@@ -7,6 +7,7 @@ import { formatMetres } from '../shared/ui/canvas.js';
 import { numberField, pointFields, seedField, textField } from './fields.js';
 import { cachedTracks } from './geometry-cache.js';
 import { macrosFor } from './macros.js';
+import { machCone } from '../shared/domain/trajectory.js';
 
 function summary(emitter, scene) {
   const jet = jetOfEngine(emitter.engine, scene.air.temperatureCelsius);
@@ -71,6 +72,8 @@ function warnings(emitter, scene) {
   ];
 }
 
+export const isSupersonic = (emitter, scene) => cachedTracks(emitter, scene.air)[0].speed.some(speed => speed >= speedOfSound(scene.air.temperatureCelsius));
+
 export const KIND_PANELS = Object.freeze({
   jet: Object.freeze({
     label: () => 'Jet',
@@ -88,7 +91,7 @@ export const KIND_PANELS = Object.freeze({
     alwaysTimed: () => false,
     eventSeconds: 0,
     tracks: (emitter, scene) => cachedTracks(emitter, scene.air),
-    cone: () => null,
+    cone: machCone,
     amplitudes,
     wavefrontSources,
     mergesSources: false,

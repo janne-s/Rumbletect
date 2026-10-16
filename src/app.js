@@ -3,7 +3,7 @@ import { prepareScene } from './domain/render.js';
 import { defaultScene, emitterAnchor, MODES, PARAMETERS, parseScene, readScene, sceneInMode, serializeScene } from './domain/scene.js';
 import * as fields from './ui/fields.js';
 import { kindViews } from './ui/kind-views.js';
-import { ADD_EMITTERS, KIND_PANELS } from './ui/kinds.js';
+import { ADD_EMITTERS, isSupersonic, KIND_PANELS } from './ui/kinds.js';
 import { startFrame } from './shared/ui/frame.js';
 
 startFrame({
@@ -21,5 +21,13 @@ startFrame({
   add: ADD_EMITTERS,
   modes: {
     jet: { label: 'Jet', button: 'fa-jet-fighter', icon: 'fa-jet-fighter' }
+  },
+  preferences: { cone: true },
+  toggles: {
+    cone: {
+      label: 'Mach cone',
+      icon: '<svg class="ui-icon" viewBox="0 0 24 24" aria-hidden="true"><ellipse cx="18" cy="12" rx="3" ry="8" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M18 4 3 12l15 8M3 12h15" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></svg>',
+      hidden: scene => !scene.emitters.some(emitter => isSupersonic(emitter, scene))
+    }
   }
 });
