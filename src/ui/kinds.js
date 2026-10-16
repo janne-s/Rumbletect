@@ -58,6 +58,19 @@ function wavefrontSources(emitter, scene, placedPoint, candidates) {
   });
 }
 
+function warnings(emitter, scene) {
+  const [path] = cachedTracks(emitter, scene.air);
+  const sound = speedOfSound(scene.air.temperatureCelsius);
+  const jet = jetOfEngine(emitter.engine, scene.air.temperatureCelsius).velocityMetresPerSecond;
+  const at = index => `${(index * path.step).toFixed(1)} s`;
+  const supersonic = path.speed.findIndex(speed => speed >= sound);
+  const outrun = path.speed.findIndex(speed => speed >= jet);
+  return [
+    ...(supersonic >= 0 ? [`Passes the speed of sound at ${at(supersonic)}; its boom is not heard here`] : []),
+    ...(outrun >= 0 ? [`Outruns its own jet at ${at(outrun)}; no mixing noise from then on`] : [])
+  ];
+}
+
 export const KIND_PANELS = Object.freeze({
   jet: Object.freeze({
     label: () => 'Jet',
@@ -78,7 +91,8 @@ export const KIND_PANELS = Object.freeze({
     cone: () => null,
     amplitudes,
     wavefrontSources,
-    mergesSources: false
+    mergesSources: false,
+    warnings
   })
 });
 

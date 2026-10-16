@@ -53,8 +53,11 @@ test('a grain\'s paths share its phases, so the same seed renders the same sound
   assert.notDeepEqual(renderReceiver(prepareScene(other), other.receivers[0], other).samples, once);
 });
 
-test('a jet that would pass the speed of sound is refused before it renders, with when and how fast', () => {
+test('a supersonic jet is heard from behind its Mach cone, its approach reversed, and silent once it outruns its jet', () => {
   const value = scene();
-  const fast = { ...value, emitters: [{ ...value.emitters[0], accelerationMetresPerSecondSquared: 33 }] };
-  assert.throws(() => prepareScene(fast), /passes Mach 0\.95 at \d+\.\d s and reaches Mach \d/);
+  const fast = { ...value, emitters: [{ ...value.emitters[0], mach: 1.6, startMetres: { x: -3000, y: 0, z: 300 } }] };
+  const result = renderReceiver(prepareScene(fast), fast.receivers[0], fast);
+  assert.ok(result.samples.every(Number.isFinite) && result.peakPa > 0);
+  const outrun = { ...value, emitters: [{ ...value.emitters[0], mach: 2.5 }] };
+  assert.equal(prepareScene(outrun)[0].sources.length, 0);
 });

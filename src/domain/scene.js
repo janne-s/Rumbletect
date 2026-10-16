@@ -8,7 +8,7 @@ const RUMBLETECT_PARAMETERS = Object.freeze({
   startSeconds: { minimum: 0, maximum: 240, unit: 's', label: 'Onset', reliability: null },
   headingDegrees: { minimum: 0, maximum: 360, unit: '°', label: 'Heading', reliability: null },
   climbDegrees: { minimum: -90, maximum: 90, unit: '°', label: 'Climb', reliability: null },
-  mach: { minimum: .1, maximum: .95, unit: '', label: 'Mach', reliability: null },
+  mach: { minimum: .1, maximum: 3, unit: '', label: 'Mach', reliability: null },
   accelerationMetresPerSecondSquared: { minimum: -50, maximum: 100, unit: 'm/s²', label: 'Acceleration', reliability: null },
   turnDegreesPerSecond: { minimum: -10, maximum: 10, unit: '°/s', label: 'Turn', reliability: null },
   flightSeconds: { minimum: 1, maximum: 600, unit: 's', label: 'Flight time', reliability: null },

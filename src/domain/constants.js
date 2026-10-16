@@ -45,7 +45,12 @@ export const JET_FLIGHT = Object.freeze({
   /** Class B: Stone, Krejsa & Clark 2003, eqs. 2, 2a, 2d; n_c their initial 0.62. */
   convectionRatio: .62,
   convectionSpread: .04,
-  convectionDecibels: 15
+  convectionDecibels: 15,
+  /**
+   * Class C: the least |1 − M cos ψ| a supersonic jet's grain is compressed by, so that its amplitude grows at most
+   * fivefold at the Mach cone's caustic, as Boomtect limits a boom's focus.
+   */
+  smallestCompression: .04
 });
 
 export const SYNTHESIS = Object.freeze({

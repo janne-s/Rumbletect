@@ -1,4 +1,4 @@
-import { JET, PROPAGATION, SYNTHESIS } from './constants.js';
+import { JET, JET_FLIGHT, PROPAGATION, SYNTHESIS } from './constants.js';
 import { jetOfEngine } from './engine.js';
 import { jetComponents, jetSpectra, speedOfSound } from './jet.js';
 import { shapeWaveform, waveformShape } from './waveform.js';
@@ -6,7 +6,6 @@ import { fft } from '../shared/domain/fft.js';
 import { createRandom, normalDeviate } from '../shared/domain/random.js';
 import { sourceTable } from '../shared/domain/source-table.js';
 import { flightPath } from '../shared/domain/trajectory.js';
-import { PARAMETERS } from './scene.js';
 
 const GRAIN = PROPAGATION.grainSamples;
 const WINDOW = Float64Array.from({ length: GRAIN }, (_, index) => Math.sin(Math.PI * (index + .5) / GRAIN));
@@ -48,8 +47,9 @@ const catmullRom = (samples, position) => {
 
 /**
  * A jet as grains along its flight (`tect-shared-interfaces.md`, grains): sine-windowed frames at half overlap,
- * each heard toward a path's departure. Its Doppler shift and −10 log(1 − M cos ψ) (Stone et al. 2003, eq. 2)
- * come with the grain, as the near listen applied them, so they count once.
+ * each heard toward a path's departure. Its Doppler shift and −10 log|1 − M cos ψ| (Stone et al. 2003, eq. 2)
+ * come with the grain, so they count once. Ahead of a supersonic jet's Mach cone the factor is negative and the
+ * grain arrives reversed.
  */
 export function jetGrains(emitter, scene) {
   const { air } = scene;
@@ -61,12 +61,6 @@ export function jetGrains(emitter, scene) {
   const grainSeconds = GRAIN / sampleRate;
   const hopSeconds = grainSeconds / 2;
   const duration = (path.seconds.length - 1) * path.step;
-  const limit = PARAMETERS.mach.maximum * sound;
-  const crossing = path.speed.findIndex(speed => speed > limit);
-  if (crossing >= 0) {
-    const top = Math.max(...path.speed) / sound;
-    throw new RangeError(`${emitter.name} passes Mach ${PARAMETERS.mach.maximum} at ${(crossing * path.step).toFixed(1)} s and reaches Mach ${top.toFixed(2)}; jets here fly below the speed of sound.`);
-  }
   const binHz = sampleRate / GRAIN;
   const frequencies = Array.from({ length: GRAIN / 2 + 1 }, (_, bin) => bin * binHz);
   const grains = [];
@@ -77,18 +71,20 @@ export function jetGrains(emitter, scene) {
     const components = jetComponents(jet, { temperatureCelsius: air.temperatureCelsius, flightMetresPerSecond: speed });
     const side = jetSpectra(components, 90, frequencies);
     const power = [...side.large, ...side.fine].reduce((sum, value) => sum + value, 0) * binHz;
-    grains.push({ centre, position, velocity, speed, components, amplitude: Math.sqrt(power) || 1 });
+    grains.push({ centre, position, velocity, speed, components, amplitude: Math.sqrt(power), heard: power > 0 });
   }
-  const rows = grains.map((grain, index) => ({
+  const rows = grains.flatMap((grain, index) => (!grain.heard ? [] : [{
     positionMetres: grain.position, direction: null, elementMetres: 0, emissionSeconds: grain.centre - grainSeconds, amplitudePaMetres: grain.amplitude,
     pulse: 'grain', noiseSeed: index, durationSeconds: grainSeconds, decay: 0, spanSeconds: 2 * grainSeconds, linearRadiusMetres: 0
-  }));
+  }]));
 
   function emission(index, departure, plan) {
     const grain = grains[index];
     const cosine = grain.speed > 0 ? (grain.velocity.x * departure.x + grain.velocity.y * departure.y + grain.velocity.z * departure.z) / grain.speed : 1;
     const mach = grain.speed / sound;
-    const compression = Math.max(1 - PARAMETERS.mach.maximum, 1 - mach * cosine);
+    const signed = 1 - mach * cosine;
+    const compression = Math.sign(signed || 1) * Math.max(JET_FLIGHT.smallestCompression, Math.abs(signed));
+    const squeeze = Math.abs(compression);
     const inletDegrees = Math.acos(Math.max(-1, Math.min(1, cosine))) * 180 / Math.PI;
     const { large, fine } = jetSpectra(grain.components, inletDegrees, frequencies);
     const cutoff = grain.components.large.peakHz / JET.packetCycles;
@@ -103,7 +99,7 @@ export function jetGrains(emitter, scene) {
     const real = Float64Array.from(WINDOW, (window, sample) => window * (shaped[sample] + fineFrame[sample]));
     const imaginary = new Float64Array(GRAIN);
     fft(real, imaginary);
-    const limit = SYNTHESIS.bandLimitShare * sampleRate * compression / binHz;
+    const limit = SYNTHESIS.bandLimitShare * sampleRate * squeeze / binHz;
     for (let bin = 0; bin <= GRAIN / 2; bin += 1) {
       if (bin < limit) continue;
       real[bin] = 0; imaginary[bin] = 0;
@@ -112,8 +108,8 @@ export function jetGrains(emitter, scene) {
     fft(real, imaginary, true);
     const out = new Float64Array(plan.size);
     const outImaginary = new Float64Array(plan.size);
-    const gain = 1 / (Math.sqrt(compression) * grain.amplitude * sampleRate);
-    const half = GRAIN * compression / 2;
+    const gain = 1 / (Math.sqrt(squeeze) * grain.amplitude * sampleRate);
+    const half = GRAIN * squeeze / 2;
     for (let sample = Math.max(0, Math.floor(GRAIN - half) - 2); sample <= Math.min(plan.size - 1, Math.ceil(GRAIN + half) + 2); sample += 1) {
       out[sample] = gain * catmullRom(real, GRAIN / 2 + (sample - GRAIN) / compression);
     }

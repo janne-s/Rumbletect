@@ -15,5 +15,5 @@ test('a jet lacking its engine takes the default engine, and a foreign scene is 
   delete saved.emitters[0].engine;
   assert.deepEqual(readScene(saved).emitters[0].engine, defaultJet().engine);
   assert.throws(() => readScene({ ...saved, format: 'boomtect.scene' }), /not a Rumbletect scene/);
-  assert.throws(() => parseScene({ ...defaultScene(), emitters: [{ ...defaultJet(), mach: 1.2 }] }), SceneError);
+  assert.throws(() => parseScene({ ...defaultScene(), emitters: [{ ...defaultJet(), mach: 4 }] }), SceneError);
 });
