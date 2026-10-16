@@ -1,9 +1,9 @@
 import { GROUND, JET, SYNTHESIS, TURBULENCE } from './constants.js';
-import { isReflecting, sphericalReflectionCoefficient } from './ground.js';
-import { createScintillation } from './scintillation.js';
-import { turbulentPhaseVariance } from './turbulence.js';
-import { ambisonicDirection, channelCount, encodeDirection } from './ambisonics.js';
-import { atmosphericAbsorptionDbPerMetre, speedOfSoundMetresPerSecond as speedOfSound } from './air.js';
+import { isReflecting, sphericalReflectionCoefficient } from '../shared/domain/ground.js';
+import { createScintillation } from '../shared/domain/scintillation.js';
+import { turbulentPhaseVariance } from '../shared/domain/render.js';
+import { ambisonicDirection, channelCount, encodeDirection } from '../shared/domain/ambisonics.js';
+import { atmosphericAbsorptionDbPerMetre, speedOfSoundMetresPerSecond as speedOfSound } from '../shared/domain/air.js';
 import { jetComponents, jetSpectra } from './jet.js';
 import { filterFrames, synthesizeNoise } from './synthesis.js';
 import { shapeWaveform, waveformShape } from './waveform.js';

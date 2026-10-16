@@ -1,5 +1,5 @@
 import { JET, JET_FLIGHT, REFERENCE_SOUND_PRESSURE_PA } from './constants.js';
-import { speedOfSoundMetresPerSecond as speedOfSound } from './air.js';
+import { speedOfSoundMetresPerSecond as speedOfSound } from '../shared/domain/air.js';
 
 export { speedOfSound };
 

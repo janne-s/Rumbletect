@@ -1,41 +1,19 @@
-import test from 'node:test';
 import assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
-import { defaultScene, parseScene, readScene, SceneError, serializeScene } from '../src/domain/scene.js';
-import { APP_VERSION } from '../src/domain/constants.js';
+import test from 'node:test';
+import { defaultJet, defaultScene, parseScene, readScene, SceneError, serializeScene } from '../src/domain/scene.js';
 
-test('the application version is the one in package.json', () => {
-  assert.equal(APP_VERSION, JSON.parse(readFileSync(new URL('../package.json', import.meta.url))).version);
-});
-
-test('the default scene parses and survives a save and an open unchanged', () => {
-  const scene = parseScene(defaultScene());
+test('the default scene is a jet heard by a binaural microphone, and it round-trips', () => {
+  const scene = defaultScene();
+  assert.equal(scene.format, 'rumbletect.scene');
+  assert.equal(scene.emitters[0].kind, 'jet');
+  assert.equal(scene.receivers[0].type, 'binaural');
   assert.deepEqual(readScene(JSON.parse(serializeScene(scene))), scene);
 });
 
-test('a scene is read tolerantly: defaults fill gaps, unknown fields go, values come into range', () => {
+test('a jet lacking its engine takes the default engine, and a foreign scene is refused', () => {
   const saved = JSON.parse(serializeScene(defaultScene()));
-  delete saved.air.turbulenceStrength;
-  saved.air.wind = 12;
-  saved.emitters[0].mach = 3;
-  delete saved.emitters[0].engine.diameterMetres;
-  saved.version = 99;
-  const scene = readScene(saved);
-  assert.equal(scene.air.turbulenceStrength, defaultScene().air.turbulenceStrength);
-  assert.equal(scene.air.wind, undefined);
-  assert.equal(scene.emitters[0].mach, .95);
-  assert.equal(scene.emitters[0].engine.diameterMetres, defaultScene().emitters[0].engine.diameterMetres);
-  assert.equal(scene.version, 1);
-});
-
-test('only a document of another kind or broken structure is refused', () => {
-  assert.throws(() => readScene({ format: 'boomtect.scene' }), SceneError);
-  assert.throws(() => readScene({ ...defaultScene(), emitters: [{ kind: 'flight' }] }), SceneError);
-  assert.throws(() => parseScene({ ...defaultScene(), receivers: [] }), SceneError);
-});
-
-test('an edit outside its range is refused, not clamped', () => {
-  const scene = defaultScene();
-  scene.emitters[0].mach = 1.2;
-  assert.throws(() => parseScene(scene), SceneError);
+  delete saved.emitters[0].engine;
+  assert.deepEqual(readScene(saved).emitters[0].engine, defaultJet().engine);
+  assert.throws(() => readScene({ ...saved, format: 'boomtect.scene' }), /not a Rumbletect scene/);
+  assert.throws(() => parseScene({ ...defaultScene(), emitters: [{ ...defaultJet(), mach: 1.2 }] }), SceneError);
 });

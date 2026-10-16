@@ -1,0 +1,10 @@
+{
+  "name": "Rumbletect",
+  "storage": "rumbletect",
+  "title": "Rumbletect · Design the rumble",
+  "description": "Rumbletect designs the continuous sound of jets from their physics: plan a flight in 3D, place microphones, and hear the flyover.",
+  "socialDescription": "Design the continuous sound of jets from their physics. Plan a flight in 3D over real terrain, set the engine's power, place microphones, and listen in stereo, binaurally, or export Ambisonics.",
+  "imageAlt": "Rumbletect showing a jet's flight path in 3D above a microphone, with its roar's waveform",
+  "url": "https://janne-s.github.io/Rumbletect/",
+  "repository": "https://github.com/janne-s/Rumbletect"
+}

@@ -1,5 +1,5 @@
-import { fft } from './fft.js';
-import { createRandom, normalDeviate } from './random.js';
+import { fft } from '../shared/domain/fft.js';
+import { createRandom, normalDeviate } from '../shared/domain/random.js';
 import { SYNTHESIS } from './constants.js';
 
 /** `spectrumAt(centreSample, binHz)` gives each bin's one-sided PSD in Pa²/Hz; sine windows at half overlap keep the variance. */

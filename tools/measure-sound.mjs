@@ -2,7 +2,7 @@
 // node tools/measure-sound.mjs <file.wav>... prints one JSON line per file.
 import { readFileSync } from 'node:fs';
 import { basename } from 'node:path';
-import { fft, nextPowerOfTwo } from '../src/domain/fft.js';
+import { fft, nextPowerOfTwo } from '../src/shared/domain/fft.js';
 
 const OCTAVES = [31.5, 63, 125, 250, 500, 1000, 2000, 4000, 8000, 16000];
 const ENVELOPE_BANDS = [[30, 250], [250, 2000], [2000, 8000]];

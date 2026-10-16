@@ -1,11 +1,13 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { nearListen } from '../src/domain/near-listen.js';
-import { createScintillation } from '../src/domain/scintillation.js';
+import { createScintillation } from '../src/shared/domain/scintillation.js';
 import { straightTrajectory } from '../src/domain/trajectory.js';
-import { speedOfSoundMetresPerSecond as speedOfSound } from '../src/domain/air.js';
-import { fft } from '../src/domain/fft.js';
-import { SCINTILLATION } from '../src/domain/constants.js';
+import { speedOfSoundMetresPerSecond as speedOfSound } from '../src/shared/domain/air.js';
+import { fft } from '../src/shared/domain/fft.js';
+import { PROPAGATION } from '../src/domain/constants.js';
+
+const SCINTILLATION = PROPAGATION.scintillation;
 
 const SAMPLE_RATE = 48000;
 

@@ -5,21 +5,38 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Rumbletect · Design the rumble</title>
     <meta name="description" content="Rumbletect designs the continuous sound of jets from their physics: plan a flight in 3D, place microphones, and hear the flyover." />
+    <meta property="og:title" content="Rumbletect · Design the rumble" />
+    <meta property="og:description" content="Design the continuous sound of jets from their physics. Plan a flight in 3D over real terrain, set the engine's power, place microphones, and listen in stereo, binaurally, or export Ambisonics." />
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content="https://janne-s.github.io/Rumbletect/" />
+    <meta property="og:image" content="https://janne-s.github.io/Rumbletect/assets/og_image.jpg" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:image:alt" content="Rumbletect showing a jet's flight path in 3D above a microphone, with its roar's waveform" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:creator" content="@JanneSarkela" />
+    <meta name="twitter:title" content="Rumbletect · Design the rumble" />
+    <meta name="twitter:description" content="Design the continuous sound of jets from their physics. Plan a flight in 3D over real terrain, set the engine's power, place microphones, and listen in stereo, binaurally, or export Ambisonics." />
+    <meta name="twitter:image" content="https://janne-s.github.io/Rumbletect/assets/og_image.jpg" />
+    <meta name="twitter:image:alt" content="Rumbletect showing a jet's flight path in 3D above a microphone, with its roar's waveform" />
     <link rel="icon" href="data:," />
     <link rel="stylesheet" href="assets/vendor/fontawesome/css/fontawesome.min.css" />
     <link rel="stylesheet" href="assets/vendor/fontawesome/css/solid.min.css" />
-    <link rel="stylesheet" href="styles.css" />
-    <script type="module" src="src/app-reset.js"></script>
+    <link rel="stylesheet" href="src/shared/styles.css" />
+    <link rel="stylesheet" href="theme.css" />
+    <script type="module" src="src/shared/app-reset.js"></script>
     <script type="module" src="src/app.js"></script>
   </head>
   <body>
     <header class="bar">
       <span class="brand">Rumbletect</span>
+      <div class="modes" role="radiogroup" aria-label="Mode"></div>
       <button type="button" id="play" class="primary" disabled aria-pressed="false">Play</button>
       <button type="button" class="icon-toggle" id="settings" data-recovery-dialog="settings-dialog" aria-haspopup="dialog" aria-label="Settings" title="Settings"><i class="fa-solid fa-gear" aria-hidden="true"></i></button>
       <div class="icon-toggles" role="group" aria-label="Rendering and playback">
         <button type="button" class="icon-toggle" id="auto-render" aria-pressed="true" aria-label="Auto render" title="Auto render"><i class="fa-solid fa-repeat" aria-hidden="true"></i></button>
         <button type="button" class="icon-toggle" id="real-delay" aria-pressed="true" aria-label="Real delay" title="Real delay"><i class="fa-solid fa-hourglass-half" aria-hidden="true"></i></button>
+        <button type="button" class="icon-toggle" id="preview" aria-pressed="false" aria-label="Preview" title="Preview"><svg class="ui-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 13a7 7 0 0 1 14 0Z" fill="currentColor"/><circle cx="20.5" cy="11.5" r="2.5" fill="currentColor"/><path d="M2 14.5 4 15h12l3-2M6 15v3m8-3v3" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
       </div>
       <span id="listen-label" class="listen-label"></span>
       <span class="spacer"></span>
@@ -41,6 +58,8 @@
         <button type="button" class="cube-chip" id="cube-chip" aria-haspopup="dialog"><span id="cube-chip-name"></span><i class="fa-solid fa-circle-info" aria-hidden="true"></i></button>
         <div class="view-side">
           <div class="icon-toggles view-tools" role="toolbar" aria-label="View" aria-orientation="vertical">
+            <button type="button" class="icon-toggle" id="wavefront" aria-pressed="false" aria-label="Wavefronts" title="Wavefronts"><i class="fa-solid fa-bullseye" aria-hidden="true"></i></button>
+            <button type="button" class="icon-toggle" id="names" aria-pressed="false" aria-label="Place names" title="Place names" hidden><i class="fa-solid fa-tag" aria-hidden="true"></i></button>
             <button type="button" class="icon-toggle" id="map" aria-pressed="false" aria-label="Map" title="Map" hidden><i class="fa-solid fa-map" aria-hidden="true"></i></button>
             <button type="button" class="icon-toggle" id="zoom-in" aria-label="Zoom in" title="Zoom in" hidden><i class="fa-solid fa-plus" aria-hidden="true"></i></button>
             <button type="button" class="icon-toggle" id="zoom-out" aria-label="Zoom out" title="Zoom out" hidden><i class="fa-solid fa-minus" aria-hidden="true"></i></button>
@@ -48,7 +67,9 @@
           <div class="attribution" id="cube-attribution" hidden>
             <button type="button" class="info-button" id="attribution-button" aria-expanded="false" aria-controls="attribution-text" title="Data sources">i</button>
             <div class="attribution-text" id="attribution-text" hidden>
-              Place search: © <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a> contributors<br />
+              <a href="https://github.com/tilezen/joerd/blob/master/docs/attribution.md" target="_blank" rel="noopener">Terrain Tiles: Mapzen / AWS Open Data</a> (SRTM, GMTED2010, NED, ETOPO1, EU-DEM, national datasets)<br />
+              Place names: <a href="https://openfreemap.org/" target="_blank" rel="noopener">OpenFreeMap</a> · © <a href="https://openmaptiles.org/" target="_blank" rel="noopener">OpenMapTiles</a><br />
+              Place names and search: © <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a> contributors<br />
               Map: © <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a> contributors, SRTM; style © <a href="https://opentopomap.org/" target="_blank" rel="noopener">OpenTopoMap</a> (<a href="https://creativecommons.org/licenses/by-sa/3.0/" target="_blank" rel="noopener">CC BY-SA</a>)
             </div>
           </div>
@@ -79,10 +100,8 @@
           <button type="button" id="sheet-close" class="primary">Done</button>
         </header>
         <section data-sheet="emitters">
-          <h2><i class="fa-solid fa-jet-fighter emitter-icon" aria-hidden="true"></i>Emitters</h2>
-          <div class="row-buttons add-row">
-            <button type="button" id="add-jet">+ Jet</button>
-          </div>
+          <h2><i class="fa-solid emitter-icon" aria-hidden="true"></i>Emitters</h2>
+          <div class="row-buttons add-row"></div>
           <div class="list" id="emitter-list"></div>
         </section>
         <section data-sheet="receivers">
@@ -96,9 +115,9 @@
           <summary><i class="fa-solid fa-wind" aria-hidden="true"></i>Air and ground</summary>
           <div class="fields" id="environment-fields"></div>
         </details>
-        <details class="group" data-sheet="place">
-          <summary><i class="fa-solid fa-location-dot" aria-hidden="true"></i>Place</summary>
-          <div class="fields" id="place-fields"></div>
+        <details class="group" data-sheet="terrain">
+          <summary><i class="fa-solid fa-mountain" aria-hidden="true"></i>Terrain</summary>
+          <div class="fields" id="terrain-fields"></div>
         </details>
         <details class="group" data-sheet="output">
           <summary><i class="fa-solid fa-volume-high" aria-hidden="true"></i>Output</summary>
@@ -124,10 +143,10 @@
         </figure>
       </section>
       <nav class="sheet-tabs" aria-label="Panels">
-        <button type="button" data-sheet="emitters" aria-label="Emitters" title="Emitters"><i class="fa-solid fa-jet-fighter emitter-icon" aria-hidden="true"></i></button>
+        <button type="button" data-sheet="emitters" aria-label="Emitters" title="Emitters"><i class="fa-solid emitter-icon" aria-hidden="true"></i></button>
         <button type="button" data-sheet="receivers" aria-label="Microphones" title="Microphones"><i class="fa-solid fa-microphone" aria-hidden="true"></i></button>
         <button type="button" data-sheet="environment" aria-label="Air and ground" title="Air and ground"><i class="fa-solid fa-wind" aria-hidden="true"></i></button>
-        <button type="button" data-sheet="place" aria-label="Place" title="Place"><i class="fa-solid fa-location-dot" aria-hidden="true"></i></button>
+        <button type="button" data-sheet="terrain" aria-label="Terrain" title="Terrain"><i class="fa-solid fa-mountain" aria-hidden="true"></i></button>
         <button type="button" data-sheet="output" aria-label="Output" title="Output"><i class="fa-solid fa-volume-high" aria-hidden="true"></i></button>
         <button type="button" id="results-toggle" class="results-toggle" aria-expanded="false" aria-controls="results" aria-label="Plots" title="Plots"><i class="fa-solid fa-wave-square" aria-hidden="true"></i></button>
       </nav>
@@ -141,7 +160,7 @@
         </form>
         <span class="place-coordinates" id="place-coordinates"></span>
         <button type="button" id="place-cancel">Cancel</button>
-        <button type="button" id="place-done" class="primary">Done</button>
+        <button type="button" id="place-done" class="primary">Load</button>
       </header>
       <div class="place-map">
         <canvas id="place-map" aria-hidden="true"></canvas>
@@ -168,6 +187,16 @@
             </div>
             <p class="export-error" id="export-error" role="alert" hidden></p>
           </div>
+          <section class="export-body export-echotect" aria-labelledby="echotect-title">
+            <h3 id="echotect-title">Echotect</h3>
+            <div class="export-list" id="echotect-options"></div>
+            <div class="export-go">
+              <p class="export-summary" id="echotect-summary"></p>
+              <button type="button" id="echotect-save">Save file</button>
+              <button type="button" id="export-send">Send to Echotect</button>
+            </div>
+            <p class="export-error" id="echotect-error" role="alert" hidden></p>
+          </section>
         </div>
         <footer class="export-actions">
           <button type="submit" value="cancel">Close</button>
@@ -180,6 +209,13 @@
           <h2 id="settings-title">Settings</h2>
         </header>
         <div class="settings-body">
+          <h3>Computation</h3>
+          <div class="settings-grid" id="settings-grid"></div>
+          <div class="settings-cost">
+            <span>Cost</span>
+            <div class="cost-bar" aria-hidden="true"><div class="cost-fill" id="cost-fill"></div><div class="cost-full" id="cost-full"></div></div>
+            <output id="cost-value"></output>
+          </div>
           <h3>This device</h3>
           <div class="settings-grid" id="device-grid"></div>
         </div>

@@ -1,8 +1,8 @@
 import { writeFileSync } from 'node:fs';
 import { nearListen } from '../src/domain/near-listen.js';
 import { straightTrajectory } from '../src/domain/trajectory.js';
-import { encodeFloat32Wav } from '../src/domain/wav.js';
-import { fft, nextPowerOfTwo } from '../src/domain/fft.js';
+import { encodeFloat32Wav } from '../src/shared/domain/wav.js';
+import { fft, nextPowerOfTwo } from '../src/shared/domain/fft.js';
 import { REFERENCE_SOUND_PRESSURE_PA, SAMPLE_RATE_HZ } from '../src/domain/constants.js';
 
 const [output = 'flyover.wav', ...pairs] = process.argv.slice(2);

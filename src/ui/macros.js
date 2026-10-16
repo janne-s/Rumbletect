@@ -1,38 +1,8 @@
 import { engineAtPower, powerLabel, powerOfEngine } from '../domain/engine.js';
 import { PARAMETERS } from '../domain/scene.js';
+import { clamp01, logPosition, logValue, METRES, metres } from '../shared/ui/macros.js';
 
-const logPosition = (value, [low, high]) => Math.log(value / low) / Math.log(high / low);
-const logValue = (t, [low, high]) => low * (high / low) ** t;
-const clamp01 = value => Math.min(1, Math.max(0, value));
 const range = key => [PARAMETERS[key].minimum, PARAMETERS[key].maximum];
-
-const metres = value => (value >= 1000 ? `${+(value / 1000).toPrecision(3)} km` : value >= 10 ? `${Math.round(value)} m` : `${+value.toPrecision(2)} m`);
-
-const UNITS = Object.freeze({
-  metres: Object.freeze({ m: 1, km: 1000 })
-});
-
-export function entryText(entry, item) {
-  const value = entry.get(item);
-  if (entry.units === 'metres') return metres(value);
-  return `${+value.toPrecision(6)}${entry.unit ? ` ${entry.unit}` : ''}`;
-}
-
-export function parseEntry(entry, text, item) {
-  const match = /^\s*([-+]?(?:\d+[.,]?\d*|[.,]\d+)(?:e[-+]?\d+)?)\s*(.*?)\s*$/i.exec(text);
-  if (!match) throw new Error(`${text.trim() || 'An empty value'} is not a number.`);
-  let value = Number(match[1].replace(',', '.'));
-  const unit = match[2];
-  if (entry.units) {
-    const units = UNITS[entry.units];
-    const shown = entryText(entry, item).split(' ').at(-1);
-    const factor = units[unit || shown];
-    if (factor === undefined) throw new Error(`Use ${Object.keys(units).join(', ')}.`);
-    value *= factor;
-  } else if (unit && unit !== entry.unit) throw new Error(entry.unit ? `Use ${entry.unit}.` : 'Give a plain number.');
-  if (!Number.isFinite(value)) throw new Error(`${text.trim()} is not a number.`);
-  return entry.integer ? Math.round(value) : value;
-}
 
 const power = {
   label: 'Power',
@@ -56,7 +26,7 @@ const flightHeight = {
   read: item => clamp01(logPosition(Math.max(HEIGHT_SPAN[0], item.startMetres.z), HEIGHT_SPAN)),
   write: (item, t) => { item.startMetres = { ...item.startMetres, z: Math.round(logValue(t, HEIGHT_SPAN)) }; },
   show: item => metres(item.startMetres.z),
-  entry: { units: 'metres', get: item => item.startMetres.z, set: (item, value) => { item.startMetres = { ...item.startMetres, z: value }; } }
+  entry: { units: METRES, get: item => item.startMetres.z, set: (item, value) => { item.startMetres = { ...item.startMetres, z: value }; } }
 };
 
 const flightHeading = {
