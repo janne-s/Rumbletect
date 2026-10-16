@@ -6,6 +6,7 @@ import { fft } from '../shared/domain/fft.js';
 import { createRandom, normalDeviate } from '../shared/domain/random.js';
 import { sourceTable } from '../shared/domain/source-table.js';
 import { flightPath } from '../shared/domain/trajectory.js';
+import { PARAMETERS } from './scene.js';
 
 const GRAIN = PROPAGATION.grainSamples;
 const WINDOW = Float64Array.from({ length: GRAIN }, (_, index) => Math.sin(Math.PI * (index + .5) / GRAIN));
@@ -60,6 +61,12 @@ export function jetGrains(emitter, scene) {
   const grainSeconds = GRAIN / sampleRate;
   const hopSeconds = grainSeconds / 2;
   const duration = (path.seconds.length - 1) * path.step;
+  const limit = PARAMETERS.mach.maximum * sound;
+  const crossing = path.speed.findIndex(speed => speed > limit);
+  if (crossing >= 0) {
+    const top = Math.max(...path.speed) / sound;
+    throw new RangeError(`${emitter.name} passes Mach ${PARAMETERS.mach.maximum} at ${(crossing * path.step).toFixed(1)} s and reaches Mach ${top.toFixed(2)}; jets here fly below the speed of sound.`);
+  }
   const binHz = sampleRate / GRAIN;
   const frequencies = Array.from({ length: GRAIN / 2 + 1 }, (_, bin) => bin * binHz);
   const grains = [];
@@ -81,7 +88,7 @@ export function jetGrains(emitter, scene) {
     const grain = grains[index];
     const cosine = grain.speed > 0 ? (grain.velocity.x * departure.x + grain.velocity.y * departure.y + grain.velocity.z * departure.z) / grain.speed : 1;
     const mach = grain.speed / sound;
-    const compression = 1 - mach * cosine;
+    const compression = Math.max(1 - PARAMETERS.mach.maximum, 1 - mach * cosine);
     const inletDegrees = Math.acos(Math.max(-1, Math.min(1, cosine))) * 180 / Math.PI;
     const { large, fine } = jetSpectra(grain.components, inletDegrees, frequencies);
     const cutoff = grain.components.large.peakHz / JET.packetCycles;
