@@ -1,4 +1,7 @@
-import { JET, SYNTHESIS } from './constants.js';
+import { GROUND, JET, SYNTHESIS, TURBULENCE } from './constants.js';
+import { isReflecting, sphericalReflectionCoefficient } from './ground.js';
+import { createScintillation } from './scintillation.js';
+import { turbulentPhaseVariance } from './turbulence.js';
 import { atmosphericAbsorptionDbPerMetre, speedOfSound } from './air.js';
 import { jetComponents, jetSpectra } from './jet.js';
 import { filterFrames, synthesizeNoise } from './synthesis.js';
@@ -29,6 +32,45 @@ export function emissionGeometry(trajectory, listener, seconds, sound) {
   return { distance, inletDegrees: Math.acos(Math.max(-1, Math.min(1, cosine))) * 180 / Math.PI, cosine, mach: speed / sound };
 }
 
+/**
+ * The path from the emission frame to the listener per bin, as `{ re, im }` at the received frequency: air
+ * absorption, and with `ground` its reflection over the plane up = 0, 1 + (R₁/R₂)·γ·Q·e^(−iωΔ) with the
+ * scattered share r²|Q|²(1 − γ²) added as power (class C), γ from roughness and turbulence.
+ */
+function pathGains({ frequencies, doppler, limit, geometry, source, listener, air, sound, ground, scintillation }) {
+  const re = new Float64Array(frequencies.length);
+  const im = new Float64Array(frequencies.length);
+  const direct = geometry.distance;
+  const image = Math.hypot(source.east - listener.east, source.north - listener.north, source.up + listener.up);
+  const cosIncidence = (source.up + listener.up) / image;
+  const delay = (image - direct) / sound;
+  const ratio = direct / image;
+  const rough = ground && !isReflecting(ground) ? GROUND.roughnessMetres : 0;
+  const turbulent = { turbulenceStrength: air.turbulenceStrength ?? TURBULENCE.strength, turbulenceScaleMetres: air.turbulenceScaleMetres ?? TURBULENCE.scaleMetres };
+  frequencies.forEach((frequency, bin) => {
+    if (frequency >= limit) return;
+    const received = frequency * doppler;
+    const magnitude = 10 ** (-atmosphericAbsorptionDbPerMetre(received, air) * direct / 20) * (scintillation ? scintillation[bin] : 1);
+    let [gainRe, gainIm] = [1, 0];
+    if (ground && received > 0) {
+      const [qRe, qIm] = sphericalReflectionCoefficient(received, ground, cosIncidence, image, sound);
+      const k = 2 * Math.PI * received / sound;
+      const variance = (2 * k * rough * cosIncidence) ** 2 + turbulentPhaseVariance(received, direct, source.up, listener.up, turbulent, sound);
+      const coherent = Math.exp(-variance / 2);
+      const phase = -2 * Math.PI * received * delay;
+      const [cos, sin] = [Math.cos(phase), Math.sin(phase)];
+      const cRe = 1 + ratio * coherent * (qRe * cos - qIm * sin);
+      const cIm = ratio * coherent * (qRe * sin + qIm * cos);
+      const coherentSize = Math.hypot(cRe, cIm);
+      const total = Math.sqrt(coherentSize ** 2 + ratio * ratio * (qRe * qRe + qIm * qIm) * (1 - coherent * coherent));
+      [gainRe, gainIm] = coherentSize > 0 ? [cRe / coherentSize * total, cIm / coherentSize * total] : [total, 0];
+    }
+    re[bin] = magnitude * gainRe;
+    im[bin] = magnitude * gainIm;
+  });
+  return { re, im };
+}
+
 const catmullRom = (samples, position) => {
   const index = Math.floor(position);
   const t = position - index;
@@ -39,10 +81,10 @@ const catmullRom = (samples, position) => {
 
 /**
  * Pressure in pascals from `startSeconds` of listener time. The moving source's Doppler shift and
- * −10 log(1 − M cos ψ) (Stone et al. 2003, eq. 2), and the air's absorption at the received frequency, are
- * applied here, not in the source, so they count once.
+ * −10 log(1 − M cos ψ) (Stone et al. 2003, eq. 2) and the path (`pathGains`) are applied here, not in the
+ * source, so they count once.
  */
-export function nearListen({ trajectory, listener, jet, air, emissionSeconds: duration, sampleRate, seed }) {
+export function nearListen({ trajectory, listener, jet, air, emissionSeconds: duration, sampleRate, seed, ground = null, scintillation = false }) {
   const sound = speedOfSound(air.temperatureCelsius);
   const startSeconds = length(difference(listener, trajectory.positionAt(0))) / sound;
   const endSeconds = duration + length(difference(listener, trajectory.positionAt(duration))) / sound;
@@ -51,6 +93,8 @@ export function nearListen({ trajectory, listener, jet, air, emissionSeconds: du
 
   const emissionLength = Math.ceil(duration * sampleRate) + 4;
   const componentsAt = mach => jetComponents(jet, { temperatureCelsius: air.temperatureCelsius, flightMetresPerSecond: mach * sound });
+  const hop = SYNTHESIS.frameSamples / 2;
+  const fluctuation = scintillation ? createScintillation({ ...(scintillation === true ? {} : scintillation), seed: (seed ^ 0x27d4eb2f) >>> 0, hopSeconds: hop / sampleRate }) : null;
   const frames = new Map();
   const frameAt = (centre, binHz) => {
     if (frames.has(centre)) return frames.get(centre);
@@ -60,7 +104,7 @@ export function nearListen({ trajectory, listener, jet, air, emissionSeconds: du
     const spectra = jetSpectra(components, geometry.inletDegrees, frequencies);
     const doppler = 1 / (1 - geometry.mach * geometry.cosine);
     const limit = SYNTHESIS.bandLimitShare * sampleRate / doppler;
-    const path = frequencies.map(frequency => (frequency < limit ? 10 ** (-atmosphericAbsorptionDbPerMetre(frequency * doppler, air) * geometry.distance / 20) : 0));
+    const path = pathGains({ frequencies, doppler, limit, geometry, source: trajectory.positionAt(centre / sampleRate), listener, air, sound, ground, scintillation: fluctuation?.gainsAt(centre / hop, frequencies) });
     const { large, fine } = spectra;
     const cutoff = components.large.peakHz / JET.packetCycles;
     const lowPass = frequencies.map(frequency => (frequency > 0 ? 1 / (1 + (frequency / cutoff) ** 2) : 0));
@@ -79,7 +123,6 @@ export function nearListen({ trajectory, listener, jet, air, emissionSeconds: du
   const fine = stream('fine', 0);
   const largeGaussian = stream('large', 0x9e3779b9);
   const envelope = stream('envelope', 0x85ebca6b);
-  const hop = SYNTHESIS.frameSamples / 2;
   const varianceAt = centre => frames.get(Math.max(0, Math.min(centre, (Math.ceil(emissionLength / hop)) * hop)))?.largeVariance ?? 0;
   const rmsAt = sample => {
     const centre = Math.floor(sample / hop) * hop;

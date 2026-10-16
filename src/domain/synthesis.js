@@ -32,7 +32,7 @@ export function synthesizeNoise({ length, sampleRate, seed, spectrumAt, frameSam
   return output;
 }
 
-/** Each frame's spectrum times `gainAt(centreSample, binHz)`, an amplitude per bin; sine windows in and out, so a gain of 1 returns the signal. */
+/** Each frame's spectrum times `gainAt(centreSample, binHz)`, real per bin or `{ re, im }`; sine windows in and out, so a gain of 1 returns the signal. */
 export function filterFrames(signal, sampleRate, gainAt, frameSamples = SYNTHESIS.frameSamples) {
   const hop = frameSamples / 2;
   const binHz = sampleRate / frameSamples;
@@ -49,12 +49,19 @@ export function filterFrames(signal, sampleRate, gainAt, frameSamples = SYNTHESI
     imaginary.fill(0);
     fft(real, imaginary);
     const gain = gainAt(centre, binHz);
+    const gainRe = gain.re ?? gain;
+    const gainIm = gain.im;
     for (let bin = 0; bin <= frameSamples / 2; bin += 1) {
-      real[bin] *= gain[bin];
-      imaginary[bin] *= gain[bin];
+      const g = gainRe[bin];
+      const h = gainIm ? gainIm[bin] : 0;
+      const [re, im] = [real[bin], imaginary[bin]];
+      real[bin] = re * g - im * h;
+      imaginary[bin] = re * h + im * g;
       if (bin > 0 && bin < frameSamples / 2) {
-        real[frameSamples - bin] *= gain[bin];
-        imaginary[frameSamples - bin] *= gain[bin];
+        const mirror = frameSamples - bin;
+        const [mirrorRe, mirrorIm] = [real[mirror], imaginary[mirror]];
+        real[mirror] = mirrorRe * g + mirrorIm * h;
+        imaginary[mirror] = mirrorIm * g - mirrorRe * h;
       }
     }
     fft(real, imaginary, true);

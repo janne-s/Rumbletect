@@ -37,8 +37,8 @@ export const JET = Object.freeze({
   finePeakStrouhal: .45,
   /** Class B: pressure skewness 0.15–0.4 made at the source, F-35AA at military power (Gee, Neilsen & Wall 2013, fig. 10). */
   largeScaleSkewness: .3,
-  /** Class C: intermittent wavepackets toward the recordings' kurtosis of 4–7 (`reviews/2026-10-15-jet-sound-diagnosis.md`). */
-  largeScaleKurtosis: 5,
+  /** Class C: intermittent wavepackets; with the path's scintillation a render's kurtosis meets the recordings' 4–7. */
+  largeScaleKurtosis: 4,
   packetCycles: 4
 });
 
@@ -53,4 +53,35 @@ export const SYNTHESIS = Object.freeze({
   frameSamples: 4096,
   bandLimitShare: .45,
   delayGridSamples: 64
+});
+
+export const GROUND = Object.freeze({
+  /** Class B: mean of each FHWA TNM ground-type range (Embleton, Piercy & Daigle 1983), kPa·s/m², as in Boomtect. */
+  flowResistivity: Object.freeze({
+    snow: 20,
+    forestFloor: 50,
+    grass: 212.5,
+    soil: 278,
+    stonyGround: 550
+  }),
+  /** Class C, as in Boomtect. */
+  roughnessMetres: .05
+});
+
+export const TURBULENCE = Object.freeze({
+  /** Class C, Boomtect's defaults. */
+  strength: 1e-6,
+  scaleMetres: 1.1
+});
+
+/**
+ * Class C: slow level fluctuation fitted so that the 0.2–2 s fluctuation of a render matches the reference
+ * recordings, about 2.3 dB with an inter-band correlation of 0.5–0.75, and its kurtosis theirs
+ * (`reviews/2026-10-15-jet-sound-diagnosis.md`).
+ */
+export const SCINTILLATION = Object.freeze({
+  decibels: 3.5,
+  bandShare: .45,
+  seconds: .2,
+  bandsHz: Object.freeze([31.5, 63, 125, 250, 500, 1000, 2000, 4000, 8000, 16000])
 });

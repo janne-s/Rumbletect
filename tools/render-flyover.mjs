@@ -6,7 +6,7 @@ import { fft, nextPowerOfTwo } from '../src/domain/fft.js';
 import { REFERENCE_SOUND_PRESSURE_PA, SAMPLE_RATE_HZ } from '../src/domain/constants.js';
 
 const [output = 'flyover.wav', ...pairs] = process.argv.slice(2);
-const option = Object.fromEntries(pairs.map(pair => pair.split('=')).map(([key, value]) => [key, Number(value)]));
+const option = Object.fromEntries(pairs.map(pair => pair.split('=')).map(([key, value]) => [key, Number.isNaN(Number(value)) ? value : Number(value)]));
 const settings = {
   altitudeMetres: 300,
   speedMetresPerSecond: 150,
@@ -16,6 +16,9 @@ const settings = {
   temperatureRatio: 2.6,
   temperatureCelsius: 15,
   relativeHumidityPercent: 70,
+  listenerHeightMetres: 1.7,
+  ground: 'grass',
+  scintillation: 1,
   seed: 1,
   ...option
 };
@@ -23,12 +26,14 @@ const settings = {
 const emission = 2 * settings.approachMetres / settings.speedMetresPerSecond;
 const result = nearListen({
   trajectory: straightTrajectory({ startMetres: { east: -settings.approachMetres, north: 0, up: settings.altitudeMetres }, headingDegrees: 90, speedMetresPerSecond: settings.speedMetresPerSecond }),
-  listener: { east: 0, north: 0, up: 1.7 },
-  jet: { diameterMetres: settings.diameterMetres, velocityMetresPerSecond: settings.jetMetresPerSecond, temperatureRatio: settings.temperatureRatio },
+  listener: { east: 0, north: 0, up: settings.listenerHeightMetres },
+  jet: { diameterMetres: settings.diameterMetres, velocityMetresPerSecond: settings.jetMetresPerSecond, temperatureRatio: settings.temperatureRatio, ...(settings.largeScaleKurtosis ? { largeScaleKurtosis: settings.largeScaleKurtosis } : {}) },
   air: { temperatureCelsius: settings.temperatureCelsius, relativeHumidityPercent: settings.relativeHumidityPercent, pressureKpa: 101.325 },
   emissionSeconds: emission,
   sampleRate: SAMPLE_RATE_HZ,
-  seed: settings.seed
+  seed: settings.seed,
+  ground: settings.ground === 'none' ? null : settings.ground,
+  scintillation: settings.scintillation ? { ...(settings.scintillationDecibels ? { decibels: settings.scintillationDecibels } : {}), ...(settings.scintillationSeconds ? { seconds: settings.scintillationSeconds } : {}) } : false
 });
 
 /** IEC 61672-1 A-weighting, as a power factor. */
