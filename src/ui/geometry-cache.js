@@ -5,4 +5,4 @@ export { currentSurface, useTerrain } from '../shared/ui/geometry-cache.js';
 
 const tracks = new Map();
 
-export const cachedTracks = (emitter, air) => cached(tracks, emitter, air, () => [jetPath(emitter, air)]);
+export const cachedTracks = (emitter, scene) => cached(tracks, emitter, [scene.air, emitter.autoDuration ? scene.receivers.map(receiver => receiver.positionMetres) : null], () => [jetPath(emitter, scene)]);

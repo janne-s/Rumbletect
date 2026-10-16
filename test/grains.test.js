@@ -61,3 +61,15 @@ test('a supersonic jet is heard from behind its Mach cone, its approach reversed
   const outrun = { ...value, emitters: [{ ...value.emitters[0], mach: 2.5 }] };
   assert.equal(prepareScene(outrun)[0].sources.length, 0);
 });
+
+test('an automatic flight time flies on until every microphone is out of hearing', async () => {
+  const { jetPath } = await import('../src/domain/grains.js');
+  const value = scene();
+  const auto = { ...value.emitters[0], autoDuration: true };
+  const path = jetPath(auto, value);
+  const at = value.receivers[0].positionMetres;
+  const distance = index => Math.hypot(path.x[index] - at.x, path.y[index] - at.y, path.z[index] - at.z);
+  const closest = Math.min(...path.x.map((_, index) => distance(index)));
+  assert.ok(path.seconds.length > jetPath(value.emitters[0], value).seconds.length);
+  assert.ok(Math.abs(distance(path.x.length - 1) / closest - 10 ** (30 / 20)) < .1);
+});

@@ -6,13 +6,31 @@ import { fft } from '../shared/domain/fft.js';
 import { createRandom, normalDeviate } from '../shared/domain/random.js';
 import { sourceTable } from '../shared/domain/source-table.js';
 import { flightPath } from '../shared/domain/trajectory.js';
+import { PARAMETERS } from './scene.js';
 
 const GRAIN = PROPAGATION.grainSamples;
 const WINDOW = Float64Array.from({ length: GRAIN }, (_, index) => Math.sin(Math.PI * (index + .5) / GRAIN));
 const STREAMS = Object.freeze({ fine: 0, large: 0x9e3779b9, envelope: 0x85ebca6b });
 
-/** The jet's flight in still air of the ground's temperature, as the near listen flew it. */
-export const jetPath = (emitter, air) => flightPath(emitter, { ...air, refraction: false });
+/**
+ * The jet's flight in still air of the ground's temperature, as the near listen flew it. With `autoDuration` it
+ * flies on until every microphone is `JET_FLIGHT.hearingDecibels` below its closest approach by spreading.
+ */
+export function jetPath(emitter, scene) {
+  const air = { ...scene.air, refraction: false };
+  if (!emitter.autoDuration) return flightPath(emitter, air);
+  const path = flightPath({ ...emitter, durationSeconds: PARAMETERS.flightSeconds.maximum }, air);
+  const ratio = 10 ** (JET_FLIGHT.hearingDecibels / 20);
+  let end = 0;
+  for (const { positionMetres: at } of scene.receivers) {
+    const distances = path.x.map((x, index) => Math.hypot(x - at.x, path.y[index] - at.y, path.z[index] - at.z));
+    const closest = distances.indexOf(Math.min(...distances));
+    const quiet = distances.findIndex((distance, index) => index > closest && distance >= ratio * distances[closest]);
+    end = Math.max(end, quiet < 0 ? distances.length - 1 : quiet);
+  }
+  const kept = Math.max(1, end) + 1;
+  return Object.fromEntries(Object.entries(path).map(([key, values]) => [key, Array.isArray(values) ? values.slice(0, kept) : values]));
+}
 
 function sampled(path, seconds) {
   const last = path.seconds.length - 1;
@@ -55,7 +73,7 @@ export function jetGrains(emitter, scene) {
   const { air } = scene;
   const sampleRate = scene.render.sampleRate;
   const sound = speedOfSound(air.temperatureCelsius);
-  const path = jetPath(emitter, air);
+  const path = jetPath(emitter, scene);
   const jet = jetOfEngine(emitter.engine, air.temperatureCelsius);
   const shape = waveformShape({ skewness: JET.largeScaleSkewness, kurtosis: JET.largeScaleKurtosis });
   const grainSeconds = GRAIN / sampleRate;

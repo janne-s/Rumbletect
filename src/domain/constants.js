@@ -50,7 +50,9 @@ export const JET_FLIGHT = Object.freeze({
    * Class C: the least |1 − M cos ψ| a supersonic jet's grain is compressed by, so that its amplitude grows at most
    * fivefold at the Mach cone's caustic, as Boomtect limits a boom's focus.
    */
-  smallestCompression: .04
+  smallestCompression: .04,
+  /** Class C: with an automatic flight time the jet flies on until each microphone is this far below its closest approach, by spreading. */
+  hearingDecibels: 30
 });
 
 export const SYNTHESIS = Object.freeze({

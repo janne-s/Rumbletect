@@ -64,9 +64,9 @@ const flightTurn = {
 const flightTime = {
   label: 'Flight time',
   read: item => clamp01(logPosition(item.durationSeconds, [1, 600])),
-  write: (item, t) => { item.durationSeconds = Math.max(1, Math.round(logValue(t, [1, 600]))); },
-  show: item => `${item.durationSeconds} s`,
-  entry: { unit: 's', get: item => item.durationSeconds, set: (item, value) => { item.durationSeconds = value; } }
+  write: (item, t) => { item.durationSeconds = Math.max(1, Math.round(logValue(t, [1, 600]))); item.autoDuration = false; },
+  show: item => (item.autoDuration ? 'auto' : `${item.durationSeconds} s`),
+  entry: { unit: 's', get: item => item.durationSeconds, set: (item, value) => { item.durationSeconds = value; item.autoDuration = false; } }
 };
 
 const onset = {

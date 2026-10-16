@@ -13,7 +13,7 @@ export function kindViews() {
       ];
     },
     extent(emitter, { includeExtent, scene }) {
-      const paths = cachedTracks(emitter, scene.air);
+      const paths = cachedTracks(emitter, scene);
       includeExtent(paths, () => paths.flatMap(path => [...path.x.map((x, index) => ({ x, y: path.y[index], z: path.z[index] })).filter((_, index) => index % 10 === 0), { x: path.x.at(-1), y: path.y.at(-1), z: path.z.at(-1) }]));
     },
     shadowPoints: () => [],
@@ -22,7 +22,7 @@ export function kindViews() {
     draw(context, emitter, { frame, scene }, { colors, selected, state }) {
       context.strokeStyle = selected ? colors.accent : colors.end;
       context.lineWidth = selected ? 1.4 : 1.2;
-      for (const path of cachedTracks(emitter, scene.air)) {
+      for (const path of cachedTracks(emitter, scene)) {
         context.beginPath();
         for (let index = 0; index < path.x.length; index += 1) {
           const p = frame.project({ x: path.x[index], y: path.y[index], z: path.z[index] });

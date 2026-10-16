@@ -30,17 +30,20 @@ export function defaultJet(id = 'jet-1', name = 'Jet', seed = 20261015) {
     accelerationMetresPerSecondSquared: 0,
     turnDegreesPerSecond: 0,
     durationSeconds: 33,
+    autoDuration: false,
     engine: engineAtPower(.75)
   };
 }
 
 export const emitterAnchor = emitter => emitter.startMetres;
 
-function readJet(value, { number, point, numbers }, path) {
+function readJet(value, { check, number, point, numbers }, path) {
   const engine = value.engine ?? {};
+  check(typeof value.autoDuration === 'boolean', `${path}.autoDuration must be true or false.`);
   return {
     startMetres: point(value.startMetres, `${path}.startMetres`),
     durationSeconds: number(value.durationSeconds, 'flightSeconds', `${path}.durationSeconds`),
+    autoDuration: value.autoDuration,
     ...numbers(value, JET_NUMBERS, path),
     engine: {
       pressureRatio: number(engine.pressureRatio, 'pressureRatio', `${path}.engine.pressureRatio`),
