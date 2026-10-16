@@ -64,7 +64,8 @@ function amplitudes(emitter, scene) {
 function wavefrontSources(emitter, scene, placedPoint, candidates) {
   cachedTracks(emitter, scene).forEach((path, member) => {
     const every = Math.max(1, Math.ceil(path.seconds.length / VIEW.wavefront.flightFronts));
-    for (let index = 0; index < path.seconds.length; index += every) candidates.push({ point: { x: path.x[index], y: path.y[index], z: path.z[index] }, emitted: path.seconds[index], group: `${emitter.id}:${member}` });
+    const spacingSeconds = every * path.step;
+    for (let index = 0; index < path.seconds.length; index += every) candidates.push({ point: { x: path.x[index], y: path.y[index], z: path.z[index] }, emitted: path.seconds[index], group: `${emitter.id}:${member}`, spacingSeconds });
   });
 }
 
