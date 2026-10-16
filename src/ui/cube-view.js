@@ -1,99 +1,14 @@
-import { FIREWORKS, RENDER, STANDARD_GRAVITY_METRES_PER_SECOND_SQUARED, VIEW } from '../domain/constants.js';
-import { airDensityKilogramsPerCubicMetre } from '../domain/air.js';
-import { emissionSeconds } from '../domain/lightning.js';
-import { createRandom } from '../domain/random.js';
-import { grazingRange, inShadow, pathProfile, soundSpeedProfile } from '../domain/refraction.js';
-import { meanPlaneFrame } from '../domain/terrain-propagation.js';
+import { VIEW } from '../domain/constants.js';
 import { fitCanvas, formatMetres, niceStep, palette } from './canvas.js';
-import { cachedFlashes, cachedRounds, cachedTracks, currentSurface, isFieldKind, isTrackKind, useTerrain } from './geometry-cache.js';
+import { cachedTracks, currentSurface, isTrackKind } from './geometry-cache.js';
 
-const DISC_POINTS = 64;
-
-const OUTLINE_STEPS = 48;
-const OUTLINE_DIRECTIONS = Object.freeze(Array.from({ length: OUTLINE_STEPS }, (_, step) => {
-  const angle = 2 * Math.PI * step / OUTLINE_STEPS;
-  return Object.freeze({ cos: Math.cos(angle), sin: Math.sin(angle) });
-}));
 const TERRAIN_LIGHT = (() => { const { x, y, z } = VIEW.terrain.light; const length = Math.hypot(x, y, z); return { x: x / length, y: y / length, z: z / length }; })();
 const LABEL_PRIORITY = Object.freeze({ city: 0, town: 1, village: 2, peak: 3, water: 4, hamlet: 5, locality: 6 });
-const TERRAIN_RIPPLE_ITERATIONS = 14;
 
-function outerCircles(circles) {
-  const kept = [];
-  for (const circle of [...circles].sort((a, b) => b.radius - a.radius)) {
-    if (!kept.some(other => Math.hypot(circle.u - other.u, circle.v - other.v) + circle.radius <= other.radius)) kept.push(circle);
-  }
-  return kept;
-}
-
-function unionArcs(circles) {
-  const arcs = [];
-  for (const circle of circles) {
-    const covered = [];
-    for (const other of circles) {
-      if (other === circle) continue;
-      const distance = Math.hypot(other.u - circle.u, other.v - circle.v);
-      if (distance >= circle.radius + other.radius || distance <= Math.abs(circle.radius - other.radius)) continue;
-      const toward = Math.atan2(other.v - circle.v, other.u - circle.u);
-      const half = Math.acos((circle.radius ** 2 + distance ** 2 - other.radius ** 2) / (2 * circle.radius * distance));
-      const from = ((toward - half) % (2 * Math.PI) + 2 * Math.PI) % (2 * Math.PI);
-      if (from + 2 * half > 2 * Math.PI) covered.push([from, 2 * Math.PI], [0, from + 2 * half - 2 * Math.PI]);
-      else covered.push([from, from + 2 * half]);
-    }
-    covered.sort((x, y) => x[0] - y[0]);
-    let at = 0;
-    for (const [from, to] of covered) {
-      if (from > at) arcs.push([circle, at, from]);
-      at = Math.max(at, to);
-    }
-    if (at < 2 * Math.PI) arcs.push([circle, at, 2 * Math.PI]);
-  }
-  return arcs;
-}
-
-const emptyBounds = () => ({ x0: Infinity, y0: Infinity, x1: -Infinity, y1: -Infinity });
-
-/** Not closePath: in Chrome it takes time in proportion to the path's earlier polygons. Strokes need round caps to look closed. */
-function addPolygon(path, points, bounds) {
-  if (!points.length) return;
-  path.moveTo(points[0].x, points[0].y);
-  for (let index = 1; index < points.length; index += 1) path.lineTo(points[index].x, points[index].y);
-  path.lineTo(points[0].x, points[0].y);
-  if (bounds) {
-    for (const { x, y } of points) {
-      if (x < bounds.x0) bounds.x0 = x;
-      if (x > bounds.x1) bounds.x1 = x;
-      if (y < bounds.y0) bounds.y0 = y;
-      if (y > bounds.y1) bounds.y1 = y;
-    }
-  }
-}
-
-const flashPoints = new WeakMap();
-const channelPaths = new WeakMap();
 const extents = new WeakMap();
-const soundTravel = new WeakMap();
-const listIds = new WeakMap();
-let nextListId = 0;
-
-function pointsKey(lists) {
-  return lists.map(list => {
-    if (list.length === 1) return `${list[0].x},${list[0].y},${list[0].z}`;
-    if (!listIds.has(list)) listIds.set(list, nextListId += 1);
-    return `#${listIds.get(list)}`;
-  }).join(';');
-}
-
-function emitterPoints(emitter) {
-  if (emitter.kind === 'blast') return [placed(emitter.positionMetres)];
-  const flashes = cachedFlashes(emitter);
-  if (!flashPoints.has(flashes)) flashPoints.set(flashes, flashes.flatMap(flash => flash.channels.flatMap(channel => channel.points)));
-  return flashPoints.get(flashes);
-}
 
 const ground = (x, y) => currentSurface().heightAt(x, y);
 const placed = point => ({ ...point, z: ground(point.x, point.y) + point.z });
-const channelBase = emitter => (emitter.flashType === 'cloud-to-ground' ? placed(emitter.baseMetres) : emitter.baseMetres);
 
 function facingTip(receiver, box) {
   const length = Math.max(box.x1 - box.x0, box.y1 - box.y0) * VIEW.box.facingLengthShare;
@@ -108,30 +23,12 @@ function facingTip(receiver, box) {
 function handles(scene, box) {
   const list = [];
   for (const emitter of scene.emitters) {
-    if (isTrackKind(emitter)) {
-      const start = emitter.kind === 'booster' ? placed(emitter.padMetres) : emitter.kind === 'whip' ? placed(emitter.startMetres) : emitter.startMetres;
-      if (emitter.kind === 'booster') list.push({ type: 'emitter', id: emitter.id, field: 'padMetres', point: start, onGround: true, role: 'start' });
-      else list.push({ type: 'emitter', id: emitter.id, field: 'startMetres', point: start, role: 'start' });
-      const reach = box ? Math.max(box.x1 - box.x0, box.y1 - box.y0) * VIEW.box.facingLengthShare : 1000;
-      const heading = emitter.headingDegrees * Math.PI / 180;
-      list.push({ type: 'emitter', id: emitter.id, field: 'flightHeading', point: { x: start.x + reach * Math.sin(heading), y: start.y + reach * Math.cos(heading), z: start.z }, role: 'end', ownPlaneOnly: true });
-      continue;
-    }
-    if (emitter.kind === 'blast') list.push({ type: 'emitter', id: emitter.id, field: 'positionMetres', point: placed(emitter.positionMetres), role: 'source' });
-    else if (isFieldKind(emitter)) {
-      list.push({ type: 'emitter', id: emitter.id, field: 'centreMetres', point: placed(emitter.centreMetres), onGround: true, role: 'start' });
-      list.push({ type: 'emitter', id: emitter.id, field: 'radiusMetres', point: placed({ x: emitter.centreMetres.x + emitter.radiusMetres, y: emitter.centreMetres.y, z: 0 }), onGround: true, role: 'radius' });
-    } else if (emitter.kind === 'storm') {
-      list.push({ type: 'emitter', id: emitter.id, field: 'centreMetres', point: placed(emitter.centreMetres), onGround: true, role: 'start' });
-      list.push({ type: 'emitter', id: emitter.id, field: 'radiusMetres', point: placed({ x: emitter.centreMetres.x + emitter.radiusMetres, y: emitter.centreMetres.y, z: 0 }), onGround: true, role: 'radius' });
-      for (const field of ['cloudBaseMetres', 'cloudTopMetres']) {
-        list.push({ type: 'emitter', id: emitter.id, field, point: { x: emitter.centreMetres.x - emitter.radiusMetres, y: emitter.centreMetres.y, z: emitter[field] }, role: 'level', verticalOnly: true, ownPlaneOnly: true });
-      }
-    }
-    else {
-      list.push({ type: 'emitter', id: emitter.id, field: 'baseMetres', point: channelBase(emitter), onGround: emitter.flashType === 'cloud-to-ground', role: 'start' });
-      list.push({ type: 'emitter', id: emitter.id, field: 'topMetres', point: emitter.topMetres, role: 'end' });
-    }
+    if (!isTrackKind(emitter)) continue;
+    const start = emitter.startMetres;
+    list.push({ type: 'emitter', id: emitter.id, field: 'startMetres', point: start, role: 'start' });
+    const reach = box ? Math.max(box.x1 - box.x0, box.y1 - box.y0) * VIEW.box.facingLengthShare : 1000;
+    const heading = emitter.headingDegrees * Math.PI / 180;
+    list.push({ type: 'emitter', id: emitter.id, field: 'flightHeading', point: { x: start.x + reach * Math.sin(heading), y: start.y + reach * Math.cos(heading), z: start.z }, role: 'end', ownPlaneOnly: true });
   }
   for (const receiver of scene.receivers) {
     list.push({ type: 'receiver', id: receiver.id, field: 'positionMetres', point: placed(receiver.positionMetres), role: 'receiver', listening: receiver.listen });
@@ -142,43 +39,18 @@ function handles(scene, box) {
   return list;
 }
 
-function flicker(seed, elapsed) {
-  const level = knot => {
-    if (knot <= 0) return 1;
-    let value = Math.imul((seed >>> 0) ^ Math.imul(knot, 0x9e3779b1), 0x85ebca6b) >>> 0;
-    value = Math.imul(value ^ (value >>> 13), 0xc2b2ae35) >>> 0;
-    return .35 + .65 * ((value ^ (value >>> 16)) >>> 0) / 4294967296;
-  };
-  const position = Math.max(0, elapsed) / VIEW.flash.flickerSeconds;
-  const knot = Math.floor(position);
-  const t = position - knot;
-  const eased = t * t * (3 - 2 * t);
-  return level(knot) + (level(knot + 1) - level(knot)) * eased;
-}
-
-function frontArc(step, elapsed, routeLength) {
-  return step.fromArc + elapsed / VIEW.flash.traverseSeconds * routeLength - step.offsetMetres;
-}
-
-export function createCubeView(canvas, { onSelect, onMove, onCommit, onView, onViewChange, focus, contours = () => false, names = () => false, clouds = () => false, map = () => false, mapTiles: loadMapTiles = () => [] }) {
+export function createCubeView(canvas, { onSelect, onMove, onCommit, onView, onViewChange, focus, contours = () => false, names = () => false, map = () => false, mapTiles: loadMapTiles = () => [] }) {
   let scene = null;
   let selection = null;
   let view = { ...VIEW.box.defaultView };
   let frame = null;
   let drag = null;
   let animation = null;
-  let scratch = null;
   let held = false;
   let lastBox = null;
   let terrainLayer = null;
   let terrainMeshCache = null;
-  let rippleLayer = null;
-  let terrainBoundary = null;
   let relief = null;
-  let shadowOutline = null;
-  let shadowLayer = null;
-  const cloudLayers = new Map();
-  let cloudLight = null;
 
   function sceneBox() {
     let minX = Infinity; let maxX = -Infinity; let minY = Infinity; let maxY = -Infinity; let maxZ = 0;
@@ -203,7 +75,6 @@ export function createCubeView(canvas, { onSelect, onMove, onCommit, onView, onV
       include({ x: extent.maxX, y: extent.maxY, z: extent.maxZ });
     };
     for (const emitter of scene.emitters) {
-      if (emitter.kind === 'blast') { include(placed(emitter.positionMetres)); continue; }
       if (isTrackKind(emitter)) {
         const paths = cachedTracks(emitter, scene.air);
         includeExtent(paths, () => {
@@ -214,28 +85,11 @@ export function createCubeView(canvas, { onSelect, onMove, onCommit, onView, onV
           }
           return points;
         });
-        continue;
       }
-      if (isFieldKind(emitter)) {
-        const { x, y } = emitter.centreMetres;
-        include({ x: x - emitter.radiusMetres, y: y - emitter.radiusMetres, z: 0 });
-        include({ x: x + emitter.radiusMetres, y: y + emitter.radiusMetres, z: 0 });
-        cachedRounds(emitter, scene.air).forEach(round => include(placed(round.positionMetres)));
-        continue;
-      }
-      if (emitter.kind === 'storm') {
-        const { x, y } = emitter.centreMetres;
-        const r = emitter.radiusMetres;
-        include({ x: x - r, y: y - r, z: emitter.cloudTopMetres });
-        include({ x: x + r, y: y + r, z: 0 });
-      }
-      const flashes = cachedFlashes(emitter);
-      includeExtent(flashes, () => flashes.flatMap(flash => flash.channels.flatMap(channel => channel.points)));
     }
     scene.receivers.forEach(receiver => include(placed(receiver.positionMetres)));
     const surface = currentSurface();
-    const enabled = scene.emitters.filter(emitter => emitter.enabled);
-    const span = enabled.length && enabled.every(emitter => emitter.kind === 'whip') ? VIEW.box.closeSpanMetres : VIEW.box.minimumSpanMetres;
+    const span = VIEW.box.minimumSpanMetres;
     const pad = Math.max(span, maxX - minX, maxY - minY, maxZ) * VIEW.box.padding;
     const grow = (low, high) => {
       const half = Math.max(high - low, span) / 2 + pad;
@@ -419,207 +273,6 @@ export function createCubeView(canvas, { onSelect, onMove, onCommit, onView, onV
     label('N', { x: nearX, y: box.y1, z: box.z0 }, 6, 24);
   }
 
-  function strokePoints(context, points, toScreen = frame.project) {
-    context.beginPath();
-    for (let index = 0; index < points.length; index += 1) {
-      const p = toScreen(points[index]);
-      if (index) context.lineTo(p.x, p.y); else context.moveTo(p.x, p.y);
-    }
-    context.stroke();
-  }
-
-  function shadowProjectors() {
-    const onWall = (fixed, value, [u, v]) => {
-      const at = (a, b) => frame.project({ [fixed]: value, [u]: a, [v]: b });
-      const origin = at(0, 0); const alongU = at(1, 0); const alongV = at(0, 1);
-      const ux = alongU.x - origin.x; const uy = alongU.y - origin.y;
-      const vx = alongV.x - origin.x; const vy = alongV.y - origin.y;
-      return point => ({ x: origin.x + point[u] * ux + point[v] * vx, y: origin.y + point[u] * uy + point[v] * vy });
-    };
-    return [
-      point => frame.project({ x: point.x, y: point.y, z: ground(point.x, point.y) }),
-      onWall('x', frame.farX, ['y', 'z']),
-      onWall('y', frame.farY, ['x', 'z'])
-    ];
-  }
-
-  function pointsUpTo(channel, fromArc, toArc) {
-    const result = [];
-    const { points, arcs } = channel;
-    for (let index = 0; index < points.length; index += 1) {
-      if (arcs[index] < fromArc) continue;
-      if (arcs[index] > toArc) {
-        if (index > 0 && arcs[index - 1] < toArc) {
-          const a = points[index - 1]; const b = points[index];
-          const t = (toArc - arcs[index - 1]) / (arcs[index] - arcs[index - 1]);
-          result.push({ x: a.x + (b.x - a.x) * t, y: a.y + (b.y - a.y) * t, z: a.z + (b.z - a.z) * t });
-        }
-        break;
-      }
-      result.push(points[index]);
-    }
-    return result;
-  }
-
-  function drawChannels(context, emitter, colors, selected, strokes) {
-    const shadows = shadowProjectors();
-    const flashes = cachedFlashes(emitter);
-    context.lineJoin = 'round';
-    let paths = channelPaths.get(flashes);
-    if (paths?.key !== frame.key) {
-      const shadowPath = new Path2D();
-      const styles = new Map();
-      const addLine = (path, points, toScreen) => points.forEach((point, index) => {
-        const p = toScreen(point);
-        if (index) path.lineTo(p.x, p.y); else path.moveTo(p.x, p.y);
-      });
-      for (const flash of flashes) {
-        for (const channel of flash.channels) {
-          if (channel.main) shadows.forEach(shadow => addLine(shadowPath, channel.points, shadow));
-          const style = channel.main ? 'main' : channel.level;
-          if (!styles.has(style)) styles.set(style, { main: channel.main, level: channel.level, path: new Path2D() });
-          addLine(styles.get(style).path, channel.points, frame.project);
-        }
-      }
-      paths = { key: frame.key, shadowPath, styles: [...styles.values()] };
-      channelPaths.set(flashes, paths);
-    }
-    const alpha = context.globalAlpha;
-    context.strokeStyle = colors.shadow;
-    context.lineWidth = .6;
-    context.stroke(paths.shadowPath);
-    context.strokeStyle = colors.lightning;
-    for (const { main, level, path } of paths.styles) {
-      context.globalAlpha = alpha * (main ? 1 : Math.max(.35, .8 - .2 * level));
-      context.lineWidth = main ? (selected ? 1.6 : 1.1) : Math.max(.4, .8 - .15 * level);
-      context.stroke(path);
-    }
-    context.globalAlpha = alpha;
-    for (const stroke of strokes ?? []) {
-      const flash = flashes[stroke.flash];
-      if (!flash) continue;
-      const routeLength = Math.max(...stroke.route.map(step => step.offsetMetres + flash.channels[step.channel].arcs.at(-1) - step.fromArc));
-      const fade = stroke.elapsed > VIEW.flash.traverseSeconds ? Math.exp(-(stroke.elapsed - VIEW.flash.traverseSeconds) / VIEW.flash.fadeSeconds) : 1;
-      context.shadowColor = colors.glow;
-      context.strokeStyle = colors.flash;
-      for (const step of stroke.route) {
-        const channel = flash.channels[step.channel];
-        const reached = frontArc(step, stroke.elapsed, routeLength);
-        if (reached <= step.fromArc) continue;
-        const lit = pointsUpTo(channel, step.fromArc, reached);
-        if (lit.length < 2) continue;
-        context.globalAlpha = fade;
-        context.shadowBlur = 18 * fade;
-        context.lineWidth = channel.main ? 2.6 : 1.3;
-        strokePoints(context, lit);
-        context.shadowBlur = 0;
-        context.globalAlpha = .35 * fade;
-        context.lineWidth = channel.main ? 1.2 : .6;
-        shadows.forEach(shadow => strokePoints(context, lit, shadow));
-      }
-      context.globalAlpha = emitter.enabled ? 1 : .35;
-    }
-  }
-
-  function drawSoundGlow(context, emitter, colors, sound) {
-    const levels = [[], [], [], []];
-    const { seconds, travelSeconds, key } = sound;
-    const travel = channel => {
-      const kept = soundTravel.get(channel);
-      if (kept?.key === key) return kept.seconds;
-      const values = Float64Array.from(channel.points, travelSeconds);
-      soundTravel.set(channel, { key, seconds: values });
-      return values;
-    };
-    const glow = arrival => {
-      const age = seconds - arrival;
-      return age >= 0 && age < VIEW.soundGlowSeconds ? 1 - age / VIEW.soundGlowSeconds : 0;
-    };
-    for (const flash of cachedFlashes(emitter)) {
-      for (const stroke of flash.strokes) {
-        if (seconds < flash.startSeconds + stroke.offsetSeconds) continue;
-        for (const step of stroke.route) {
-          const channel = flash.channels[step.channel];
-          const travelled = travel(channel);
-          let previous = null;
-          channel.points.forEach((point, index) => {
-            const arc = channel.arcs[index];
-            if (arc < step.fromArc) return;
-            const level = glow(emissionSeconds(flash, stroke, step, arc) + travelled[index]);
-            if (previous && level > .02) levels[Math.min(3, Math.floor(level * 4))].push(previous, point);
-            previous = point;
-          });
-        }
-      }
-    }
-    context.strokeStyle = colors.flash;
-    context.shadowColor = colors.glow;
-    levels.forEach((pairs, level) => {
-      if (!pairs.length) return;
-      context.globalAlpha = (level + 1) / 4;
-      context.shadowBlur = 6 + 4 * level;
-      context.lineWidth = 1.2 + .6 * level;
-      context.beginPath();
-      for (let index = 0; index < pairs.length; index += 2) {
-        const a = frame.project(pairs[index]);
-        const b = frame.project(pairs[index + 1]);
-        context.moveTo(a.x, a.y);
-        context.lineTo(b.x, b.y);
-      }
-      context.stroke();
-    });
-    context.shadowBlur = 0;
-    context.globalAlpha = 1;
-  }
-
-  /** The cut also strokes every edge: where two edges nearly coincide the coverage stays below one and leaves a seam. */
-  function unionOutline(context, path, color, { fillAlpha, edgeAlpha, bounds }) {
-    scratch ??= document.createElement('canvas');
-    if (scratch.width !== canvas.width || scratch.height !== canvas.height) {
-      scratch.width = canvas.width;
-      scratch.height = canvas.height;
-    }
-    const transform = context.getTransform();
-    const reach = (VIEW.box.outlinePixels * 2 + VIEW.box.seamPixels) * transform.a + 2;
-    const x0 = Math.max(0, Math.floor(bounds.x0 * transform.a + transform.e - reach));
-    const y0 = Math.max(0, Math.floor(bounds.y0 * transform.d + transform.f - reach));
-    const x1 = Math.min(scratch.width, Math.ceil(bounds.x1 * transform.a + transform.e + reach));
-    const y1 = Math.min(scratch.height, Math.ceil(bounds.y1 * transform.d + transform.f + reach));
-    if (!(x1 > x0 && y1 > y0)) return;
-    const layer = scratch.getContext('2d');
-    layer.setTransform(1, 0, 0, 1, 0, 0);
-    layer.clearRect(x0, y0, x1 - x0, y1 - y0);
-    layer.setTransform(transform);
-    layer.lineJoin = 'round';
-    layer.lineCap = 'round';
-    layer.lineWidth = VIEW.box.outlinePixels * 2 + VIEW.box.seamPixels;
-    layer.strokeStyle = color;
-    layer.stroke(path);
-    layer.globalCompositeOperation = 'destination-out';
-    layer.fill(path);
-    layer.lineWidth = VIEW.box.seamPixels;
-    layer.stroke(path);
-    layer.globalCompositeOperation = 'source-over';
-    if (fillAlpha) {
-      context.globalAlpha = fillAlpha;
-      context.fillStyle = color;
-      context.fill(path);
-    }
-    context.save();
-    context.setTransform(1, 0, 0, 1, 0, 0);
-    context.globalAlpha = edgeAlpha;
-    context.drawImage(scratch, x0, y0, x1 - x0, y1 - y0, x0, y0, x1 - x0, y1 - y0);
-    context.restore();
-    context.globalAlpha = 1;
-  }
-
-  function floorPath() {
-    const { box } = frame;
-    const path = new Path2D();
-    addPolygon(path, [{ x: box.x0, y: box.y0, z: 0 }, { x: box.x1, y: box.y0, z: 0 }, { x: box.x1, y: box.y1, z: 0 }, { x: box.x0, y: box.y1, z: 0 }].map(frame.project));
-    return path;
-  }
-
   function mixColors(a, b, t) {
     return a.map((value, index) => Math.round(value + (b[index] - value) * t));
   }
@@ -801,245 +454,7 @@ export function createCubeView(canvas, { onSelect, onMove, onCommit, onView, onV
       return receiver ? [placed(receiver.positionMetres)] : [];
     }
     const emitter = selection?.type === 'emitter' ? scene.emitters.find(item => item.id === selection.id) : null;
-    if (!emitter || emitter.kind === 'storm' || isFieldKind(emitter)) return [];
-    if (emitter.kind === 'booster') return [placed(emitter.padMetres)];
-    if (isTrackKind(emitter)) return [emitter.startMetres];
-    return emitter.kind === 'blast' ? [placed(emitter.positionMetres)] : [channelBase(emitter), emitter.topMetres];
-  }
-
-  function drawShadowBoundary(context, colors) {
-    const profile = soundSpeedProfile(scene.air);
-    const receiver = focus?.();
-    const leastGradient = profile.gradient - (profile.shear ? Math.hypot(profile.shear.x, profile.shear.y) : 0);
-    if (!(leastGradient < 0) || !receiver) return;
-    const chosen = selection?.type === 'emitter' ? scene.emitters.filter(emitter => emitter.id === selection.id) : scene.emitters.filter(emitter => emitter.enabled);
-    const pointSets = chosen.map(emitterPoints);
-    const points = pointSets.flat();
-    if (!points.length) return;
-    const key = `${pointsKey(pointSets)}|${JSON.stringify(scene.air)}|${receiver.positionMetres.z}`;
-    if (!currentSurface().flat) {
-      drawTerrainShadowBoundary(context, colors, profile, points, receiver.positionMetres.z, key);
-      return;
-    }
-    if (shadowOutline?.key !== key) {
-      const stride = Math.ceil(points.length / VIEW.shadowBoundary.points);
-      const height = receiver.positionMetres.z;
-      const rings = [];
-      for (let index = 0; index < points.length; index += stride) {
-        const point = points[index];
-        rings.push(OUTLINE_DIRECTIONS.map(({ cos, sin }) => {
-          const along = pathProfile(profile, point, { x: point.x + cos, y: point.y + sin, z: height });
-          const radius = Math.min(2 * RENDER.sceneExtentMetres, grazingRange(along, point.z) + grazingRange(along, height));
-          return { x: point.x + radius * cos, y: point.y + radius * sin };
-        }));
-      }
-      shadowOutline = { key, rings };
-    }
-    const layerKey = `${frame.key}|${canvas.width}|${canvas.height}|${colors.muted}`;
-    if (shadowOutline.layerKey !== layerKey) {
-      const origin = frame.project({ x: 0, y: 0, z: 0 });
-      const east = frame.project({ x: 1, y: 0, z: 0 });
-      const north = frame.project({ x: 0, y: 1, z: 0 });
-      const toScreen = ({ x, y }) => ({ x: origin.x + x * (east.x - origin.x) + y * (north.x - origin.x), y: origin.y + x * (east.y - origin.y) + y * (north.y - origin.y) });
-      const path = new Path2D();
-      const bounds = emptyBounds();
-      for (const ring of shadowOutline.rings) addPolygon(path, ring.map(toScreen), bounds);
-      shadowLayer = sized(shadowLayer);
-      const paint = shadowLayer.getContext('2d');
-      paint.setTransform(context.getTransform());
-      paint.save();
-      paint.clip(floorPath());
-      unionOutline(paint, path, colors.muted, { fillAlpha: 0, edgeAlpha: VIEW.shadowBoundary.edgeAlpha, bounds });
-      paint.restore();
-      shadowOutline.layerKey = layerKey;
-    }
-    context.save();
-    context.setTransform(1, 0, 0, 1, 0, 0);
-    context.drawImage(shadowLayer, 0, 0);
-    context.restore();
-  }
-
-  function drawTerrainShadowBoundary(context, colors, profile, points, heightAboveGround, sourcesKey) {
-    const { box } = frame;
-    const surface = currentSurface();
-    const key = [sourcesKey, box.x0, box.x1, box.y0, box.y1].join('|');
-    if (terrainBoundary?.key !== key || terrainBoundary.surface !== surface) {
-      const stride = Math.ceil(points.length / VIEW.shadowBoundary.terrainSources);
-      const sampled = points.filter((_, index) => index % stride === 0);
-      const lit = new Uint8Array(VIEW.shadowBoundary.terrainCells * VIEW.shadowBoundary.terrainCells);
-      const width = (box.x1 - box.x0) / VIEW.shadowBoundary.terrainCells;
-      const depth = (box.y1 - box.y0) / VIEW.shadowBoundary.terrainCells;
-      for (let row = 0; row < VIEW.shadowBoundary.terrainCells; row += 1) {
-        for (let column = 0; column < VIEW.shadowBoundary.terrainCells; column += 1) {
-          const x = box.x0 + (column + .5) * width;
-          const y = box.y0 + (row + .5) * depth;
-          const receiver = { x, y, z: ground(x, y) + heightAboveGround };
-          lit[row * VIEW.shadowBoundary.terrainCells + column] = sampled.some(point => {
-            const plane = meanPlaneFrame(pathProfile(profile, point, receiver), ground, point, receiver, VIEW.shadowBoundary.planeSamples);
-            return !inShadow(plane.profile, plane.from, plane.to);
-          }) ? 1 : 0;
-        }
-      }
-      terrainBoundary = { key, surface, lit, width, depth };
-    }
-    const { lit, width, depth } = terrainBoundary;
-    if (lit.every(Boolean)) return;
-    const path = new Path2D();
-    const bounds = emptyBounds();
-    for (let row = 0; row < VIEW.shadowBoundary.terrainCells; row += 1) {
-      for (let column = 0; column < VIEW.shadowBoundary.terrainCells; column += 1) {
-        if (!lit[row * VIEW.shadowBoundary.terrainCells + column]) continue;
-        const x0 = box.x0 + column * width;
-        const y0 = box.y0 + row * depth;
-        addPolygon(path, [[x0, y0], [x0 + width, y0], [x0 + width, y0 + depth], [x0, y0 + depth]].map(([x, y]) => frame.project({ x, y, z: ground(x, y) })), bounds);
-      }
-    }
-    unionOutline(context, path, colors.muted, { fillAlpha: 0, edgeAlpha: VIEW.shadowBoundary.edgeAlpha, bounds });
-  }
-
-  function drawWavefronts(context, colors, { profile, spheres, total }) {
-    // A flash is dropped whole: dropping a single sphere would uncover the edges it hides.
-    const { box } = frame;
-    const innermost = (VIEW.wavefront.rippleAlphas.length - 1) * rippleSpacing();
-    const terrain = currentSurface().bounds;
-    const bounds = terrain ? { x0: Math.min(box.x0, terrain.west), x1: Math.max(box.x1, terrain.east), y0: Math.min(box.y0, terrain.south), y1: Math.max(box.y1, terrain.north) } : box;
-    const terrainStride = Math.max(1, Math.ceil(total / VIEW.wavefront.terrainSpheres));
-    const groups = new Map();
-    const passed = new Set();
-    for (const sphere of spheres) {
-      const { centre, radiusMetres } = sphere;
-      const farthest = Math.hypot(Math.max(centre.x - bounds.x0, bounds.x1 - centre.x), Math.max(centre.y - bounds.y0, bounds.y1 - centre.y), Math.max(centre.z - box.z0, box.z1 - centre.z));
-      if (radiusMetres - innermost > farthest) passed.add(sphere.group);
-      if (!groups.has(sphere.group)) groups.set(sphere.group, []);
-      groups.get(sphere.group).push(sphere);
-    }
-    for (const group of passed) groups.delete(group);
-    const strength = group => Math.max(0, ...group.map(sphere => sphere.strength ?? 1));
-    const drawn = [...groups.values()].sort((a, b) => strength(b) - strength(a)).slice(0, VIEW.wavefront.groups);
-    for (const group of drawn) drawFronts(context, colors, profile, group, terrainStride);
-  }
-
-  const rippleSpacing = () => Math.max(frame.box.x1 - frame.box.x0, frame.box.y1 - frame.box.y0, frame.box.z1) * VIEW.wavefront.rippleSpacingShare;
-
-  function drawFronts(context, colors, profile, spheres, terrainStride) {
-    const strength = Math.max(0, ...spheres.map(sphere => sphere.strength ?? 1));
-    if (!(strength > 0)) return;
-    const { box, farX, farY } = frame;
-    const faces = [
-      ...(currentSurface().flat ? [{ fixed: 'z', value: 0, axes: ['x', 'y'], corners: [[box.x0, box.y0], [box.x1, box.y0], [box.x1, box.y1], [box.x0, box.y1]] }] : []),
-      { fixed: 'x', value: farX, axes: ['y', 'z'], corners: [[box.y0, 0], [box.y1, 0], [box.y1, box.z1], [box.y0, box.z1]] },
-      { fixed: 'y', value: farY, axes: ['x', 'z'], corners: [[box.x0, 0], [box.x1, 0], [box.x1, box.z1], [box.x0, box.z1]] }
-    ];
-    const spacing = rippleSpacing();
-    if (!currentSurface().flat) drawTerrainRipples(context, colors, spheres.filter(sphere => sphere.order % terrainStride === 0), spacing, strength);
-    for (const face of faces) {
-      const [u, v] = face.axes;
-      const at = (a, b) => frame.project({ [face.fixed]: face.value, [u]: a, [v]: b });
-      const origin = at(0, 0);
-      const alongU = at(1, 0);
-      const alongV = at(0, 1);
-      const ux = alongU.x - origin.x; const uy = alongU.y - origin.y;
-      const vx = alongV.x - origin.x; const vy = alongV.y - origin.y;
-      const place = (a, b) => ({ x: origin.x + a * ux + b * vx, y: origin.y + a * uy + b * vy });
-      const outline = new Path2D();
-      addPolygon(outline, face.corners.map(([a, b]) => place(a, b)));
-      context.save();
-      context.clip(outline);
-      VIEW.wavefront.rippleAlphas.forEach((alpha, ring) => {
-        if (alpha * strength < VIEW.wavefront.visibleAlpha) return;
-        const parts = [{ circles: [], alpha: alpha * strength }, { circles: [], alpha: alpha * strength * VIEW.wavefront.shadowShare }];
-        for (const { source, centre, radiusMetres } of spheres) {
-          const sphere = radiusMetres - ring * spacing;
-          const offset = face.value - centre[face.fixed];
-          if (!(sphere > Math.abs(offset))) continue;
-          const radius = Math.sqrt(sphere ** 2 - offset ** 2);
-          if (!(radius > 0)) continue;
-          parts[face.fixed === 'z' && profile.gradient < 0 && radius > grazingRange(profile, source.z) ? 1 : 0].circles.push({ u: centre[u], v: centre[v], radius });
-        }
-        for (const part of parts) {
-          if (!part.circles.length || part.alpha < VIEW.wavefront.visibleAlpha) continue;
-          if (part.circles.some(circle => face.corners.every(([a, b]) => Math.hypot(a - circle.u, b - circle.v) <= circle.radius))) continue;
-          strokeUnion(context, outerCircles(part.circles), [ux, uy, vx, vy, origin.x, origin.y], colors.glow, part.alpha);
-        }
-      });
-      context.restore();
-    }
-  }
-
-  function strokeUnion(context, circles, mapping, color, alpha) {
-    context.save();
-    context.transform(...mapping);
-    context.beginPath();
-    for (const [{ u, v, radius }, from, to] of unionArcs(circles)) {
-      context.moveTo(u + radius * Math.cos(from), v + radius * Math.sin(from));
-      context.arc(u, v, radius, from, to);
-    }
-    context.restore();
-    context.lineWidth = VIEW.box.outlinePixels;
-    context.lineCap = 'round';
-    context.strokeStyle = color;
-    context.globalAlpha = alpha;
-    context.stroke();
-    context.globalAlpha = 1;
-  }
-
-  function drawTerrainRipples(context, colors, spheres, spacing, strength = 1) {
-    const rings = VIEW.wavefront.rippleAlphas.map((alpha, ring) => {
-      if (alpha * strength < VIEW.wavefront.visibleAlpha) return null;
-      const path = new Path2D();
-      const bounds = emptyBounds();
-      let any = false;
-      for (const { centre, radiusMetres } of spheres) {
-        const radius = radiusMetres - ring * spacing;
-        if (!(radius > 0)) continue;
-        const points = [];
-        for (const { cos, sin } of OUTLINE_DIRECTIONS) {
-          const excess = distance => distance * distance + (ground(centre.x + distance * cos, centre.y + distance * sin) - centre.z) ** 2 - radius * radius;
-          if (excess(0) > 0) continue;
-          let low = 0;
-          let high = radius;
-          for (let iteration = 0; iteration < TERRAIN_RIPPLE_ITERATIONS; iteration += 1) {
-            const middle = (low + high) / 2;
-            if (excess(middle) > 0) high = middle; else low = middle;
-          }
-          const distance = (low + high) / 2;
-          const x = centre.x + distance * cos;
-          const y = centre.y + distance * sin;
-          points.push(frame.project({ x, y, z: ground(x, y) }));
-        }
-        if (points.length < OUTLINE_STEPS) continue;
-        any = true;
-        addPolygon(path, points, bounds);
-      }
-      return any ? { path, bounds, alpha } : null;
-    }).filter(Boolean);
-    if (!rings.length) return;
-    const ratio = window.devicePixelRatio || 1;
-    const area = rings.reduce((all, { bounds }) => ({ x0: Math.min(all.x0, bounds.x0), y0: Math.min(all.y0, bounds.y0), x1: Math.max(all.x1, bounds.x1), y1: Math.max(all.y1, bounds.y1) }), emptyBounds());
-    const reach = (VIEW.box.outlinePixels * 2 + VIEW.box.seamPixels) * ratio + 2;
-    const x0 = Math.max(0, Math.floor(area.x0 * ratio - reach));
-    const y0 = Math.max(0, Math.floor(area.y0 * ratio - reach));
-    const width = Math.min(canvas.width, Math.ceil(area.x1 * ratio + reach)) - x0;
-    const height = Math.min(canvas.height, Math.ceil(area.y1 * ratio + reach)) - y0;
-    if (!(width > 0 && height > 0)) return;
-    rippleLayer ??= document.createElement('canvas');
-    if (rippleLayer.width !== canvas.width || rippleLayer.height !== canvas.height) {
-      rippleLayer.width = canvas.width;
-      rippleLayer.height = canvas.height;
-    }
-    const paint = rippleLayer.getContext('2d');
-    paint.setTransform(1, 0, 0, 1, 0, 0);
-    paint.globalCompositeOperation = 'source-over';
-    paint.clearRect(x0, y0, width, height);
-    paint.setTransform(ratio, 0, 0, ratio, 0, 0);
-    for (const { path, bounds, alpha } of rings) unionOutline(paint, path, colors.glow, { fillAlpha: 0, edgeAlpha: alpha * strength, bounds });
-    paint.setTransform(1, 0, 0, 1, 0, 0);
-    paint.globalCompositeOperation = 'destination-in';
-    paint.drawImage(terrainLayers(colors).layers[2], x0, y0, width, height, x0, y0, width, height);
-    context.save();
-    context.setTransform(1, 0, 0, 1, 0, 0);
-    context.drawImage(rippleLayer, x0, y0, width, height, x0, y0, width, height);
-    context.restore();
+    return emitter && isTrackKind(emitter) ? [emitter.startMetres] : [];
   }
 
   function drawProjectionLines(context, colors, point) {
@@ -1061,205 +476,6 @@ export function createCubeView(canvas, { onSelect, onMove, onCommit, onView, onV
     context.restore();
   }
 
-  function drawStorm(context, emitter, colors, selected) {
-    const { x, y } = emitter.centreMetres;
-    const ring = z => Array.from({ length: DISC_POINTS }, (_, index) => {
-      const angle = 2 * Math.PI * index / DISC_POINTS;
-      return { x: x + emitter.radiusMetres * Math.cos(angle), y: y + emitter.radiusMetres * Math.sin(angle), z };
-    });
-    if (!clouds()) {
-      context.fillStyle = colors.cloud;
-      polygon(context, ring(emitter.cloudBaseMetres)); context.fill();
-      polygon(context, ring(emitter.cloudTopMetres)); context.fill();
-    }
-    context.strokeStyle = selected ? colors.accent : colors.lightning;
-    context.lineWidth = selected ? 1.4 : 1.2;
-    polygon(context, ring(0).map(point => ({ ...point, z: ground(point.x, point.y) }))); context.stroke();
-  }
-
-  function cloudPuffs(emitter) {
-    const random = createRandom(emitter.seed ^ 0x5c10d);
-    const { x, y } = emitter.centreMetres;
-    const base = emitter.cloudBaseMetres;
-    const depth = emitter.cloudTopMetres - base;
-    return Array.from({ length: VIEW.cloud.puffs }, () => {
-      const share = random() ** 1.4;
-      const reach = emitter.radiusMetres * (.75 + VIEW.cloud.anvilSpread * share ** 4);
-      const angle = 2 * Math.PI * random();
-      const distance = reach * Math.sqrt(random());
-      return {
-        centre: { x: x + distance * Math.cos(angle), y: y + distance * Math.sin(angle), z: base + depth * share },
-        radius: Math.max(depth * (.22 + .22 * random()), emitter.radiusMetres * .18),
-        share
-      };
-    });
-  }
-
-  function drawCloud(context, emitter, colors) {
-    const key = [view.yaw, view.pitch, view.zoom, view.panU, view.panV, canvas.width, canvas.height, emitter.seed, emitter.centreMetres.x, emitter.centreMetres.y, emitter.radiusMetres, emitter.cloudBaseMetres, emitter.cloudTopMetres, colors['storm-base'], colors['storm-top'], frame.box.x0, frame.box.x1, frame.box.z1].join('|');
-    let layer = cloudLayers.get(emitter.id);
-    if (layer?.key !== key) {
-      const canvasLayer = sized(layer?.canvas);
-      const paint = canvasLayer.getContext('2d');
-      const ratio = window.devicePixelRatio || 1;
-      paint.setTransform(ratio, 0, 0, ratio, 0, 0);
-      const dark = rgb(colors['storm-base']);
-      const light = rgb(colors['storm-top']);
-      const puffs = cloudPuffs(emitter).map(puff => {
-        const p = frame.project(puff.centre);
-        const edge = frame.project({ ...puff.centre, z: puff.centre.z + puff.radius });
-        return { ...puff, p, size: Math.hypot(edge.x - p.x, edge.y - p.y) };
-      }).sort((a, b) => b.p.depth - a.p.depth);
-      for (const { p, size, share } of puffs) {
-        const [r, g, b] = mixColors(dark, light, share ** 1.5);
-        const gradient = paint.createRadialGradient(p.x, p.y, 0, p.x, p.y, size);
-        gradient.addColorStop(0, `rgba(${r},${g},${b},${VIEW.cloud.puffAlpha})`);
-        gradient.addColorStop(.6, `rgba(${r},${g},${b},${VIEW.cloud.puffAlpha * .5})`);
-        gradient.addColorStop(1, `rgba(${r},${g},${b},0)`);
-        paint.fillStyle = gradient;
-        paint.beginPath();
-        paint.arc(p.x, p.y, size, 0, 2 * Math.PI);
-        paint.fill();
-      }
-      layer = { key, canvas: canvasLayer };
-      cloudLayers.set(emitter.id, layer);
-    }
-    context.save();
-    context.setTransform(1, 0, 0, 1, 0, 0);
-    context.drawImage(layer.canvas, 0, 0);
-    context.restore();
-  }
-
-  function drawCloudLight(context, emitter, colors, strokes) {
-    const layer = cloudLayers.get(emitter.id);
-    if (!layer || !strokes?.length) return;
-    const flashes = cachedFlashes(emitter);
-    const depth = emitter.cloudTopMetres - emitter.cloudBaseMetres;
-    cloudLight = { light: sized(cloudLight?.light), mask: sized(cloudLight?.mask) };
-    const { light, mask } = cloudLight;
-    const ratio = window.devicePixelRatio || 1;
-    const glow = light.getContext('2d');
-    glow.setTransform(ratio, 0, 0, ratio, 0, 0);
-    glow.globalCompositeOperation = 'lighter';
-    const [r, g, b] = rgb(colors.flash);
-    let lit = false;
-    for (const stroke of strokes) {
-      const flash = flashes[stroke.flash];
-      if (!flash) continue;
-      const fade = stroke.elapsed > VIEW.flash.traverseSeconds ? Math.exp(-(stroke.elapsed - VIEW.flash.traverseSeconds) / VIEW.flash.fadeSeconds) : 1;
-      const intensity = VIEW.cloud.flashAlpha * fade * flicker(emitter.seed + stroke.flash * 7919, stroke.elapsed);
-      if (intensity < .01) continue;
-      const routeLength = Math.max(...stroke.route.map(step => step.offsetMetres + flash.channels[step.channel].arcs.at(-1) - step.fromArc));
-      const inCloud = stroke.route.flatMap(step => {
-        const reached = frontArc(step, stroke.elapsed, routeLength);
-        return reached > step.fromArc ? pointsUpTo(flash.channels[step.channel], step.fromArc, reached) : [];
-      }).filter(point => point.z >= emitter.cloudBaseMetres);
-      const along = inCloud.length ? inCloud : [flash.channels[0].points.at(-1)];
-      const random = createRandom((emitter.seed ^ Math.imul(stroke.flash + 1, 0x27d4eb2d)) >>> 0);
-      for (let blob = 0; blob < VIEW.cloud.flashBlobs; blob += 1) {
-        const at = along[Math.min(along.length - 1, Math.floor((blob + random()) / VIEW.cloud.flashBlobs * along.length))];
-        const offset = depth * VIEW.cloud.blobScatter;
-        const centre = { x: at.x + offset * (random() - .5), y: at.y + offset * (random() - .5), z: at.z + offset * (random() - .5) };
-        const p = frame.project(centre);
-        const edge = frame.project({ ...centre, z: centre.z + depth * VIEW.cloud.flashReach * (.6 + .8 * random()) });
-        const size = Math.hypot(edge.x - p.x, edge.y - p.y);
-        const gradient = glow.createRadialGradient(p.x, p.y, 0, p.x, p.y, size);
-        const alpha = intensity / VIEW.cloud.flashBlobs * 2.2;
-        gradient.addColorStop(0, `rgba(${r},${g},${b},${alpha})`);
-        gradient.addColorStop(.45, `rgba(${r},${g},${b},${alpha * .45})`);
-        gradient.addColorStop(1, `rgba(${r},${g},${b},0)`);
-        glow.fillStyle = gradient;
-        glow.beginPath();
-        glow.arc(p.x, p.y, size, 0, 2 * Math.PI);
-        glow.fill();
-        lit = true;
-      }
-    }
-    if (!lit) return;
-    const shape = mask.getContext('2d');
-    shape.drawImage(layer.canvas, 0, 0);
-    shape.globalCompositeOperation = 'source-in';
-    shape.drawImage(light, 0, 0);
-    context.save();
-    context.setTransform(1, 0, 0, 1, 0, 0);
-    context.globalCompositeOperation = 'lighter';
-    context.drawImage(mask, 0, 0);
-    context.restore();
-  }
-
-  function drawBlast(context, emitter, colors, state) {
-    const stroke = state?.strokes.get(emitter.id)?.[0];
-    if (stroke) drawBurst(context, frame.project(placed(emitter.positionMetres)), stroke, colors);
-  }
-
-  function drawBarrage(context, emitter, colors, selected, state) {
-    const { x, y } = emitter.centreMetres;
-    context.strokeStyle = selected ? colors.accent : colors.end;
-    context.lineWidth = selected ? 1.4 : 1.2;
-    polygon(context, Array.from({ length: DISC_POINTS }, (_, index) => {
-      const angle = 2 * Math.PI * index / DISC_POINTS;
-      const px = x + emitter.radiusMetres * Math.cos(angle);
-      const py = y + emitter.radiusMetres * Math.sin(angle);
-      return { x: px, y: py, z: ground(px, py) };
-    }));
-    context.stroke();
-    context.fillStyle = colors.end;
-    const alpha = context.globalAlpha;
-    context.globalAlpha = alpha * .5;
-    const rounds = cachedRounds(emitter, scene.air);
-    for (const round of rounds) {
-      const p = frame.project(placed(round.positionMetres));
-      context.beginPath(); context.arc(p.x, p.y, 1.5, 0, 2 * Math.PI); context.fill();
-    }
-    if (emitter.kind === 'fireworks') {
-      context.lineWidth = .8;
-      const mortars = new Map(rounds.filter(round => round.id.endsWith(':thump')).map(round => [round.id.slice(0, -':thump'.length), round]));
-      context.beginPath();
-      for (const round of rounds) {
-        const mortar = round.id.endsWith(':burst') ? mortars.get(round.id.slice(0, -':burst'.length)) : null;
-        if (!mortar) continue;
-        const from = frame.project(placed(mortar.positionMetres));
-        const to = frame.project(placed(round.positionMetres));
-        context.moveTo(from.x, from.y); context.lineTo(to.x, to.y);
-      }
-      context.stroke();
-    }
-    context.globalAlpha = alpha;
-    for (const stroke of state?.strokes.get(emitter.id) ?? []) {
-      if (stroke.shell === null || stroke.shell === undefined) {
-        drawBurst(context, frame.project(placed(stroke.position)), stroke, colors);
-        continue;
-      }
-      const color = colors.fireworks[stroke.shell % colors.fireworks.length];
-      drawStars(context, placed(stroke.position), stroke, color);
-      drawBurst(context, frame.project(placed(stroke.position)), stroke, colors, color);
-    }
-  }
-
-  function drawStars(context, centre, stroke, color) {
-    const { stars, burnSeconds } = VIEW.fireworks;
-    const t = stroke.elapsed;
-    if (t >= burnSeconds) return;
-    const pull = airDensityKilogramsPerCubicMetre(scene.air.pressureKpa * 1000, scene.air.temperatureCelsius) / (2 * FIREWORKS.starKilogramsPerSquareMetre);
-    const reach = Math.log1p(pull * FIREWORKS.starMetresPerSecond * t) / pull;
-    const sag = STANDARD_GRAVITY_METRES_PER_SECOND_SQUARED * t * t / 2;
-    const turn = stroke.shell / 0x100000000 * 2 * Math.PI;
-    const alpha = context.globalAlpha;
-    context.globalAlpha = alpha * (1 - t / burnSeconds) ** 1.5;
-    context.fillStyle = color;
-    context.beginPath();
-    for (let star = 0; star < stars; star += 1) {
-      const up = 1 - 2 * (star + .5) / stars;
-      const around = turn + star * Math.PI * (3 - Math.sqrt(5));
-      const across = Math.sqrt(1 - up * up);
-      const p = frame.project({ x: centre.x + reach * across * Math.cos(around), y: centre.y + reach * across * Math.sin(around), z: centre.z + reach * up - sag });
-      context.moveTo(p.x + 1.6, p.y);
-      context.arc(p.x, p.y, 1.6, 0, 2 * Math.PI);
-    }
-    context.fill();
-    context.globalAlpha = alpha;
-  }
-
   function drawFlight(context, emitter, colors, selected, state) {
     context.strokeStyle = selected ? colors.accent : colors.end;
     context.lineWidth = selected ? 1.4 : 1.2;
@@ -1279,82 +495,6 @@ export function createCubeView(canvas, { onSelect, onMove, onCommit, onView, onV
       context.beginPath(); context.arc(p.x, p.y, 5, 0, 2 * Math.PI); context.fill();
       context.shadowBlur = 0;
     }
-    for (const stroke of state?.strokes.get(emitter.id) ?? []) drawBurst(context, frame.project(stroke.position), stroke, colors);
-  }
-
-  function drawCones(context, cones, colors) {
-    const { box } = frame;
-    const terrain = currentSurface().bounds;
-    const low = { x: Math.min(box.x0, terrain?.west ?? box.x0), y: Math.min(box.y0, terrain?.south ?? box.y0), z: box.z0 };
-    const high = { x: Math.max(box.x1, terrain?.east ?? box.x1), y: Math.max(box.y1, terrain?.north ?? box.y1), z: box.z1 };
-    const highest = currentSurface().highestMetres;
-    const levels = Array.from({ length: VIEW.cone.levels }, () => new Path2D());
-    let path = null;
-    let from = 0;
-    let to = 1;
-    const within = (start, delta, minimum, maximum) => {
-      if (delta === 0) return start >= minimum && start <= maximum;
-      const t0 = (minimum - start) / delta;
-      const t1 = (maximum - start) / delta;
-      from = Math.max(from, Math.min(t0, t1));
-      to = Math.min(to, Math.max(t0, t1));
-      return true;
-    };
-    const draw = (p, q, start, end) => {
-      path.moveTo(p.x + (q.x - p.x) * start, p.y + (q.y - p.y) * start);
-      path.lineTo(p.x + (q.x - p.x) * end, p.y + (q.y - p.y) * end);
-    };
-    const line = (a, b, p, q) => {
-      from = 0;
-      to = 1;
-      if (!within(a.x, b.x - a.x, low.x, high.x) || !within(a.y, b.y - a.y, low.y, high.y) || !within(a.z, b.z - a.z, low.z, high.z)) return;
-      if (!(to > from)) return;
-      if (Math.min(a.z + (b.z - a.z) * from, a.z + (b.z - a.z) * to) > highest) { draw(p, q, from, to); return; }
-      for (let piece = 0; piece < VIEW.cone.pieces; piece += 1) {
-        const start = from + (to - from) * piece / VIEW.cone.pieces;
-        const end = from + (to - from) * (piece + 1) / VIEW.cone.pieces;
-        const t = (start + end) / 2;
-        if (a.z + (b.z - a.z) * t < ground(a.x + (b.x - a.x) * t, a.y + (b.y - a.y) * t)) continue;
-        draw(p, q, start, end);
-      }
-    };
-    for (const { apex, rings, strengths } of cones) {
-      const screen = rings.map(ring => ring.map(frame.project));
-      const apexScreen = apex && frame.project(apex);
-      rings.forEach((ring, index) => {
-        const strength = strengths?.[index] ?? 1;
-        if (!(strength > 0)) return;
-        path = levels[Math.min(VIEW.cone.levels, Math.ceil(strength * VIEW.cone.levels)) - 1];
-        const points = screen[index];
-        ring.forEach((point, step) => {
-          const next = (step + 1) % ring.length;
-          line(point, ring[next], points[step], points[next]);
-          if (step % VIEW.cone.lineEvery) return;
-          if (index) line(rings[index - 1][step], point, screen[index - 1][step], points[step]);
-          else if (apex) line(apex, point, apexScreen, points[step]);
-        });
-      });
-    }
-    const alpha = context.globalAlpha;
-    context.strokeStyle = colors.glow;
-    context.lineWidth = 1;
-    levels.forEach((level, index) => {
-      context.globalAlpha = alpha * VIEW.cone.alpha * (index + 1) / VIEW.cone.levels;
-      context.stroke(level);
-    });
-    context.globalAlpha = alpha;
-  }
-
-  function drawBurst(context, centre, stroke, colors, glow = colors.glow) {
-    const alpha = context.globalAlpha;
-    const level = Math.exp(-stroke.elapsed / VIEW.flash.fadeSeconds);
-    context.fillStyle = colors.flash;
-    context.shadowColor = glow;
-    context.shadowBlur = 30 * level;
-    context.globalAlpha = alpha * level;
-    context.beginPath(); context.arc(centre.x, centre.y, 4 + 12 * level, 0, 2 * Math.PI); context.fill();
-    context.shadowBlur = 0;
-    context.globalAlpha = alpha;
   }
 
   function drawHandle(context, handle, colors, selected, usable) {
@@ -1395,24 +535,10 @@ export function createCubeView(canvas, { onSelect, onMove, onCommit, onView, onV
       context.fill();
       return;
     }
-    if (handle.role === 'level') {
-      context.arc(p.x, p.y, VIEW.box.handleRadius - 1, 0, 2 * Math.PI);
-      context.fillStyle = colors['cloud-handle'];
-      context.fill();
-      if (selected) {
-        context.strokeStyle = colors.accent;
-        context.beginPath(); context.arc(p.x, p.y, VIEW.box.handleRadius + 1, 0, 2 * Math.PI); context.stroke();
-      }
-      return;
-    }
-    const radius = handle.role === 'radius' ? VIEW.box.handleRadius - 1.5 : VIEW.box.handleRadius;
-    context.arc(p.x, p.y, radius, 0, 2 * Math.PI);
+    context.arc(p.x, p.y, VIEW.box.handleRadius, 0, 2 * Math.PI);
     if (handle.role === 'end') {
       context.fillStyle = colors.end;
       context.fill();
-      context.strokeStyle = selected ? colors.accent : colors.end;
-      context.stroke();
-    } else if (handle.role === 'radius') {
       context.strokeStyle = selected ? colors.accent : colors.end;
       context.stroke();
     } else {
@@ -1470,28 +596,11 @@ export function createCubeView(canvas, { onSelect, onMove, onCommit, onView, onV
     else drawTerrain(context, colors, false);
     drawBoxLabels(context, colors);
     drawNames(context, colors);
-    drawShadowBoundary(context, colors);
-    if (state?.wavefronts) drawWavefronts(context, colors, state.wavefronts);
-    if (state?.cones.length) drawCones(context, state.cones, colors);
     for (const emitter of scene.emitters) {
       const selected = selection?.type === 'emitter' && selection.id === emitter.id;
       context.globalAlpha = emitter.enabled ? 1 : .35;
-      if (emitter.kind === 'storm') drawStorm(context, emitter, colors, selected);
-      if (emitter.kind === 'blast') drawBlast(context, emitter, colors, state);
-      else if (isFieldKind(emitter)) drawBarrage(context, emitter, colors, selected, state);
-      else if (isTrackKind(emitter)) drawFlight(context, emitter, colors, selected, state);
-      else {
-        drawChannels(context, emitter, colors, selected, state?.strokes.get(emitter.id));
-        if (state?.sound && emitter.enabled) drawSoundGlow(context, emitter, colors, state.sound);
-      }
+      if (isTrackKind(emitter)) drawFlight(context, emitter, colors, selected, state);
       context.globalAlpha = 1;
-    }
-    if (clouds()) {
-      for (const emitter of scene.emitters) {
-        if (emitter.kind !== 'storm' || !emitter.enabled) continue;
-        drawCloud(context, emitter, colors);
-        drawCloudLight(context, emitter, colors, state?.strokes.get(emitter.id));
-      }
     }
     for (const point of selectedPoints()) drawProjectionLines(context, colors, point);
     for (const receiver of scene.receivers) {
@@ -1528,9 +637,7 @@ export function createCubeView(canvas, { onSelect, onMove, onCommit, onView, onV
     context.font = '11px system-ui, sans-serif';
     context.fillStyle = colors.faint;
     for (const emitter of scene.emitters) {
-      const anchor = emitter.kind === 'blast' ? placed(emitter.positionMetres) : emitter.kind === 'storm' || isFieldKind(emitter) ? placed(emitter.centreMetres)
-        : emitter.kind === 'booster' ? placed(emitter.padMetres) : isTrackKind(emitter) ? emitter.startMetres : emitter.topMetres;
-      const p = frame.project(anchor);
+      const p = frame.project(emitter.startMetres);
       context.fillText(emitter.name, p.x + 9, p.y - 8);
     }
     for (const receiver of scene.receivers) {
@@ -1726,7 +833,6 @@ export function createCubeView(canvas, { onSelect, onMove, onCommit, onView, onV
   return {
     update(nextScene, nextSelection) {
       scene = nextScene;
-      useTerrain(scene.terrain);
       selection = nextSelection;
       if (!drag) frame = null;
       draw();

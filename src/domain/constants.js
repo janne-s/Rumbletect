@@ -527,3 +527,18 @@ export const SCINTILLATION = Object.freeze({
   seconds: .2,
   bandsHz: Object.freeze([31.5, 63, 125, 250, 500, 1000, 2000, 4000, 8000, 16000])
 });
+
+export const ENGINE = Object.freeze({
+  /** Class B: hot exhaust gas, γ and c_p of combustion products. */
+  gasGamma: 1.33,
+  gasHeatCapacityJoulesPerKilogramKelvin: 1150,
+  /**
+   * Class C: assumed settings of a single-engine fighter. The nozzle is about 1 m across and changes with power
+   * (F-35, Gee, Neilsen & Wall 2013); afterburning gas reaches about 2 100 K (F404-GE-400 exhaust survey, NASA, NTRS 19880010923).
+   */
+  settings: Object.freeze([
+    Object.freeze({ power: 0, label: 'Idle', pressureRatio: 1.3, totalTemperatureKelvin: 550, diameterMetres: .8 }),
+    Object.freeze({ power: .75, label: 'Military', pressureRatio: 3.5, totalTemperatureKelvin: 750, diameterMetres: .9 }),
+    Object.freeze({ power: 1, label: 'Afterburner', pressureRatio: 4, totalTemperatureKelvin: 1900, diameterMetres: 1.05 })
+  ])
+});

@@ -1,32 +1,7 @@
 import { PARAMETERS } from '../domain/scene.js';
 
 const DISPLAY = Object.freeze({
-  energyJoulesPerMetre: { scale: 1e-3, unit: 'kJ/m' },
-  terrainExtentMetres: { scale: 1e-3, unit: 'km' },
-  acousticEfficiency: { scale: 100, unit: '%' },
-  forestDensity: { scale: 100, unit: '%' },
-  channelSpeedMetresPerSecond: { scale: 1e-3, unit: 'km/s' },
-  inCloudSpeedMetresPerSecond: { scale: 1e-3, unit: 'km/s' },
-  currentDecayHeightMetres: { scale: 1e-3, unit: 'km' },
-  inCloudLengthMetres: { scale: 1e-3, unit: 'km' },
-  inCloudEnergyRatio: { scale: 100, unit: '%' },
-  branchLengthRatio: { scale: 100, unit: '% of channel' },
-  branchEnergyRatio: { scale: 100, unit: '%' },
-  groundFlashShare: { scale: 100, unit: '%' },
-  newTerminationProbability: { scale: 100, unit: '% of strokes' },
-  turbulenceStrength: { scale: 1e6, unit: '×10⁻⁶ ⟨μ²⟩' },
-  lapseRateKelvinPerMetre: { scale: 1e3, unit: 'K/km' },
-  windShearPerSecond: { scale: 1e3, unit: 'm/s per km' },
-  humidityScaleHeightMetres: { scale: 1e-3, unit: 'km' },
-  groundLayerLapseKelvinPerMetre: { scale: 1e3, unit: 'K/km' },
-  tropopauseMetres: { scale: 1e-3, unit: 'km' },
-  radiusMetres: { scale: 1e-3, unit: 'km' },
-  cloudBaseMetres: { scale: 1e-3, unit: 'km' },
-  cloudTopMetres: { scale: 1e-3, unit: 'km' },
-  strokeIntervalSeconds: { scale: 1e3, unit: 'ms' },
-  subsequentStrokeEnergyRatio: { scale: 100, unit: '%' },
-  durationSecondsPerCubeRootKilogram: { scale: 1e3, unit: 'ms/kg^⅓' },
-  riseTimeSeconds: { scale: 1e3, unit: 'ms' }
+  turbulenceStrength: { scale: 1e6, unit: '×10⁻⁶ ⟨μ²⟩' }
 });
 
 const display = key => DISPLAY[key] ?? { scale: 1, unit: PARAMETERS[key]?.unit ?? '' };

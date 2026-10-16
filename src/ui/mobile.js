@@ -4,11 +4,9 @@ const SHEET_TITLES = Object.freeze({
   emitters: 'Emitters',
   receivers: 'Microphones',
   environment: 'Air and ground',
-  terrain: 'Terrain',
+  place: 'Place',
   output: 'Output'
 });
-
-const EMITTER_ICONS = Object.freeze({ thunder: 'fa-bolt', blast: 'fa-explosion', sonic: 'fa-jet-fighter' });
 
 const $ = id => document.getElementById(id);
 
@@ -75,9 +73,8 @@ export function createMobileLayout({ onResults }) {
   $('info-close').addEventListener('click', () => info.close());
 
   return {
-    update({ mode, name, selected }) {
+    update({ name, selected }) {
       if (selected) body.dataset.selected = selected; else delete body.dataset.selected;
-      document.querySelectorAll('.emitter-icon').forEach(icon => { icon.className = `fa-solid ${EMITTER_ICONS[mode]} emitter-icon`; });
       $('cube-chip-name').textContent = name;
       $('info-title').textContent = name;
       const sections = [$('cube-selected'), $('cube-listen')].filter(source => source.childElementCount).map(source => {

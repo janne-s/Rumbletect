@@ -2,6 +2,7 @@ import { GROUND, JET, SYNTHESIS, TURBULENCE } from './constants.js';
 import { isReflecting, sphericalReflectionCoefficient } from './ground.js';
 import { createScintillation } from './scintillation.js';
 import { turbulentPhaseVariance } from './turbulence.js';
+import { ambisonicDirection, channelCount, encodeDirection } from './ambisonics.js';
 import { atmosphericAbsorptionDbPerMetre, speedOfSoundMetresPerSecond as speedOfSound } from './air.js';
 import { jetComponents, jetSpectra } from './jet.js';
 import { filterFrames, synthesizeNoise } from './synthesis.js';
@@ -50,7 +51,8 @@ function pathGains({ frequencies, doppler, limit, geometry, source, listener, ai
   frequencies.forEach((frequency, bin) => {
     if (frequency >= limit) return;
     const received = frequency * doppler;
-    const magnitude = 10 ** (-atmosphericAbsorptionDbPerMetre(received, air) * direct / 20) * (scintillation ? scintillation[bin] : 1);
+    const absorbed = air.absorption === false ? 1 : 10 ** (-atmosphericAbsorptionDbPerMetre(received, air) * direct / 20);
+    const magnitude = absorbed * (scintillation ? scintillation[bin] : 1);
     let [gainRe, gainIm] = [1, 0];
     if (ground && received > 0) {
       const [qRe, qIm] = sphericalReflectionCoefficient(received, ground, cosIncidence, image, sound);
@@ -84,7 +86,7 @@ const catmullRom = (samples, position) => {
  * −10 log(1 − M cos ψ) (Stone et al. 2003, eq. 2) and the path (`pathGains`) are applied here, not in the
  * source, so they count once.
  */
-export function nearListen({ trajectory, listener, jet, air, emissionSeconds: duration, sampleRate, seed, ground = null, scintillation = false }) {
+export function nearListen({ trajectory, listener, jet, air, emissionSeconds: duration, sampleRate, seed, ground = null, scintillation = false, order = 0 }) {
   const sound = speedOfSound(air.temperatureCelsius);
   const startSeconds = length(difference(listener, trajectory.positionAt(0))) / sound;
   const endSeconds = duration + length(difference(listener, trajectory.positionAt(duration))) / sound;
@@ -143,14 +145,19 @@ export function nearListen({ trajectory, listener, jet, air, emissionSeconds: du
     knots[knot] = guess;
   }
 
-  const pressure = new Float32Array(outputLength);
+  const channels = Array.from({ length: channelCount(order) }, () => new Float32Array(outputLength));
+  const gains = new Float64Array(channels.length);
   for (let sample = 0; sample < outputLength; sample += 1) {
     const knot = Math.floor(sample / grid);
     const emission = knots[knot] + (knots[knot + 1] - knots[knot]) * (sample % grid) / grid;
     if (emission < 0 || emission > duration) continue;
     const geometry = emissionGeometry(trajectory, listener, emission, sound);
-    const gain = 1 / (geometry.distance * Math.sqrt(1 - geometry.mach * geometry.cosine));
-    pressure[sample] = gain * catmullRom(emitted, emission * sampleRate);
+    const value = catmullRom(emitted, emission * sampleRate) / (geometry.distance * Math.sqrt(1 - geometry.mach * geometry.cosine));
+    channels[0][sample] = value;
+    if (order === 0) continue;
+    const toward = difference(trajectory.positionAt(emission), listener);
+    encodeDirection(...ambisonicDirection(toward.east / geometry.distance, toward.north / geometry.distance, toward.up / geometry.distance), order, gains);
+    for (let channel = 1; channel < channels.length; channel += 1) channels[channel][sample] = value * gains[channel];
   }
-  return { pressure, sampleRate, startSeconds };
+  return { pressure: channels[0], channels, sampleRate, startSeconds };
 }

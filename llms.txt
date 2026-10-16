@@ -1,0 +1,22 @@
+# Rumbletect
+
+> Rumbletect is a browser app that designs the continuous sound of jets from their physics. A scene places jets on flight paths and microphones in 3D over level ground, and renders what each microphone hears: jet mixing noise in two components with their spectra and directivity, carried with delay, spreading, Doppler shift, air absorption, ground reflection, and turbulence. It is a creative tool for sound design: a result is a plausible flyover, not a measurement, and levels are uncalibrated model values in pascals.
+
+Rumbletect runs entirely in the browser, with no account and no server of its own. Every part of the model is marked A (first principles), B (literature), or C (heuristic or synthetic). It belongs to the tect family with Boomtect and Echotect and shares Boomtect's interface.
+
+Exports are 32-bit float WAV at one full scale in pascals, recorded in the scene JSON; per-microphone files start at the same moment. A scene is JSON with `"format": "rumbletect.scene"` and opens again as a scene. A scene reader fills in missing fields with defaults and never refuses an older or newer version.
+
+## Docs
+
+- [README](https://github.com/janne-s/Rumbletect/blob/main/README.md): what every control does and the model table with sources and classes
+- [Live app](https://janne-s.github.io/Rumbletect/)
+
+## Formats
+
+- [Scene](https://github.com/janne-s/Rumbletect/blob/main/src/domain/scene.js): every parameter with its default and range
+- [Constants](https://github.com/janne-s/Rumbletect/blob/main/src/domain/constants.js): the model's tuning values and limits
+
+## Optional
+
+- [Boomtect](https://janne-s.github.io/Boomtect/llms.txt): lightning, blasts, and sonic booms
+- [Echotect](https://janne-s.github.io/Echotect/llms.txt): echoes from buildings, streets, and terrain

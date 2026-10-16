@@ -13,16 +13,14 @@ export function fitCanvas(canvas) {
 }
 
 const MICROPHONE_COLORS = 8;
-const FIREWORK_COLORS = 6;
 
 export function palette() {
   const style = getComputedStyle(document.documentElement);
   const read = name => style.getPropertyValue(name).trim();
-  const names = ['bg', 'panel', 'raised', 'line', 'ink', 'muted', 'faint', 'accent', 'ground', 'cloud', 'wall', 'grid', 'shadow',
-    'lightning', 'flash', 'glow', 'start', 'end', 'receiver', 'direct', 'reflected', 'cloud-handle', 'storm-base', 'storm-top'];
+  const names = ['bg', 'panel', 'raised', 'line', 'ink', 'muted', 'faint', 'accent', 'ground', 'wall', 'grid', 'shadow',
+    'flash', 'glow', 'start', 'end', 'receiver', 'direct', 'reflected'];
   const colors = Object.fromEntries(names.map(name => [name, read(`--${name}`)]));
   colors.mics = Array.from({ length: MICROPHONE_COLORS }, (_, index) => read(`--mic-${index + 1}`));
-  colors.fireworks = Array.from({ length: FIREWORK_COLORS }, (_, index) => read(`--firework-${index + 1}`));
   return colors;
 }
 

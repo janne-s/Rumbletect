@@ -1,68 +1,24 @@
-import assert from 'node:assert/strict';
 import test from 'node:test';
-import { entryText, macrosFor, parseEntry } from '../src/ui/macros.js';
-import { defaultBarrage, defaultBlast, defaultFireworks, parseScene, defaultScene } from '../src/domain/scene.js';
+import assert from 'node:assert/strict';
+import { macrosFor, parseEntry } from '../src/ui/macros.js';
+import { defaultJet, parseScene, defaultScene } from '../src/domain/scene.js';
 
-const macro = (emitter, label) => macrosFor(emitter, { onset: true }).find(item => item.label === label);
-
-test('a typed charge reads in g, kg, t, or kt, and in the shown unit when none is given', () => {
-  const blast = { ...defaultBlast(), chargeKilograms: 3.5e8 };
-  const { entry } = macro(blast, 'Charge');
-  assert.equal(entryText(entry, blast), '350 kt');
-  assert.equal(parseEntry(entry, '350 kt', blast), 3.5e8);
-  assert.equal(parseEntry(entry, '1,5', blast), 1.5e6);
-  assert.equal(parseEntry(entry, '250 g', blast), .25);
-  assert.equal(parseEntry(entry, '2t', blast), 2000);
-  assert.throws(() => parseEntry(entry, '3 lb', blast), /g, kg, t, kt/);
-  assert.throws(() => parseEntry(entry, 'lots', blast), /not a number/);
-});
-
-test('a typed height takes m or km, and a plain unit may be left out', () => {
-  const blast = { ...defaultBlast(), positionMetres: { x: 0, y: 0, z: 1500 } };
-  const height = macro(blast, 'Height').entry;
-  assert.equal(entryText(height, blast), '1.5 km');
-  assert.equal(parseEntry(height, '2', blast), 2000);
-  assert.equal(parseEntry(height, '30 m', blast), 30);
-  const fireball = macro(blast, 'Fireball').entry;
-  assert.equal(parseEntry(fireball, '-12 dB', blast), -12);
-  assert.equal(parseEntry(fireball, '-12', blast), -12);
-  assert.throws(() => parseEntry(fireball, '-12 s', blast), /dB/);
-});
-
-test('typed counts are whole, and a typed value beyond the slider is left to the scene to check', () => {
-  const barrage = defaultBarrage();
-  const rounds = macro(barrage, 'Rounds').entry;
-  assert.equal(parseEntry(rounds, '12.4', barrage), 12);
-  const scene = defaultScene('blast');
-  const blast = scene.emitters[0];
-  macro(blast, 'Height').entry.set(blast, parseEntry(macro(blast, 'Height').entry, '8 km', blast));
-  assert.equal(parseScene(scene).emitters[0].positionMetres.z, 8000);
-  macro(blast, 'Charge').entry.set(blast, parseEntry(macro(blast, 'Charge').entry, '400 kt', blast));
-  assert.throws(() => parseScene(scene), /chargeKilograms/);
-});
-
-test('the onset slider is fine near zero, takes typed seconds, and reads back what it wrote', () => {
-  const blast = defaultBlast();
-  const onset = macro(blast, 'Onset');
-  for (const t of [0, .1, .5, 1]) {
-    onset.write(blast, t);
-    assert.ok(Math.abs(onset.read(blast) - t) < 1e-3, `${t}`);
+test('every macro writes values the scene accepts, across its whole slider', () => {
+  for (const macro of macrosFor(defaultJet(), { onset: true })) {
+    for (const t of [0, .25, .5, .75, 1]) {
+      const scene = defaultScene();
+      macro.write(scene.emitters[0], t);
+      assert.doesNotThrow(() => parseScene(scene), macro.label);
+      const difference = Math.abs(macro.read(scene.emitters[0]) - t);
+      const circular = macro.label === 'Heading' ? Math.min(difference, 1 - difference) : difference;
+      assert.ok(circular < .02, `${macro.label} at ${t}: ${macro.read(scene.emitters[0])}`);
+    }
   }
-  onset.write(blast, .1);
-  assert.equal(blast.startSeconds, .24);
-  assert.equal(parseEntry(onset.entry, '1,25 s', blast), 1.25);
-  assert.ok(macrosFor(defaultBarrage(), { onset: true }).some(item => item.label === 'Onset'));
-  assert.ok(!macrosFor(defaultBarrage()).some(item => item.label === 'Onset'));
 });
 
-test('a display’s pop charge is on its sliders, logarithmic, and typed in mg', () => {
-  const fireworks = defaultFireworks();
-  const pop = macro(fireworks, 'Pop charge');
-  for (const t of [0, .5, 1]) {
-    pop.write(fireworks, t);
-    assert.ok(Math.abs(pop.read(fireworks) - t) < .02, `${t}`);
-  }
-  assert.equal(fireworks.popMilligrams, 100);
-  assert.equal(parseEntry(pop.entry, '2,5 mg', fireworks), 2.5);
-  assert.throws(() => parseEntry(pop.entry, '2 g', fireworks), /mg/);
+test('a typed height takes metres or kilometres', () => {
+  const height = macrosFor(defaultJet()).find(macro => macro.label === 'Height');
+  assert.equal(parseEntry(height.entry, '1,5 km', defaultJet()), 1500);
+  assert.equal(parseEntry(height.entry, '250', defaultJet()), 250);
+  assert.throws(() => parseEntry(height.entry, '3 ft', defaultJet()));
 });

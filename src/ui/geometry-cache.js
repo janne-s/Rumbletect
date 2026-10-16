@@ -1,28 +1,7 @@
-import { barrageRounds } from '../domain/barrage.js';
-import { emitterFlashes, fireworksRounds } from '../domain/emitters.js';
-import { boosterPath, flightMembers, flightPath, whipPath } from '../domain/flight.js';
-import { meteorBursts, meteorTrack, showerMembers } from '../domain/meteor.js';
-import { FLAT_SURFACE, terrainSurface } from '../domain/terrain.js';
+import { jetPath } from '../domain/jet-render.js';
+import { FLAT_SURFACE } from '../domain/terrain.js';
 
-const caches = new WeakMap();
-let surface = FLAT_SURFACE;
-
-export function useTerrain(terrain) {
-  surface = terrainSurface(terrain);
-  return surface;
-}
-
-export const currentSurface = () => surface;
-
-function arcs(points) {
-  const values = new Float64Array(points.length);
-  for (let index = 1; index < points.length; index += 1) {
-    const a = points[index - 1];
-    const b = points[index];
-    values[index] = values[index - 1] + Math.hypot(b.x - a.x, b.y - a.y, b.z - a.z);
-  }
-  return values;
-}
+export const currentSurface = () => FLAT_SURFACE;
 
 function cached(cache, emitter, extra, compute) {
   const { name: _name, enabled: _enabled, ...shape } = emitter;
@@ -34,35 +13,8 @@ function cached(cache, emitter, extra, compute) {
   return value;
 }
 
-export function cachedFlashes(emitter) {
-  if (!caches.has(surface)) caches.set(surface, new Map());
-  return cached(caches.get(surface), emitter, null, () => {
-    let flashes;
-    try { flashes = emitterFlashes(emitter, surface); } catch { flashes = []; }
-    for (const flash of flashes) for (const channel of flash.channels) channel.arcs = arcs(channel.points);
-    return flashes;
-  });
-}
-
 const tracks = new Map();
-const trackSurfaces = new Map();
 
-export function cachedTracks(emitter, air) {
-  if (trackSurfaces.get(emitter.id) !== surface) tracks.delete(emitter.id);
-  trackSurfaces.set(emitter.id, surface);
-  return cached(tracks, emitter, air, () => (emitter.kind === 'whip' ? [whipPath(emitter, air, surface)] : emitter.kind === 'booster' ? [boosterPath(emitter, air, surface)]
-    : isFlightKind(emitter) ? flightMembers(emitter).map(member => flightPath(member, air)) : showerMembers(emitter).map(meteorTrack)));
-}
+export const cachedTracks = (emitter, air) => cached(tracks, emitter, air, () => [jetPath(emitter, air)]);
 
-const bursts = new Map();
-
-export const cachedBursts = (emitter, air) => cached(bursts, emitter, air, () => showerMembers(emitter).map(meteor => meteorBursts(meteor, air)));
-
-export const isFieldKind = emitter => emitter.kind === 'barrage' || emitter.kind === 'fireworks';
-export const isFlightKind = emitter => emitter.kind === 'flight' || emitter.kind === 'formation';
-export const isTrackKind = emitter => isFlightKind(emitter) || emitter.kind === 'whip' || emitter.kind === 'booster' || emitter.kind === 'meteor' || emitter.kind === 'shower';
-
-const rounds = new Map();
-
-export const cachedRounds = (emitter, air) => cached(rounds, emitter, emitter.kind === 'fireworks' ? air : null,
-  () => (emitter.kind === 'fireworks' ? fireworksRounds(emitter, air) : barrageRounds(emitter)));
+export const isTrackKind = emitter => emitter.kind === 'jet';

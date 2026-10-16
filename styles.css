@@ -1,47 +1,36 @@
 :root {
   color-scheme: dark;
-  --bg: #11161c;
-  --panel: #19212a;
-  --panel-dim: #141a21;
-  --raised: #222c37;
-  --band-hover: #0d1116;
-  --line: #2e3a46;
-  --ink: #e3e9ef;
-  --muted: #8b99a8;
-  --faint: #56636f;
-  --accent: #ff9a45;
-  --accent-soft: rgba(255, 154, 69, .16);
-  --accent-hover: #ffad66;
-  --ground: #18212b;
-  --wall: #151c24;
-  --grid: #222c37;
-  --shadow: rgba(139, 160, 186, .22);
-  --cloud: rgba(150, 175, 205, .07);
-  --storm-base: #10161d;
-  --storm-top: #46525f;
-  --lightning: #8fb6e6;
-  --flash: #f2f8ff;
-  --glow: #9cc9ff;
-  --start: #0c1015;
-  --end: #f3f6fa;
-  --receiver: #dfe6ee;
-  --direct: #8fb6e6;
-  --reflected: #6c7c8e;
-  --cloud-handle: #7d95b3;
-  --mic-1: #e3e9ef;
-  --mic-2: #8fb6e6;
+  --bg: #16130f;
+  --panel: #1f1a15;
+  --panel-dim: #1a1612;
+  --raised: #2a241d;
+  --band-hover: #110e0b;
+  --line: #3a3229;
+  --ink: #ece6df;
+  --muted: #a39788;
+  --faint: #6b6156;
+  --accent: #6aa9ff;
+  --accent-soft: rgba(106, 169, 255, .16);
+  --accent-hover: #8bbcff;
+  --ground: #1d1813;
+  --wall: #191510;
+  --grid: #2a241d;
+  --shadow: rgba(186, 168, 139, .22);
+  --flash: #fff6ec;
+  --glow: #9cc4ff;
+  --start: #110e0b;
+  --end: #f6f1ea;
+  --receiver: #ece4da;
+  --direct: #9cc4ff;
+  --reflected: #85786a;
+  --mic-1: #ece6df;
+  --mic-2: #9cc4ff;
   --mic-3: #7fcfc0;
   --mic-4: #b7a6ec;
   --mic-5: #e59ab5;
   --mic-6: #b5d67a;
   --mic-7: #6fd3e8;
-  --mic-8: #93a4b8;
-  --firework-1: #ff5a4f;
-  --firework-2: #52e07a;
-  --firework-3: #5b8cff;
-  --firework-4: #ffc94a;
-  --firework-5: #e9eef5;
-  --firework-6: #c77dff;
+  --mic-8: #b0a393;
   font-family:
     Inter,
     ui-sans-serif,
@@ -91,7 +80,7 @@ button:disabled {
 button.primary {
   min-width: 64px;
   background: var(--accent);
-  color: #1a1208;
+  color: #16130f;
   font-weight: 600;
 }
 button.primary:hover:not(:disabled) {
@@ -155,7 +144,7 @@ input[type="checkbox"] {
 input[type="checkbox"]::before {
   width: 8px;
   height: 8px;
-  background: #1a1208;
+  background: #16130f;
   clip-path: polygon(14% 44%, 0 65%, 50% 100%, 100% 16%, 80% 0, 43% 62%);
   content: "";
   transform: scale(0);
@@ -331,19 +320,6 @@ figcaption {
 }
 .spacer {
   flex: 1;
-}
-
-.modes {
-  display: inline-flex;
-  gap: 2px;
-  margin-right: 6px;
-}
-.modes button[aria-checked="true"] {
-  background: var(--accent-soft);
-  color: var(--accent);
-}
-.modes button i {
-  display: none;
 }
 
 .layout {
@@ -834,7 +810,7 @@ dialog {
   padding: 0;
 }
 dialog::backdrop {
-  background: rgba(8, 11, 15, .6);
+  background: rgba(17, 14, 11, .6);
 }
 .details-header {
   display: flex;
@@ -1066,15 +1042,6 @@ details summary {
 .export-dialog {
   width: min(460px, calc(100% - 32px));
 }
-.export-echotect {
-  border-top: 1px solid var(--line);
-}
-.export-echotect h3 {
-  margin: 0;
-  color: var(--ink);
-  font-size: 14px;
-  font-weight: 600;
-}
 .export-go {
   display: flex;
   align-items: center;
@@ -1170,8 +1137,7 @@ details summary {
   font-size: 12px;
   white-space: nowrap;
 }
-.settings-grid + h3,
-.settings-cost + h3 {
+.settings-grid + h3 {
   margin-top: 22px;
 }
 .settings-grid .idle,
@@ -1189,43 +1155,6 @@ details summary {
 }
 .settings-check .settings-summary {
   color: var(--muted);
-}
-.settings-cost {
-  display: grid;
-  grid-template-columns: 140px minmax(0, 1fr) auto;
-  align-items: center;
-  gap: 12px;
-  margin-top: 18px;
-  border-top: 1px solid var(--line);
-  padding-top: 14px;
-}
-.settings-cost > span {
-  color: var(--muted);
-}
-.settings-cost output {
-  color: var(--ink);
-  font-size: 12px;
-  white-space: nowrap;
-}
-.cost-bar {
-  position: relative;
-  height: 8px;
-  border-radius: 4px;
-  background: var(--line);
-}
-.cost-fill {
-  height: 100%;
-  border-radius: 4px;
-  background: var(--accent);
-  transition: width .15s;
-}
-.cost-full {
-  position: absolute;
-  top: -3px;
-  bottom: -3px;
-  width: 2px;
-  margin-left: -1px;
-  background: var(--ink);
 }
 
 .sheet-header,
@@ -1253,22 +1182,6 @@ details summary {
   .brand {
     margin-right: 0;
     flex: none;
-  }
-  .modes {
-    flex: none;
-    margin-right: 0;
-  }
-  .modes button {
-    width: 36px;
-    height: 36px;
-    padding: 0;
-    font-size: 15px;
-  }
-  .modes button i {
-    display: inline-block;
-  }
-  .modes button span {
-    display: none;
   }
   .bar #play {
     flex: none;
@@ -1486,13 +1399,6 @@ details summary {
     grid-template-columns: 92px minmax(0, 1fr) auto;
     gap: 14px 10px;
   }
-  .settings-cost {
-    grid-template-columns: 104px minmax(0, 1fr);
-    gap: 8px 10px;
-  }
-  .settings-cost output {
-    grid-column: 2;
-  }
   .info-body {
     display: flex;
     flex-direction: column;
@@ -1523,7 +1429,6 @@ details summary {
   .brand {
     font-size: 12px;
   }
-  .modes button,
   .bar #settings,
   .bar .github-link {
     width: 32px;
