@@ -1,7 +1,8 @@
-import { SYNTHESIS } from './constants.js';
+import { JET, SYNTHESIS } from './constants.js';
 import { atmosphericAbsorptionDbPerMetre, speedOfSound } from './air.js';
 import { jetComponents, jetSpectra } from './jet.js';
-import { synthesizeNoise } from './synthesis.js';
+import { filterFrames, synthesizeNoise } from './synthesis.js';
+import { shapeWaveform, waveformShape } from './waveform.js';
 import { difference, dot, length } from './trajectory.js';
 
 const NEWTON_STEPS = 8;
@@ -50,21 +51,46 @@ export function nearListen({ trajectory, listener, jet, air, emissionSeconds: du
 
   const emissionLength = Math.ceil(duration * sampleRate) + 4;
   const componentsAt = mach => jetComponents(jet, { temperatureCelsius: air.temperatureCelsius, flightMetresPerSecond: mach * sound });
-  const emitted = synthesizeNoise({
-    length: emissionLength,
-    sampleRate,
-    seed,
-    spectrumAt: (centre, binHz) => {
-      const geometry = emissionGeometry(trajectory, listener, centre / sampleRate, sound);
-      const frequencies = Array.from({ length: SYNTHESIS.frameSamples / 2 + 1 }, (_, bin) => bin * binHz);
-      const { large, fine } = jetSpectra(componentsAt(geometry.mach), geometry.inletDegrees, frequencies);
-      const doppler = 1 / (1 - geometry.mach * geometry.cosine);
-      const limit = SYNTHESIS.bandLimitShare * sampleRate / doppler;
-      return frequencies.map((frequency, bin) => (frequency < limit
-        ? (large[bin] + fine[bin]) * 10 ** (-atmosphericAbsorptionDbPerMetre(frequency * doppler, air) * geometry.distance / 10)
-        : 0));
-    }
-  });
+  const frames = new Map();
+  const frameAt = (centre, binHz) => {
+    if (frames.has(centre)) return frames.get(centre);
+    const geometry = emissionGeometry(trajectory, listener, centre / sampleRate, sound);
+    const frequencies = Array.from({ length: SYNTHESIS.frameSamples / 2 + 1 }, (_, bin) => bin * binHz);
+    const components = componentsAt(geometry.mach);
+    const spectra = jetSpectra(components, geometry.inletDegrees, frequencies);
+    const doppler = 1 / (1 - geometry.mach * geometry.cosine);
+    const limit = SYNTHESIS.bandLimitShare * sampleRate / doppler;
+    const path = frequencies.map(frequency => (frequency < limit ? 10 ** (-atmosphericAbsorptionDbPerMetre(frequency * doppler, air) * geometry.distance / 20) : 0));
+    const { large, fine } = spectra;
+    const cutoff = components.large.peakHz / JET.packetCycles;
+    const lowPass = frequencies.map(frequency => (frequency > 0 ? 1 / (1 + (frequency / cutoff) ** 2) : 0));
+    const lowPassSum = lowPass.reduce((sum, value) => sum + value, 0) * binHz;
+    const frame = {
+      large,
+      fine,
+      path,
+      envelope: lowPass.map(value => value / lowPassSum),
+      largeVariance: large.reduce((sum, value) => sum + value, 0) * binHz
+    };
+    frames.set(centre, frame);
+    return frame;
+  };
+  const stream = (part, salt) => synthesizeNoise({ length: emissionLength, sampleRate, seed: (seed ^ salt) >>> 0, spectrumAt: (centre, binHz) => frameAt(centre, binHz)[part] });
+  const fine = stream('fine', 0);
+  const largeGaussian = stream('large', 0x9e3779b9);
+  const envelope = stream('envelope', 0x85ebca6b);
+  const hop = SYNTHESIS.frameSamples / 2;
+  const varianceAt = centre => frames.get(Math.max(0, Math.min(centre, (Math.ceil(emissionLength / hop)) * hop)))?.largeVariance ?? 0;
+  const rmsAt = sample => {
+    const centre = Math.floor(sample / hop) * hop;
+    const share = (sample - centre) / hop;
+    return Math.sqrt((1 - share) * varianceAt(centre) + share * varianceAt(centre + hop));
+  };
+  const large = shapeWaveform(largeGaussian, rmsAt, envelope, waveformShape({
+    skewness: jet.largeScaleSkewness ?? JET.largeScaleSkewness,
+    kurtosis: jet.largeScaleKurtosis ?? JET.largeScaleKurtosis
+  }));
+  const emitted = filterFrames(large.map((value, index) => value + fine[index]), sampleRate, (centre, binHz) => frameAt(centre, binHz).path);
 
   const grid = SYNTHESIS.delayGridSamples;
   const knots = new Float64Array(Math.ceil(outputLength / grid) + 2);

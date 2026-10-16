@@ -34,7 +34,12 @@ export const JET = Object.freeze({
    * fitted to those peaks for the default jet (class C). Tam 1996 fig. 10 gives half of it for laboratory jets.
    */
   largePeakStrouhal: .19,
-  finePeakStrouhal: .45
+  finePeakStrouhal: .45,
+  /** Class B: pressure skewness 0.15–0.4 made at the source, F-35AA at military power (Gee, Neilsen & Wall 2013, fig. 10). */
+  largeScaleSkewness: .3,
+  /** Class C: intermittent wavepackets toward the recordings' kurtosis of 4–7 (`reviews/2026-10-15-jet-sound-diagnosis.md`). */
+  largeScaleKurtosis: 5,
+  packetCycles: 4
 });
 
 export const FLIGHT = Object.freeze({
