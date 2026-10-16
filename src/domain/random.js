@@ -10,9 +10,13 @@ export function createRandom(seed) {
   };
 }
 
+export const uniform = (random, [low, high]) => low + random() * (high - low);
+
 export function normalDeviate(random) {
   const radius = Math.sqrt(-2 * Math.log(1 - random()));
   return radius * Math.cos(2 * Math.PI * random());
 }
 
 export const isSeed = value => Number.isInteger(value) && value >= 0 && value <= 0xffffffff;
+
+export const newSeed = () => crypto.getRandomValues(new Uint32Array(1))[0];

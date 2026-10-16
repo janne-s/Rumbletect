@@ -1,5 +1,5 @@
-import { FLIGHT, JET, REFERENCE_SOUND_PRESSURE_PA } from './constants.js';
-import { speedOfSound } from './air.js';
+import { JET, JET_FLIGHT, REFERENCE_SOUND_PRESSURE_PA } from './constants.js';
+import { speedOfSoundMetresPerSecond as speedOfSound } from './air.js';
 
 export { speedOfSound };
 
@@ -32,7 +32,7 @@ export function fineSimilarityDecibels(ratio) {
 /** Class B: Stone, Krejsa & Clark 2003, eq. 2a, the velocity split evenly between relative and absolute. */
 export const effectiveVelocity = (jetVelocity, flightVelocity) => jetVelocity * Math.sqrt(Math.max(0, 1 - flightVelocity / jetVelocity));
 
-const convection = (mach, cosine) => (1 + mach * cosine) ** 2 + FLIGHT.convectionSpread * mach * mach;
+const convection = (mach, cosine) => (1 + mach * cosine) ** 2 + JET_FLIGHT.convectionSpread * mach * mach;
 
 /**
  * The jet's two mixing-noise components in flight, as peak level and peak frequency. `jet` holds the fully
@@ -46,12 +46,12 @@ export function jetComponents(jet, { temperatureCelsius, flightMetresPerSecond =
   const { large, fine } = JET;
   const largeExponent = large.velocityExponent[0] + large.velocityExponent[1] * ratio;
   const fineExponent = fine.velocityExponent[0] + fine.velocityExponent[1] / ratio ** fine.velocityExponent[2];
-  const staticConvection = FLIGHT.convectionRatio * jet.velocityMetresPerSecond / sound;
+  const staticConvection = JET_FLIGHT.convectionRatio * jet.velocityMetresPerSecond / sound;
   return {
     sound,
     diameterMetres: jet.diameterMetres,
     staticConvection,
-    flightConvection: FLIGHT.convectionRatio * (jet.velocityMetresPerSecond - flightMetresPerSecond) / sound,
+    flightConvection: JET_FLIGHT.convectionRatio * (jet.velocityMetresPerSecond - flightMetresPerSecond) / sound,
     large: {
       decibels: large.base + large.temperature / ratio ** large.temperatureExponent + 10 * largeExponent * acoustic,
       peakHz: JET.largePeakStrouhal * velocity / jet.diameterMetres
@@ -74,7 +74,7 @@ export const fineDirectivityDecibels = inletDegrees => JET.fineRiseDecibelsPerDe
 /** Class B: Stone, Krejsa & Clark 2003, eq. 2, the change of convective amplification from static to flight. */
 export function flightConvectionDecibels(components, inletDegrees) {
   const cosine = Math.cos(inletDegrees * Math.PI / 180);
-  return FLIGHT.convectionDecibels * Math.log10(convection(components.staticConvection, cosine) / convection(components.flightConvection, cosine));
+  return JET_FLIGHT.convectionDecibels * Math.log10(convection(components.staticConvection, cosine) / convection(components.flightConvection, cosine));
 }
 
 /**

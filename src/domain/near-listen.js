@@ -2,7 +2,7 @@ import { GROUND, JET, SYNTHESIS, TURBULENCE } from './constants.js';
 import { isReflecting, sphericalReflectionCoefficient } from './ground.js';
 import { createScintillation } from './scintillation.js';
 import { turbulentPhaseVariance } from './turbulence.js';
-import { atmosphericAbsorptionDbPerMetre, speedOfSound } from './air.js';
+import { atmosphericAbsorptionDbPerMetre, speedOfSoundMetresPerSecond as speedOfSound } from './air.js';
 import { jetComponents, jetSpectra } from './jet.js';
 import { filterFrames, synthesizeNoise } from './synthesis.js';
 import { shapeWaveform, waveformShape } from './waveform.js';

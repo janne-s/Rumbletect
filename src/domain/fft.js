@@ -55,3 +55,47 @@ export function fft(real, imaginary, inverse = false) {
   }
   if (inverse) for (let index = 0; index < length; index += 1) { real[index] /= length; imaginary[index] /= length; }
 }
+
+const BLOCK_KERNELS = 4;
+
+export function silent(samples, from, to) {
+  for (let index = from, end = Math.min(to, samples.length); index < end; index += 1) if (samples[index] !== 0) return false;
+  return true;
+}
+
+export function overlapSize(signalLength, kernelLength) {
+  return Math.min(BLOCK_KERNELS * nextPowerOfTwo(kernelLength), nextPowerOfTwo(signalLength + kernelLength));
+}
+
+export function convolveAdd(targets, signals, kernel) {
+  const length = Math.max(0, ...signals.map(signal => signal.length));
+  if (!length || !kernel.length) return;
+  const size = overlapSize(length, kernel.length);
+  const block = size - kernel.length + 1;
+  const kernelRe = new Float64Array(size);
+  const kernelIm = new Float64Array(size);
+  kernelRe.set(kernel);
+  fft(kernelRe, kernelIm);
+  const re = new Float64Array(size);
+  const im = new Float64Array(size);
+  for (let pair = 0; pair < signals.length; pair += 2) {
+    const [first, second] = [signals[pair], signals[pair + 1]];
+    const [firstTarget, secondTarget] = [targets[pair], targets[pair + 1]];
+    for (let start = 0; start < length; start += block) {
+      if (silent(first, start, start + block) && (!second || silent(second, start, start + block))) continue;
+      re.fill(0);
+      im.fill(0);
+      re.set(first.subarray(start, start + block));
+      if (second) im.set(second.subarray(start, start + block));
+      fft(re, im);
+      for (let bin = 0; bin < size; bin += 1) {
+        const productRe = re[bin] * kernelRe[bin] - im[bin] * kernelIm[bin];
+        im[bin] = re[bin] * kernelIm[bin] + im[bin] * kernelRe[bin];
+        re[bin] = productRe;
+      }
+      fft(re, im, true);
+      for (let index = 0, end = Math.min(size, firstTarget.length - start); index < end; index += 1) firstTarget[start + index] += re[index];
+      if (second) for (let index = 0, end = Math.min(size, secondTarget.length - start); index < end; index += 1) secondTarget[start + index] += im[index];
+    }
+  }
+}

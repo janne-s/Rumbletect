@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { synthesizeNoise } from '../src/domain/synthesis.js';
 import { emissionSeconds, nearListen } from '../src/domain/near-listen.js';
 import { straightTrajectory } from '../src/domain/trajectory.js';
-import { atmosphericAbsorptionDbPerMetre, speedOfSound } from '../src/domain/air.js';
+import { atmosphericAbsorptionDbPerMetre, speedOfSoundMetresPerSecond as speedOfSound } from '../src/domain/air.js';
 import { fft, nextPowerOfTwo } from '../src/domain/fft.js';
 
 const SAMPLE_RATE = 48000;

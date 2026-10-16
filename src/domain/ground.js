@@ -5,6 +5,18 @@ import { faddeeva } from './faddeeva.js';
 const REFLECTING_GROUNDS = Object.freeze(['rigid', 'water']);
 export const isReflecting = groundType => REFLECTING_GROUNDS.includes(groundType);
 
+export const GROUND_TYPES = Object.freeze([...REFLECTING_GROUNDS, ...Object.keys(GROUND.flowResistivity)]);
+
+export const GROUND_LABELS = Object.freeze({
+  rigid: 'Rigid',
+  water: 'Water',
+  snow: 'Snow',
+  forestFloor: 'Forest floor',
+  grass: 'Grass',
+  soil: 'Soil',
+  stonyGround: 'Stony ground'
+});
+
 const SQRT_PI = Math.sqrt(Math.PI);
 
 /** Class B: Delany–Bazley, e^(−iωt) convention. */

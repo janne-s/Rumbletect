@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { nearListen } from '../src/domain/near-listen.js';
 import { createScintillation } from '../src/domain/scintillation.js';
 import { straightTrajectory } from '../src/domain/trajectory.js';
-import { speedOfSound } from '../src/domain/air.js';
+import { speedOfSoundMetresPerSecond as speedOfSound } from '../src/domain/air.js';
 import { fft } from '../src/domain/fft.js';
 import { SCINTILLATION } from '../src/domain/constants.js';
 
