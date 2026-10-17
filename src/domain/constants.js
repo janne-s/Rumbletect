@@ -72,14 +72,55 @@ export const ENGINE = Object.freeze({
   gasGamma: 1.33,
   gasHeatCapacityJoulesPerKilogramKelvin: 1150,
   /**
-   * Class C: assumed settings of a single-engine fighter. The nozzle is about 1 m across and changes with power
-   * (F-35, Gee, Neilsen & Wall 2013); afterburning gas reaches about 2 100 K (F404-GE-400 exhaust survey, NASA, NTRS 19880010923).
+   * The category slider's engine classes, each with its settings from idle (power 0) to full power (1), its engine count
+   * and a typical flight. Nozzle diameter and pressure ratio of the smaller ones follow from thrust, mass flow and exhaust
+   * temperature through the ideal nozzle (C): a JetCat P100 hobby turbine, 100 N, 0.23 kg/s, about 970 K (JetCat; AFRL
+   * gives 434 m/s); a 4 kN target-drone turbojet (TRI 60 class, C); a cruise missile's F107 turbofan, 3.1 kN, bypass 1:1,
+   * mixed, 6.2 kg/s assumed (C); a B-52's eight TF33-P-3, 75.6 kN each, bypass 1.42 (JT3D), 196–230 kg/s, taken as one
+   * equivalent mixed jet of 210 kg/s at 545 K (decision 4, 3A, C). Idle settings are assumed (C).
    */
-  settings: Object.freeze([
-    Object.freeze({ power: 0, label: 'Idle', pressureRatio: 1.3, totalTemperatureKelvin: 550, diameterMetres: .8 }),
-    Object.freeze({ power: .75, label: 'Military', pressureRatio: 3.5, totalTemperatureKelvin: 750, diameterMetres: .9 }),
-    Object.freeze({ power: 1, label: 'Afterburner', pressureRatio: 4, totalTemperatureKelvin: 1900, diameterMetres: 1.05 })
-  ])
+  classes: Object.freeze({
+    hobby: Object.freeze({
+      label: 'Hobby turbine', engines: 1, defaultPower: 1, flight: Object.freeze({ mach: .2, heightMetres: 30 }),
+      settings: Object.freeze([
+        Object.freeze({ power: 0, label: 'Idle', pressureRatio: 1.03, totalTemperatureKelvin: 850, diameterMetres: .041 }),
+        Object.freeze({ power: 1, label: 'Full', pressureRatio: 1.429, totalTemperatureKelvin: 970, diameterMetres: .041 })
+      ])
+    }),
+    drone: Object.freeze({
+      label: 'Jet drone', engines: 1, defaultPower: 1, flight: Object.freeze({ mach: .6, heightMetres: 200 }),
+      settings: Object.freeze([
+        Object.freeze({ power: 0, label: 'Idle', pressureRatio: 1.1, totalTemperatureKelvin: 650, diameterMetres: .185 }),
+        Object.freeze({ power: 1, label: 'Full', pressureRatio: 1.971, totalTemperatureKelvin: 1000, diameterMetres: .185 })
+      ])
+    }),
+    cruise: Object.freeze({
+      label: 'Cruise missile', engines: 1, defaultPower: 1, flight: Object.freeze({ mach: .7, heightMetres: 50 }),
+      settings: Object.freeze([
+        Object.freeze({ power: 0, label: 'Idle', pressureRatio: 1.15, totalTemperatureKelvin: 450, diameterMetres: .148 }),
+        Object.freeze({ power: 1, label: 'Full', pressureRatio: 2.238, totalTemperatureKelvin: 600, diameterMetres: .148 })
+      ])
+    }),
+    /**
+     * Class C: a single-engine fighter. The nozzle is about 1 m across and changes with power (F-35, Gee, Neilsen & Wall
+     * 2013); afterburning gas reaches about 2 100 K (F404-GE-400 exhaust survey, NASA, NTRS 19880010923).
+     */
+    fighter: Object.freeze({
+      label: 'Fighter', engines: 1, defaultPower: .75, flight: Object.freeze({ mach: .44, heightMetres: 300 }),
+      settings: Object.freeze([
+        Object.freeze({ power: 0, label: 'Idle', pressureRatio: 1.3, totalTemperatureKelvin: 550, diameterMetres: .8 }),
+        Object.freeze({ power: .75, label: 'Military', pressureRatio: 3.5, totalTemperatureKelvin: 750, diameterMetres: .9 }),
+        Object.freeze({ power: 1, label: 'Afterburner', pressureRatio: 4, totalTemperatureKelvin: 1900, diameterMetres: 1.05 })
+      ])
+    }),
+    bomber: Object.freeze({
+      label: 'Heavy bomber', engines: 8, defaultPower: 1, flight: Object.freeze({ mach: .25, heightMetres: 300 }),
+      settings: Object.freeze([
+        Object.freeze({ power: 0, label: 'Idle', pressureRatio: 1.12, totalTemperatureKelvin: 450, diameterMetres: 1.014 }),
+        Object.freeze({ power: 1, label: 'Full', pressureRatio: 1.552, totalTemperatureKelvin: 545, diameterMetres: 1.014 })
+      ])
+    })
+  })
 });
 
 export const ROCKET = Object.freeze({

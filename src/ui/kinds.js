@@ -1,4 +1,4 @@
-import { VIEW } from '../domain/constants.js';
+import { ENGINE, VIEW } from '../domain/constants.js';
 import { jetOfEngine, powerLabel, powerOfEngine } from '../domain/engine.js';
 import { jetComponents, speedOfSound } from '../domain/jet.js';
 import { defaultJet, defaultRocket, PROPELLANTS } from '../domain/scene.js';
@@ -17,7 +17,8 @@ const flownSeconds = (emitter, scene) => { const [path] = cachedTracks(emitter, 
 function summary(emitter, scene) {
   const jet = jetOfEngine(emitter.engine, scene.air.temperatureCelsius);
   const { aircraft } = emitter.formation;
-  return `${aircraft > 1 ? `${aircraft} aircraft, ` : ''}${powerLabel(powerOfEngine(emitter.engine))}, jet ${Math.round(jet.velocityMetresPerSecond)} m/s · Mach ${emitter.mach.toFixed(2)} at ${formatMetres(emitter.startMetres.z)} for ${flownSeconds(emitter, scene)} s`;
+  const { engines } = emitter.engine;
+  return `${aircraft > 1 ? `${aircraft} × ` : ''}${ENGINE.classes[emitter.engineClass].label}${engines > 1 ? `, ${engines} engines` : ''}, ${powerLabel(powerOfEngine(emitter.engine, emitter.engineClass), emitter.engineClass)}, jet ${Math.round(jet.velocityMetresPerSecond)} m/s · Mach ${emitter.mach.toFixed(2)} at ${formatMetres(emitter.startMetres.z)} for ${flownSeconds(emitter, scene)} s`;
 }
 
 function details(emitter, { updateEmitter, scene }) {
@@ -46,6 +47,7 @@ function details(emitter, { updateEmitter, scene }) {
       }
     }),
     section('Engine', container => {
+      numberField(container, { key: 'engines', value: emitter.engine.engines, onCommit: setEngine('engines') });
       numberField(container, { key: 'pressureRatio', value: emitter.engine.pressureRatio, onCommit: setEngine('pressureRatio') });
       numberField(container, { key: 'totalTemperatureKelvin', value: emitter.engine.totalTemperatureKelvin, onCommit: setEngine('totalTemperatureKelvin') });
       numberField(container, { key: 'nozzleDiameterMetres', value: emitter.engine.diameterMetres, onCommit: setEngine('diameterMetres') });
@@ -66,7 +68,7 @@ const pathPoints = (emitter, scene, at) => { for (const path of cachedTracks(emi
 function amplitudes(emitter, scene) {
   const { air } = scene;
   const components = jetComponents(jetOfEngine(emitter.engine, air.temperatureCelsius), { temperatureCelsius: air.temperatureCelsius, flightMetresPerSecond: emitter.mach * speedOfSound(air.temperatureCelsius) });
-  const amplitude = 10 ** (components.large.decibels / 20) * 20e-6 * components.diameterMetres * Math.sqrt(components.large.peakHz);
+  const amplitude = 10 ** (components.large.decibels / 20) * 20e-6 * components.diameterMetres * Math.sqrt(components.large.peakHz * emitter.engine.engines);
   return new Map(Array.from({ length: emitter.formation.aircraft }, (_, member) => [`${emitter.id}:${member}`, { amplitude, frequencyHz: components.large.peakHz }]));
 }
 

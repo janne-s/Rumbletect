@@ -1,6 +1,6 @@
 import { MODEL_VERSION, ROCKET } from './constants.js';
 import { sizedRocket } from './rocket.js';
-import { engineAtPower } from './engine.js';
+import { ENGINE_CLASSES, engineOfClass } from './engine.js';
 import { createScene } from '../shared/domain/scene.js';
 
 export { DEFAULT_PLACE, DEFAULT_QUALITY, defaultReceiver, headingToward, PLACE_NAME_KINDS, placeLabel, QUALITY_NUMBERS, QUALITY_SWITCHES, SceneError, TERRAIN_DEFAULTS } from '../shared/domain/scene.js';
@@ -13,9 +13,9 @@ const RUMBLETECT_PARAMETERS = Object.freeze({
   accelerationMetresPerSecondSquared: { minimum: -50, maximum: 100, unit: 'm/s²', label: 'Acceleration', reliability: null },
   turnDegreesPerSecond: { minimum: -10, maximum: 10, unit: '°/s', label: 'Turn', reliability: null },
   flightSeconds: { minimum: 1, maximum: 600, unit: 's', label: 'Flight time', reliability: null },
-  pressureRatio: { minimum: 1.05, maximum: 6, unit: '', label: 'Nozzle pressure ratio', reliability: 'C' },
+  pressureRatio: { minimum: 1.01, maximum: 6, unit: '', label: 'Nozzle pressure ratio', reliability: 'C' },
   totalTemperatureKelvin: { minimum: 300, maximum: 2300, unit: 'K', label: 'Jet temperature', reliability: 'C' },
-  nozzleDiameterMetres: { minimum: .1, maximum: 3, unit: 'm', label: 'Nozzle diameter', reliability: 'C' },
+  nozzleDiameterMetres: { minimum: .02, maximum: 3, unit: 'm', label: 'Nozzle diameter', reliability: 'C' },
   engines: { minimum: 1, maximum: 60, unit: '', label: 'Engines', reliability: null, integer: true },
   thrustKilonewtons: { minimum: .01, maximum: 10000, unit: 'kN', label: 'Thrust per engine', reliability: 'B' },
   exitVelocityMetresPerSecond: { minimum: 500, maximum: 5000, unit: 'm/s', label: 'Exhaust velocity', reliability: 'B' },
@@ -61,7 +61,8 @@ export function defaultJet(id = 'jet-1', name = 'Jet', seed = 20261015) {
     turnDegreesPerSecond: 0,
     durationSeconds: 33,
     autoDuration: false,
-    engine: engineAtPower(.75),
+    engineClass: 'fighter',
+    engine: engineOfClass('fighter'),
     formation: { ...JET_FORMATION }
   };
 }
@@ -105,6 +106,7 @@ function readJet(value, { check, number, point, numbers }, path) {
   const engine = value.engine ?? {};
   check(typeof value.autoDuration === 'boolean', `${path}.autoDuration must be true or false.`);
   return {
+    engineClass: ENGINE_CLASSES.includes(value.engineClass) ? value.engineClass : 'fighter',
     startMetres: point(value.startMetres, `${path}.startMetres`),
     durationSeconds: number(value.durationSeconds, 'flightSeconds', `${path}.durationSeconds`),
     autoDuration: value.autoDuration,
@@ -112,7 +114,8 @@ function readJet(value, { check, number, point, numbers }, path) {
     engine: {
       pressureRatio: number(engine.pressureRatio, 'pressureRatio', `${path}.engine.pressureRatio`),
       totalTemperatureKelvin: number(engine.totalTemperatureKelvin, 'totalTemperatureKelvin', `${path}.engine.totalTemperatureKelvin`),
-      diameterMetres: number(engine.diameterMetres, 'nozzleDiameterMetres', `${path}.engine.diameterMetres`)
+      diameterMetres: number(engine.diameterMetres, 'nozzleDiameterMetres', `${path}.engine.diameterMetres`),
+      engines: number(engine.engines, 'engines', `${path}.engine.engines`)
     },
     formation: numbers(value.formation, Object.keys(JET_FORMATION), `${path}.formation`)
   };

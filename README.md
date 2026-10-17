@@ -26,12 +26,15 @@ the flight, then delays, spreads, and filters that sound on its way there.
 
 ## Jet
 
-- **Power** — Idle through military power to full afterburner.
+- **Category** — Hobby turbine, jet drone, cruise missile, fighter, or heavy
+  bomber: sets the engine, its count, speed, and height in one step.
+- **Power** — Idle to full power, for a fighter through military power to
+  full afterburner.
 - **Mach, height, heading, climb, acceleration, turn, flight time** — The
   flight, subsonic.
 - **Aircraft** — A formation flying a V behind the leader, each aircraft
   with its own seed.
-- **Details** — Start point, onset, seed, the engine's nozzle pressure
+- **Details** — Start point, onset, seed, engine count, the engine's nozzle pressure
   ratio, jet temperature, and nozzle diameter, and the formation's lateral
   and trail spacing.
 
@@ -82,7 +85,7 @@ the flight, then delays, spreads, and filters that sound on its way there.
 | Directivity | Tam 1996 figs. 6–7 | B |
 | Flight effects | Stone, Krejsa & Clark 2003 | B, combined C |
 | Skewness, intermittency | Gee et al. 2013; fitted to recordings | B, C |
-| Engine settings | assumed for a single-engine fighter | C |
+| Engine settings | from published thrust and mass flow; a heavy bomber's turbofans as one mixed jet | C |
 | Rocket source | SATURN, Mathews 2025 | B |
 | Ascent, sizing, salvo | assumed | C |
 | Jet velocity | ideal nozzle | A |

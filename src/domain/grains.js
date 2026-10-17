@@ -185,9 +185,13 @@ const JET_SHAPE = waveformShape({ skewness: JET.largeScaleSkewness, kurtosis: JE
 export function jetGrains(emitter, scene) {
   const { air } = scene;
   const jet = jetOfEngine(emitter.engine, air.temperatureCelsius);
+  const { engines } = emitter.engine;
   const source = {
     components: ({ speed }) => jetComponents(jet, { temperatureCelsius: air.temperatureCelsius, flightMetresPerSecond: speed }),
-    spectra: (components, inletDegrees, frequencies) => { const { large, fine } = jetSpectra(components, inletDegrees, frequencies); return { shaped: large, plain: fine }; },
+    spectra: (components, inletDegrees, frequencies) => {
+      const { large, fine } = jetSpectra(components, inletDegrees, frequencies);
+      return engines === 1 ? { shaped: large, plain: fine } : { shaped: large.map(value => value * engines), plain: fine.map(value => value * engines) };
+    },
     packetHz: components => components.large.peakHz / JET.packetCycles,
     shape: JET_SHAPE
   };

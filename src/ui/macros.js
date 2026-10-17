@@ -1,6 +1,6 @@
-import { engineAtPower, powerLabel, powerOfEngine } from '../domain/engine.js';
+import { ENGINE_CLASSES, engineAtPower, engineOfClass, powerLabel, powerOfEngine } from '../domain/engine.js';
 import { PARAMETERS } from '../domain/scene.js';
-import { ROCKET } from '../domain/constants.js';
+import { ENGINE, ROCKET } from '../domain/constants.js';
 import { categoryRocket, liftoffThrustToWeight, nearestCategory, sizedRocket } from '../domain/rocket.js';
 import { clamp01, logPosition, logValue, METRES, metres } from '../shared/ui/macros.js';
 
@@ -8,9 +8,27 @@ const range = key => [PARAMETERS[key].minimum, PARAMETERS[key].maximum];
 
 const power = {
   label: 'Power',
-  read: item => powerOfEngine(item.engine),
-  write: (item, t) => { item.engine = engineAtPower(t); },
-  show: item => powerLabel(powerOfEngine(item.engine))
+  read: item => powerOfEngine(item.engine, item.engineClass),
+  write: (item, t) => { item.engine = { ...item.engine, ...engineAtPower(t, item.engineClass) }; },
+  show: item => powerLabel(powerOfEngine(item.engine, item.engineClass), item.engineClass)
+};
+
+/** A class's usual flight keeps the path flown: its duration follows the new speed. */
+const jetCategory = {
+  label: 'Category',
+  read: item => ENGINE_CLASSES.indexOf(item.engineClass) / (ENGINE_CLASSES.length - 1),
+  write: (item, t) => {
+    const engineClass = ENGINE_CLASSES[Math.round(t * (ENGINE_CLASSES.length - 1))];
+    if (engineClass === item.engineClass) return;
+    const { flight } = ENGINE.classes[engineClass];
+    const flown = item.mach * item.durationSeconds;
+    item.engineClass = engineClass;
+    item.engine = engineOfClass(engineClass);
+    item.mach = flight.mach;
+    item.startMetres = { ...item.startMetres, z: flight.heightMetres };
+    item.durationSeconds = Math.min(range('flightSeconds')[1], Math.max(range('flightSeconds')[0], Math.round(flown / flight.mach)));
+  },
+  show: item => ENGINE.classes[item.engineClass].label
 };
 
 const machNumber = {
@@ -88,7 +106,7 @@ const jetAircraft = {
 };
 
 export function macrosFor(emitter, { onset: withOnset = false } = {}) {
-  const list = [power, machNumber, flightHeight, flightHeading, flightClimb, flightAcceleration, flightTurn, flightTime, jetAircraft];
+  const list = [jetCategory, power, machNumber, flightHeight, flightHeading, flightClimb, flightAcceleration, flightTurn, flightTime, jetAircraft];
   return withOnset ? [...list, onset] : list;
 }
 

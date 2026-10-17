@@ -2,9 +2,13 @@ import { ENGINE, KELVIN_OFFSET } from './constants.js';
 
 const between = (a, b, share) => a + (b - a) * share;
 
-/** The engine at a power from 0 (idle) through 0.75 (military) to 1 (full afterburner), interpolated between settings (class C). */
-export function engineAtPower(power) {
-  const settings = ENGINE.settings;
+export const ENGINE_CLASSES = Object.freeze(Object.keys(ENGINE.classes));
+
+const settingsOf = engineClass => (ENGINE.classes[engineClass] ?? ENGINE.classes.fighter).settings;
+
+/** The nozzle at a power from 0 (idle) to 1 (full power, the fighter's full afterburner) of an engine class, interpolated between its settings (class C). */
+export function engineAtPower(power, engineClass = 'fighter') {
+  const settings = settingsOf(engineClass);
   const upper = Math.max(1, settings.findIndex(setting => setting.power >= power));
   const [low, high] = [settings[upper - 1], settings[upper]];
   const share = Math.min(1, Math.max(0, (power - low.power) / (high.power - low.power)));
@@ -16,19 +20,27 @@ export function engineAtPower(power) {
 }
 
 /** The power whose total temperature this is, the inverse of `engineAtPower` along its temperature. */
-export function powerOfEngine({ totalTemperatureKelvin }) {
-  const settings = ENGINE.settings;
+export function powerOfEngine({ totalTemperatureKelvin }, engineClass = 'fighter') {
+  const settings = settingsOf(engineClass);
   const upper = Math.max(1, settings.findIndex(setting => setting.totalTemperatureKelvin >= totalTemperatureKelvin));
   const [low, high] = [settings[upper - 1], settings[upper]];
   const share = (totalTemperatureKelvin - low.totalTemperatureKelvin) / (high.totalTemperatureKelvin - low.totalTemperatureKelvin);
   return Math.min(1, Math.max(0, low.power + (high.power - low.power) * share));
 }
 
-export function powerLabel(power) {
-  const nearest = ENGINE.settings.reduce((best, setting) => (Math.abs(setting.power - power) < Math.abs(best.power - power) ? setting : best));
+export function powerLabel(power, engineClass = 'fighter') {
+  const settings = settingsOf(engineClass);
+  const nearest = settings.reduce((best, setting) => (Math.abs(setting.power - power) < Math.abs(best.power - power) ? setting : best));
   if (Math.abs(nearest.power - power) < .02) return nearest.label;
-  const military = ENGINE.settings[1].power;
+  if (settings.length < 3) return `${Math.round(power * 100)} %`;
+  const military = settings[1].power;
   return power < military ? `${Math.round(power / military * 100)} %` : `AB ${Math.round((power - military) / (1 - military) * 100)} %`;
+}
+
+/** A jet of an engine class at its usual power, with the class's engine count. */
+export function engineOfClass(engineClass) {
+  const type = ENGINE.classes[engineClass];
+  return { ...engineAtPower(type.defaultPower, engineClass), engines: type.engines };
 }
 
 /** Class A for an ideal nozzle: the fully expanded jet of a pressure ratio and total temperature. */
