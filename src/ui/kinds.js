@@ -1,4 +1,4 @@
-import { ENGINE, VIEW } from '../domain/constants.js';
+import { ENGINE } from '../domain/constants.js';
 import { jetOfEngine, powerLabel, powerOfEngine } from '../domain/engine.js';
 import { jetComponents, speedOfSound } from '../domain/jet.js';
 import { defaultFormation, defaultJet, defaultRocket, defaultSalvo, defaultVolcano, PROPELLANTS } from '../domain/scene.js';
