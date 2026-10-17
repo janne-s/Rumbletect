@@ -118,6 +118,8 @@ export const ROCKET = Object.freeze({
   waterDecibels: 4,
   /** Class C: pitch kick and throttle ramps take this long. */
   pitchKickSeconds: 4,
+  /** Class C: a launch rail or tube holds the angle until the rocket is this fast; then gravity turns it. */
+  guidedMetresPerSecond: 30,
   throttleRampSeconds: 3,
   integrationSeconds: .02,
   /** Echoes and scattering arrive after the direct sound; the ascent ends this much before the render's span would. */

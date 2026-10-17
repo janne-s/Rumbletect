@@ -109,6 +109,7 @@ function rocketDetails(emitter, { updateEmitter }) {
       numberField(container, { key: 'startSeconds', label: 'Ignition', value: emitter.startSeconds, onCommit: set('startSeconds') });
       pointFields(container, { label: 'Nozzles on the pad', point: emitter.startMetres, onCommit: set('startMetres') });
       numberField(container, { key: 'headingDegrees', value: emitter.headingDegrees, onCommit: set('headingDegrees') });
+      numberField(container, { key: 'launchDegrees', value: emitter.launchDegrees, onCommit: set('launchDegrees') });
     }),
     section('Engines', container => {
       selectField(container, { label: 'Propellant', value: emitter.propellant, options: PROPELLANTS.map(key => [key, ROCKET.propellants[key].label]), reliability: 'B', onCommit: choose });

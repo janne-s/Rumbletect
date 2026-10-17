@@ -27,7 +27,8 @@ const RUMBLETECT_PARAMETERS = Object.freeze({
   pitchKickDegrees: { minimum: 0, maximum: 45, unit: '°', label: 'Pitch kick', reliability: 'C' },
   throttleDownSeconds: { minimum: 0, maximum: 590, unit: 's', label: 'Throttle down at', reliability: 'C' },
   throttleUpSeconds: { minimum: 0, maximum: 590, unit: 's', label: 'Throttle up at', reliability: 'C' },
-  throttlePercent: { minimum: 30, maximum: 100, unit: '%', label: 'Throttle', reliability: 'C' }
+  throttlePercent: { minimum: 30, maximum: 100, unit: '%', label: 'Throttle', reliability: 'C' },
+  launchDegrees: { minimum: 5, maximum: 90, unit: '°', label: 'Launch angle', reliability: null }
 });
 
 export const PROPELLANTS = Object.freeze(Object.keys(ROCKET.propellants));
@@ -58,6 +59,7 @@ export function defaultRocket(id = 'rocket-1', seed = 20261017) {
     startSeconds: 0,
     startMetres: { x: 0, y: 0, z: 10 },
     headingDegrees: 90,
+    launchDegrees: 90,
     engine: { ...sized.engine, efficiencyPercent: .3 },
     ascent: { ...ROCKET.defaultAscent, ...sized.ascent }
   };
@@ -75,7 +77,7 @@ function readRocket(value, { check, point, numbers }, path) {
   return {
     propellant: value.propellant,
     startMetres: point(value.startMetres, `${path}.startMetres`),
-    ...numbers(value, ['startSeconds', 'headingDegrees'], path),
+    ...numbers(value, ['startSeconds', 'headingDegrees', 'launchDegrees'], path),
     engine: numbers(value.engine, ROCKET_ENGINE_NUMBERS, `${path}.engine`),
     ascent: { ...numbers(value.ascent, ROCKET_ASCENT_NUMBERS, `${path}.ascent`), water: value.ascent.water }
   };

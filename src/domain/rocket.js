@@ -114,7 +114,7 @@ export function throttleAt(ascent, secondsAfterRelease) {
 
 /**
  * Class C: the ascent in the vertical plane of the launch heading, liquid engines held on the pad for `ROCKET.holdSeconds`, then a
- * vertical rise, a pitch kick and a gravity turn under thrust, mass flow F/U_e and gravity, no drag and a flat Earth.
+ * rise at the launch angle, guided until `ROCKET.guidedMetresPerSecond`, a pitch kick and a gravity turn under thrust, mass flow F/U_e and gravity, no drag and a flat Earth.
  * The path is sampled like `flightPath` and ends at engine cut-off.
  */
 export function ascentPath(emitter) {
@@ -127,15 +127,16 @@ export function ascentPath(emitter) {
   const heading = emitter.headingDegrees * Math.PI / 180;
   const along = { x: Math.sin(heading), y: Math.cos(heading) };
   const pad = emitter.startMetres;
-  const path = { seconds: [], x: [], y: [], z: [], vx: [], vy: [], vz: [], speed: [], step, throttle: [], heldSeconds: hold };
+  const path = { seconds: [], x: [], y: [], z: [], vx: [], vy: [], vz: [], speed: [], step, throttle: [], heldSeconds: hold, launchAxis: { x: along.x * Math.cos(emitter.launchDegrees * Math.PI / 180), y: along.y * Math.cos(emitter.launchDegrees * Math.PI / 180), z: Math.sin(emitter.launchDegrees * Math.PI / 180) } };
   const kickRate = ascent.pitchKickDegrees * Math.PI / 180 / ROCKET.pitchKickSeconds;
   const dt = ROCKET.integrationSeconds;
-  let [height, range, speed, gamma, mass, clock] = [0, 0, 0, Math.PI / 2, ascent.liftoffMassTonnes * 1000, 0];
+  const launch = emitter.launchDegrees * Math.PI / 180;
+  let [height, range, speed, gamma, mass, clock] = [0, 0, 0, launch, ascent.liftoffMassTonnes * 1000, 0];
   const derivative = (t, h, v, g, m) => {
     const throttle = throttleAt(ascent, t);
     const thrust = vehicle.totalThrustNewtons * throttle;
     const kicking = t >= ascent.pitchKickAtSeconds && t < ascent.pitchKickAtSeconds + ROCKET.pitchKickSeconds;
-    const turn = kicking ? -kickRate : (g < Math.PI / 2 - 1e-9 && v > 1 ? -ROCKET.gravity * Math.cos(g) / v : 0);
+    const turn = kicking ? -kickRate : (g < Math.PI / 2 - 1e-9 && v > ROCKET.guidedMetresPerSecond ? -ROCKET.gravity * Math.cos(g) / v : 0);
     return { dv: thrust / m - ROCKET.gravity * Math.sin(g), dg: turn, dm: -thrust / vehicle.exitVelocityMetresPerSecond, dh: v * Math.sin(g), dr: v * Math.cos(g) };
   };
   for (let index = 0; index <= steps; index += 1) {
@@ -158,7 +159,6 @@ export function ascentPath(emitter) {
   return path;
 }
 
-const up = { x: 0, y: 0, z: 1 };
 const GRID_DEGREES = 181;
 
 /** Per frequency, once per rocket: SATURN's power as a linear share per unit Sr, the source's distance behind the nozzle, and its directivity every degree. */
@@ -205,7 +205,7 @@ export function rocketSource(emitter, scene, path) {
         water: emitter.ascent.water
       };
     },
-    axis: (components, flight, speed) => (speed > 1 ? { x: flight.x / speed, y: flight.y / speed, z: flight.z / speed } : up),
+    axis: (components, flight, speed) => (speed > 1 ? { x: flight.x / speed, y: flight.y / speed, z: flight.z / speed } : path.launchAxis),
     place: (components, position, axis) => {
       const behind = ROCKET.sourceDiameters * diameter;
       return { x: position.x - axis.x * behind, y: position.y - axis.y * behind, z: Math.max(padHeight, position.z - axis.z * behind) };

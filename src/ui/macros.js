@@ -133,7 +133,15 @@ const rocketKick = {
   entry: { unit: '°', get: item => item.ascent.pitchKickDegrees, set: (item, value) => { item.ascent = { ...item.ascent, pitchKickDegrees: value }; } }
 };
 
+const rocketLaunch = {
+  label: 'Launch angle',
+  read: item => (item.launchDegrees - range('launchDegrees')[0]) / (range('launchDegrees')[1] - range('launchDegrees')[0]),
+  write: (item, t) => { item.launchDegrees = Math.round(range('launchDegrees')[0] + t * (range('launchDegrees')[1] - range('launchDegrees')[0])); },
+  show: item => `${item.launchDegrees}°`,
+  entry: { unit: '°', get: item => item.launchDegrees, set: (item, value) => { item.launchDegrees = value; } }
+};
+
 export function rocketMacros(emitter, { onset: withOnset = false } = {}) {
-  const list = [rocketSize, rocketPropellant, flightHeading, rocketBurn, rocketKick];
+  const list = [rocketSize, rocketPropellant, flightHeading, rocketLaunch, rocketBurn, rocketKick];
   return withOnset ? [...list, onset] : list;
 }

@@ -39,8 +39,9 @@ the flight, then delays, spreads, and filters that sound on its way there.
 - **Propellant** — Solid, kerosene, methane, or hydrogen: a faster exhaust
   sounds higher. Liquid engines are held on the pad for three seconds, solid
   motors lift off at ignition.
-- **Heading, burn time, pitch kick** — The ascent: liftoff, pitch kick, and a
-  gravity turn to engine cut-off.
+- **Heading, launch angle, burn time, pitch kick** — The ascent: liftoff,
+  straight up or at a slant off a rail, a pitch kick, and a gravity turn to
+  engine cut-off.
 - **Details** — Engine count, thrust, exhaust velocity, nozzle diameter,
   acoustic efficiency, mass, throttle-down around max-Q, and water on the pad.
 - **Source** — Sound power from thrust and exhaust velocity, with the

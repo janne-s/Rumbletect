@@ -73,3 +73,15 @@ test('sizing reaches known engines within a third and scales from a hobby motor 
   const path = ascentPath(parseScene({ ...scene, emitters: [small] }).emitters[0]);
   assert.ok(path.z.at(-1) > small.startMetres.z + 20, `${path.z.at(-1)} m`);
 });
+
+test('a rocket launched at a slant keeps its angle off the rail, then curves under gravity', () => {
+  const rocket = { ...defaultRocket(), launchDegrees: 50 };
+  const sized = sizedRocket(300e3, 1, 'solid');
+  Object.assign(rocket, { propellant: 'solid', engine: { ...rocket.engine, ...sized.engine }, ascent: { ...rocket.ascent, ...sized.ascent, burnSeconds: 5, pitchKickDegrees: 0 } });
+  const path = ascentPath(rocket);
+  const angle = index => Math.atan2(path.vz[index], Math.hypot(path.vx[index], path.vy[index])) * 180 / Math.PI;
+  const early = path.speed.findIndex(speed => speed > 5);
+  assert.ok(Math.abs(angle(early) - 50) < .5, `${angle(early)}°`);
+  assert.ok(angle(path.speed.length - 1) < 50 && path.z.at(-1) > rocket.startMetres.z);
+  assert.equal(path.seconds[0], rocket.startSeconds);
+});
