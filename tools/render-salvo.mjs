@@ -14,7 +14,7 @@ const distance = Number(distanceText);
 mkdirSync(folder, { recursive: true });
 const base = defaultScene('rocket');
 const salvo = Number(roundsText) > 1;
-const rocket = { ...categoryRocket(defaultSalvo(undefined, Number(seedText)), ROCKET.categories.find(category => category.label === categoryLabel)), ...(salvo ? { roundCount: Number(roundsText), salvoSeconds: Number(secondsText) } : {}), kind: salvo ? 'salvo' : 'rocket' };
+const rocket = { ...categoryRocket(defaultSalvo(undefined, undefined, Number(seedText)), ROCKET.categories.find(category => category.label === categoryLabel)), ...(salvo ? { roundCount: Number(roundsText), salvoSeconds: Number(secondsText) } : {}), kind: salvo ? 'salvo' : 'rocket' };
 rocket.startMetres = { ...rocket.startMetres, z: 2 };
 const scene = parseScene({
   ...base,

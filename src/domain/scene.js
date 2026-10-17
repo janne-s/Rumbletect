@@ -76,10 +76,10 @@ export function defaultJet(id = 'jet-1', name = 'Jet', seed = 20261015) {
 
 export const defaultFormation = (id = 'formation-1', name = 'Formation', seed = 20261014) => ({ ...defaultJet(id, name, seed), kind: 'formation', ...FORMATION_LAYOUT });
 
-export function defaultRocket(id = 'rocket-1', seed = 20261017) {
+export function defaultRocket(id = 'rocket-1', name = 'Rocket', seed = 20261017) {
   const sized = sizedRocket(7.6e6, 9, 'kerosene');
   return {
-    id, name: 'Rocket', kind: 'rocket', enabled: true, seed,
+    id, name, kind: 'rocket', enabled: true, seed,
     propellant: 'kerosene',
     startSeconds: 0,
     startMetres: { x: 0, y: 0, z: 10 },
@@ -90,15 +90,15 @@ export function defaultRocket(id = 'rocket-1', seed = 20261017) {
   };
 }
 
-export function defaultSalvo(id = 'salvo-1', seed = 20261012) {
+export function defaultSalvo(id = 'salvo-1', name = 'Salvo', seed = 20261012) {
   const artillery = ROCKET.categories.find(category => category.label === 'Artillery');
-  return { ...categoryRocket(defaultRocket(id, seed), artillery), name: 'Salvo', kind: 'salvo', ...ROCKET.salvoLayout };
+  return { ...categoryRocket(defaultRocket(id, name, seed), artillery), kind: 'salvo', ...ROCKET.salvoLayout };
 }
 
-export function defaultVolcano(id = 'volcano-1', seed = 20261018) {
+export function defaultVolcano(id = 'volcano-1', name = 'Volcano', seed = 20261018) {
   const { key, ventDiameterMetres, ventVelocityMetresPerSecond, gasTemperatureKelvin } = VOLCANO.categories.at(-1);
   return {
-    id, name: 'Volcano', kind: 'volcano', enabled: true, seed,
+    id, name, kind: 'volcano', enabled: true, seed,
     category: key,
     startSeconds: 0,
     ventMetres: { x: 0, y: 0, z: 0 },

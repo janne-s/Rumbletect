@@ -13,7 +13,7 @@ const vehicle = `${thrustText}MN`;
 const distance = Number(distanceText);
 mkdirSync(folder, { recursive: true });
 const base = defaultScene('rocket');
-const rocket = defaultRocket(undefined, Number(seedText));
+const rocket = defaultRocket(undefined, undefined, Number(seedText));
 const sized = sizedRocket(Number(thrustText) * 1e6, Number(enginesText), propellant);
 Object.assign(rocket, { propellant, engine: { ...rocket.engine, ...sized.engine, ...(efficiencyText ? { efficiencyPercent: Number(efficiencyText) } : {}) }, ascent: { ...rocket.ascent, ...sized.ascent } });
 if (secondsText) rocket.ascent.burnSeconds = Number(secondsText);
