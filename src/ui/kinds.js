@@ -64,9 +64,9 @@ function amplitudes(emitter, scene) {
   return new Map([[`${emitter.id}:0`, { amplitude, frequencyHz: components.large.peakHz }]]);
 }
 
-function wavefrontSources(emitter, scene, placedPoint, candidates) {
+function wavefrontSources(emitter, scene, placedPoint, candidates, fronts = VIEW.wavefront.flightFronts) {
   cachedTracks(emitter, scene).forEach((path, member) => {
-    const every = Math.max(1, Math.ceil(path.seconds.length / VIEW.wavefront.flightFronts));
+    const every = Math.max(1, Math.ceil(path.seconds.length / fronts));
     const spacingSeconds = every * path.step;
     for (let index = 0; index < path.seconds.length; index += every) candidates.push({ point: { x: path.x[index], y: path.y[index], z: path.z[index] }, emitted: path.seconds[index], group: `${emitter.id}:${member}`, spacingSeconds });
   });
@@ -185,7 +185,7 @@ export const KIND_PANELS = Object.freeze({
     tracks: (emitter, scene) => cachedTracks(emitter, scene),
     cone: machCone,
     amplitudes: rocketAmplitudes,
-    wavefrontSources,
+    wavefrontSources: (emitter, scene, placedPoint, candidates) => wavefrontSources(emitter, scene, placedPoint, candidates, VIEW.wavefront.spheres),
     mergesSources: false,
     warnings: rocketWarnings
   })
