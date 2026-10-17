@@ -1,7 +1,7 @@
 import { ENGINE, VIEW } from '../domain/constants.js';
 import { jetOfEngine, powerLabel, powerOfEngine } from '../domain/engine.js';
 import { jetComponents, speedOfSound } from '../domain/jet.js';
-import { defaultJet, defaultRocket, defaultVolcano, PROPELLANTS } from '../domain/scene.js';
+import { defaultFormation, defaultJet, defaultRocket, defaultSalvo, defaultVolcano, PROPELLANTS } from '../domain/scene.js';
 import { RENDER, ROCKET } from '../domain/constants.js';
 import { heardCounts } from '../domain/rocket-grains.js';
 import { peakFrequencyHz, sizedRocket, soundPowerWatts, totalThrustNewtons, vehicleOf } from '../domain/rocket.js';
@@ -17,7 +17,7 @@ const flownSeconds = (emitter, scene) => { const [path] = cachedTracks(emitter, 
 
 function summary(emitter, scene) {
   const jet = jetOfEngine(emitter.engine, scene.air.temperatureCelsius);
-  const { aircraft } = emitter.formation;
+  const aircraft = emitter.kind === 'formation' ? emitter.memberCount : 1;
   const { engines } = emitter.engine;
   return `${aircraft > 1 ? `${aircraft} × ` : ''}${ENGINE.classes[emitter.engineClass].label}${engines > 1 ? `, ${engines} engines` : ''}, ${powerLabel(powerOfEngine(emitter.engine, emitter.engineClass), emitter.engineClass)}, jet ${Math.round(jet.velocityMetresPerSecond)} m/s · Mach ${emitter.mach.toFixed(2)} at ${formatMetres(emitter.startMetres.z)} for ${flownSeconds(emitter, scene)} s`;
 }
@@ -25,7 +25,6 @@ function summary(emitter, scene) {
 function details(emitter, { updateEmitter, scene }) {
   const set = key => value => updateEmitter(emitter.id, item => { item[key] = value; });
   const setEngine = key => value => updateEmitter(emitter.id, item => { item.engine = { ...item.engine, [key]: value }; });
-  const setFormation = key => value => updateEmitter(emitter.id, item => { item.formation = { ...item.formation, [key]: value }; });
   const section = (title, build) => ({ title, build });
   const numbers = keys => container => keys.forEach(key => numberField(container, { key, value: emitter[key], onCommit: set(key) }));
   const jet = jetOfEngine(emitter.engine, scene.air.temperatureCelsius);
@@ -57,10 +56,7 @@ function details(emitter, { updateEmitter, scene }) {
       note.textContent = `Jet ${Math.round(jet.velocityMetresPerSecond)} m/s · ${jet.temperatureRatio.toFixed(2)} × ambient temperature`;
       container.append(note);
     }),
-    section('Formation', container => {
-      numberField(container, { key: 'aircraft', value: emitter.formation.aircraft, onCommit: setFormation('aircraft') });
-      if (emitter.formation.aircraft > 1) ['lateralSpacingMetres', 'trailSpacingMetres'].forEach(key => numberField(container, { key, value: emitter.formation[key], onCommit: setFormation(key) }));
-    })
+    ...(emitter.kind === 'formation' ? [section('Formation', numbers(['memberCount', 'lateralSpacingMetres', 'trailSpacingMetres']))] : [])
   ];
 }
 
@@ -70,7 +66,7 @@ function amplitudes(emitter, scene) {
   const { air } = scene;
   const components = jetComponents(jetOfEngine(emitter.engine, air.temperatureCelsius), { temperatureCelsius: air.temperatureCelsius, flightMetresPerSecond: emitter.mach * speedOfSound(air.temperatureCelsius) });
   const amplitude = 10 ** (components.large.decibels / 20) * 20e-6 * components.diameterMetres * Math.sqrt(components.large.peakHz * emitter.engine.engines);
-  return new Map(Array.from({ length: emitter.formation.aircraft }, (_, member) => [`${emitter.id}:${member}`, { amplitude, frequencyHz: components.large.peakHz }]));
+  return new Map(Array.from({ length: emitter.kind === 'formation' ? emitter.memberCount : 1 }, (_, member) => [`${emitter.id}:${member}`, { amplitude, frequencyHz: components.large.peakHz }]));
 }
 
 function wavefrontSources(emitter, scene, placedPoint, candidates, fronts = VIEW.wavefront.flightFronts) {
@@ -97,8 +93,7 @@ function warnings(emitter, scene) {
 function rocketSummary(emitter) {
   const vehicle = vehicleOf(emitter);
   const engines = emitter.engine.engines === 1 ? '1 engine' : `${emitter.engine.engines} engines`;
-  const { rounds, salvoSeconds } = emitter.salvo;
-  const salvo = rounds > 1 ? ` · ${rounds} rounds over ${salvoSeconds} s` : '';
+  const salvo = emitter.kind === 'salvo' ? ` · ${emitter.roundCount} rounds over ${emitter.salvoSeconds} s` : '';
   return `${ROCKET.propellants[emitter.propellant].label}, ${engines}, ${thrustLabel(totalThrustNewtons(emitter))} · ${(10 * Math.log10(soundPowerWatts(vehicle) / 1e-12)).toFixed(0)} dB power · burns ${emitter.ascent.burnSeconds} s${salvo}`;
 }
 
@@ -134,19 +129,16 @@ function rocketDetails(emitter, { updateEmitter }) {
       ['liftoffMassTonnes', 'burnSeconds', 'pitchKickAtSeconds', 'pitchKickDegrees', 'throttleDownSeconds', 'throttleUpSeconds', 'throttlePercent'].forEach(key => numberField(container, { key, value: emitter.ascent[key], onCommit: setIn('ascent', key) }));
       checkboxField(container, { label: 'Water on the pad', value: emitter.ascent.water, reliability: 'B', onCommit: setIn('ascent', 'water') });
     }),
-    section('Salvo', container => {
-      numberField(container, { key: 'rounds', value: emitter.salvo.rounds, onCommit: setIn('salvo', 'rounds') });
-      if (emitter.salvo.rounds > 1) SALVO_LAYOUT.forEach(key => numberField(container, { key, value: emitter.salvo[key], onCommit: setIn('salvo', key) }));
-    })
+    ...(emitter.kind === 'salvo' ? [section('Salvo', container => SALVO_LAYOUT.forEach(key => numberField(container, { key, value: emitter[key], onCommit: set(key) })))] : [])
   ];
 }
 
-const SALVO_LAYOUT = Object.freeze(['salvoSize', 'salvoSeconds', 'salvoSpreadSeconds', 'launcherRadiusMetres', 'headingSpreadDegrees', 'launchSpreadDegrees', 'thrustSpreadPercent']);
+const SALVO_LAYOUT = Object.freeze(['roundCount', 'salvoSize', 'salvoSeconds', 'salvoSpreadSeconds', 'launcherRadiusMetres', 'headingSpreadDegrees', 'launchSpreadDegrees', 'thrustSpreadPercent']);
 
 function rocketAmplitudes(emitter, scene) {
   const vehicle = vehicleOf(emitter);
   const amplitude = Math.sqrt(soundPowerWatts(vehicle) * 1.2 * speedOfSound(scene.air.temperatureCelsius) / (4 * Math.PI));
-  return new Map(Array.from({ length: emitter.salvo.rounds }, (_, member) => [`${emitter.id}:${member}`, { amplitude, frequencyHz: peakFrequencyHz(vehicle) }]));
+  return new Map(Array.from({ length: emitter.kind === 'salvo' ? emitter.roundCount : 1 }, (_, member) => [`${emitter.id}:${member}`, { amplitude, frequencyHz: peakFrequencyHz(vehicle) }]));
 }
 
 function rocketWarnings(emitter, scene) {
@@ -218,7 +210,7 @@ const VOLCANO_PANEL = Object.freeze({
   warnings: () => []
 });
 
-export const KIND_PANELS = Object.freeze({
+const KIND_PANELS_EXTENDED = {
   jet: Object.freeze({
     label: () => 'Jet',
     summary,
@@ -264,10 +256,17 @@ export const KIND_PANELS = Object.freeze({
     warnings: rocketWarnings
   }),
   volcano: VOLCANO_PANEL
-});
+};
+
+KIND_PANELS_EXTENDED.formation = Object.freeze({ ...KIND_PANELS_EXTENDED.jet, label: () => 'Formation', macros: macrosFor });
+KIND_PANELS_EXTENDED.salvo = Object.freeze({ ...KIND_PANELS_EXTENDED.rocket, label: () => 'Salvo', macros: rocketMacros });
+
+export const KIND_PANELS = Object.freeze(KIND_PANELS_EXTENDED);
 
 export const ADD_EMITTERS = Object.freeze({
   jet: Object.freeze({ create: defaultJet, label: 'Jet', mode: 'jet' }),
+  formation: Object.freeze({ create: defaultFormation, label: 'Formation', mode: 'jet' }),
   rocket: Object.freeze({ create: defaultRocket, label: 'Rocket', mode: 'rocket' }),
+  salvo: Object.freeze({ create: defaultSalvo, label: 'Salvo', mode: 'rocket' }),
   volcano: Object.freeze({ create: defaultVolcano, label: 'Volcano', mode: 'volcano' })
 });

@@ -1,5 +1,5 @@
 import { MODEL_VERSION, ROCKET, VOLCANO } from './constants.js';
-import { sizedRocket } from './rocket.js';
+import { categoryRocket, sizedRocket } from './rocket.js';
 import { ENGINE_CLASSES, engineOfClass } from './engine.js';
 import { createScene } from '../shared/domain/scene.js';
 
@@ -29,7 +29,7 @@ const RUMBLETECT_PARAMETERS = Object.freeze({
   throttleUpSeconds: { minimum: 0, maximum: 590, unit: 's', label: 'Throttle up at', reliability: 'C' },
   throttlePercent: { minimum: 30, maximum: 100, unit: '%', label: 'Throttle', reliability: 'C' },
   launchDegrees: { minimum: 5, maximum: 90, unit: '°', label: 'Launch angle', reliability: null },
-  aircraft: { minimum: 1, maximum: 24, unit: '', label: 'Aircraft', reliability: null, integer: true },
+  memberCount: { minimum: 2, maximum: 24, unit: '', label: 'Aircraft', reliability: null, integer: true },
   lateralSpacingMetres: { minimum: 0, maximum: 2000, unit: 'm', label: 'Lateral spacing', reliability: null },
   trailSpacingMetres: { minimum: 0, maximum: 3000, unit: 'm', label: 'Trail spacing', reliability: null },
   ventDiameterMetres: { minimum: 1, maximum: 500, unit: 'm', label: 'Vent diameter', reliability: 'C' },
@@ -40,7 +40,7 @@ const RUMBLETECT_PARAMETERS = Object.freeze({
   fadeSeconds: { minimum: 0, maximum: 300, unit: 's', label: 'Fade', reliability: null },
   pulsePeriodSeconds: { minimum: 1, maximum: 120, unit: 's', label: 'Pulse period', reliability: 'C' },
   pulseDepthPercent: { minimum: 0, maximum: 100, unit: '%', label: 'Pulse depth', reliability: 'C' },
-  rounds: { minimum: 1, maximum: 48, unit: '', label: 'Rounds', reliability: null, integer: true },
+  roundCount: { minimum: 2, maximum: 48, unit: '', label: 'Rounds', reliability: null, integer: true },
   salvoSize: { minimum: 1, maximum: 24, unit: '', label: 'Rounds per salvo', reliability: null, integer: true },
   salvoSeconds: { minimum: 0, maximum: 300, unit: 's', label: 'Duration', reliability: null },
   salvoSpreadSeconds: { minimum: 0, maximum: 10, unit: 's', label: 'Salvo spread', reliability: 'C' },
@@ -53,7 +53,7 @@ const RUMBLETECT_PARAMETERS = Object.freeze({
 export const PROPELLANTS = Object.freeze(Object.keys(ROCKET.propellants));
 
 /** Class C: a close formation, wingtips some 10 m apart. */
-const JET_FORMATION = Object.freeze({ aircraft: 1, lateralSpacingMetres: 20, trailSpacingMetres: 30 });
+const FORMATION_LAYOUT = Object.freeze({ memberCount: 4, lateralSpacingMetres: 20, trailSpacingMetres: 30 });
 
 const JET_NUMBERS = Object.freeze(['startSeconds', 'headingDegrees', 'climbDegrees', 'mach', 'accelerationMetresPerSecondSquared', 'turnDegreesPerSecond']);
 
@@ -70,10 +70,11 @@ export function defaultJet(id = 'jet-1', name = 'Jet', seed = 20261015) {
     durationSeconds: 33,
     autoDuration: false,
     engineClass: 'fighter',
-    engine: engineOfClass('fighter'),
-    formation: { ...JET_FORMATION }
+    engine: engineOfClass('fighter')
   };
 }
+
+export const defaultFormation = (id = 'formation-1', name = 'Formation', seed = 20261014) => ({ ...defaultJet(id, name, seed), kind: 'formation', ...FORMATION_LAYOUT });
 
 export function defaultRocket(id = 'rocket-1', seed = 20261017) {
   const sized = sizedRocket(7.6e6, 9, 'kerosene');
@@ -85,9 +86,13 @@ export function defaultRocket(id = 'rocket-1', seed = 20261017) {
     headingDegrees: 90,
     launchDegrees: 90,
     engine: { ...sized.engine, efficiencyPercent: .3 },
-    ascent: { ...ROCKET.defaultAscent, ...sized.ascent },
-    salvo: { ...ROCKET.defaultSalvo }
+    ascent: { ...ROCKET.defaultAscent, ...sized.ascent }
   };
+}
+
+export function defaultSalvo(id = 'salvo-1', seed = 20261012) {
+  const artillery = ROCKET.categories.find(category => category.label === 'Artillery');
+  return { ...categoryRocket(defaultRocket(id, seed), artillery), name: 'Salvo', kind: 'salvo', ...ROCKET.salvoLayout };
 }
 
 export function defaultVolcano(id = 'volcano-1', seed = 20261018) {
@@ -117,7 +122,6 @@ function readVolcano(value, { point, numbers }, path) {
 export const emitterAnchor = emitter => emitter.ventMetres ?? emitter.startMetres;
 
 const ROCKET_ENGINE_NUMBERS = Object.freeze(['engines', 'thrustKilonewtons', 'exitVelocityMetresPerSecond', 'exitDiameterMetres', 'efficiencyPercent']);
-const SALVO_NUMBERS = Object.freeze(Object.keys(ROCKET.defaultSalvo));
 const ROCKET_ASCENT_NUMBERS = Object.freeze(['liftoffMassTonnes', 'burnSeconds', 'pitchKickAtSeconds', 'pitchKickDegrees', 'throttleDownSeconds', 'throttleUpSeconds', 'throttlePercent']);
 
 function readRocket(value, { check, point, numbers }, path) {
@@ -129,10 +133,11 @@ function readRocket(value, { check, point, numbers }, path) {
     startMetres: point(value.startMetres, `${path}.startMetres`),
     ...numbers(value, ['startSeconds', 'headingDegrees', 'launchDegrees'], path),
     engine: numbers(value.engine, ROCKET_ENGINE_NUMBERS, `${path}.engine`),
-    ascent: { ...numbers(value.ascent, ROCKET_ASCENT_NUMBERS, `${path}.ascent`), water: value.ascent.water },
-    salvo: numbers(value.salvo, SALVO_NUMBERS, `${path}.salvo`)
+    ascent: { ...numbers(value.ascent, ROCKET_ASCENT_NUMBERS, `${path}.ascent`), water: value.ascent.water }
   };
 }
+
+const readSalvo = (value, fields, path) => ({ ...readRocket(value, fields, path), ...fields.numbers(value, Object.keys(ROCKET.salvoLayout), path) });
 
 function readJet(value, { check, number, point, numbers }, path) {
   const engine = value.engine ?? {};
@@ -148,10 +153,11 @@ function readJet(value, { check, number, point, numbers }, path) {
       totalTemperatureKelvin: number(engine.totalTemperatureKelvin, 'totalTemperatureKelvin', `${path}.engine.totalTemperatureKelvin`),
       diameterMetres: number(engine.diameterMetres, 'nozzleDiameterMetres', `${path}.engine.diameterMetres`),
       engines: number(engine.engines, 'engines', `${path}.engine.engines`)
-    },
-    formation: numbers(value.formation, Object.keys(JET_FORMATION), `${path}.formation`)
+    }
   };
 }
+
+const readFormation = (value, fields, path) => ({ ...readJet(value, fields, path), ...fields.numbers(value, Object.keys(FORMATION_LAYOUT), path) });
 
 export const { PARAMETERS, MODES, defaultScene, parseScene, readScene, serializeScene, sceneInMode } = createScene({
   name: 'Rumbletect',
@@ -160,13 +166,15 @@ export const { PARAMETERS, MODES, defaultScene, parseScene, readScene, serialize
   modelVersion: MODEL_VERSION,
   anchor: emitterAnchor,
   modes: {
-    jet: { kinds: ['jet'], emitter: () => defaultJet(), receiverMetres: { x: 0, y: 0, z: 1.7 } },
-    rocket: { kinds: ['rocket'], emitter: () => defaultRocket(), receiverMetres: { x: -1500, y: -2600, z: 1.7 } },
+    jet: { kinds: ['jet', 'formation'], emitter: () => defaultJet(), receiverMetres: { x: 0, y: 0, z: 1.7 } },
+    rocket: { kinds: ['rocket', 'salvo'], emitter: () => defaultRocket(), receiverMetres: { x: -1500, y: -2600, z: 1.7 } },
     volcano: { kinds: ['volcano'], emitter: () => defaultVolcano(), receiverMetres: { x: -3000, y: -4000, z: 1.7 } }
   },
   kinds: {
     jet: { defaults: () => defaultJet(), read: readJet },
+    formation: { defaults: () => defaultFormation(), read: readFormation },
     rocket: { defaults: () => defaultRocket(), read: readRocket },
+    salvo: { defaults: () => defaultSalvo(), read: readSalvo },
     volcano: { defaults: () => defaultVolcano(), read: readVolcano }
   },
   parameters: RUMBLETECT_PARAMETERS

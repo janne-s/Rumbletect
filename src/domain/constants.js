@@ -224,22 +224,22 @@ export const ROCKET = Object.freeze({
    * rocket's a Terrier booster's 6 s burn to about Mach 3 (C).
    */
   categories: Object.freeze([
-    Object.freeze({ label: 'Hobby', newtons: 10, engines: 1, propellant: 'solid', burnSeconds: 2, launchDegrees: 85, efficiencyPercent: .3, rounds: 1 }),
-    Object.freeze({ label: 'Artillery', newtons: 100e3, engines: 1, propellant: 'solid', burnSeconds: 4, launchDegrees: 50, efficiencyPercent: .3, rounds: 6, thrustToWeight: 20 }),
-    Object.freeze({ label: 'Sounding', newtons: 250e3, engines: 1, propellant: 'solid', burnSeconds: 6, launchDegrees: 85, efficiencyPercent: .3, rounds: 1, thrustToWeight: 15 }),
-    Object.freeze({ label: 'Small launcher', newtons: .73e6, engines: 4, propellant: 'kerosene', burnSeconds: 160, launchDegrees: 90, efficiencyPercent: .3, rounds: 1 }),
-    Object.freeze({ label: 'Medium launcher', newtons: 7.6e6, engines: 9, propellant: 'kerosene', burnSeconds: 150, launchDegrees: 90, efficiencyPercent: .3, rounds: 1 }),
-    Object.freeze({ label: 'Heavy launcher', newtons: 22.8e6, engines: 27, propellant: 'kerosene', burnSeconds: 150, launchDegrees: 90, efficiencyPercent: .3, rounds: 1 }),
-    Object.freeze({ label: 'Super-heavy', newtons: 74.4e6, engines: 33, propellant: 'methane', burnSeconds: 160, launchDegrees: 90, efficiencyPercent: .4, rounds: 1 })
+    Object.freeze({ label: 'Hobby', newtons: 10, engines: 1, propellant: 'solid', burnSeconds: 2, launchDegrees: 85, efficiencyPercent: .3 }),
+    Object.freeze({ label: 'Artillery', newtons: 100e3, engines: 1, propellant: 'solid', burnSeconds: 4, launchDegrees: 50, efficiencyPercent: .3, thrustToWeight: 20 }),
+    Object.freeze({ label: 'Sounding', newtons: 250e3, engines: 1, propellant: 'solid', burnSeconds: 6, launchDegrees: 85, efficiencyPercent: .3, thrustToWeight: 15 }),
+    Object.freeze({ label: 'Small launcher', newtons: .73e6, engines: 4, propellant: 'kerosene', burnSeconds: 160, launchDegrees: 90, efficiencyPercent: .3 }),
+    Object.freeze({ label: 'Medium launcher', newtons: 7.6e6, engines: 9, propellant: 'kerosene', burnSeconds: 150, launchDegrees: 90, efficiencyPercent: .3 }),
+    Object.freeze({ label: 'Heavy launcher', newtons: 22.8e6, engines: 27, propellant: 'kerosene', burnSeconds: 150, launchDegrees: 90, efficiencyPercent: .3 }),
+    Object.freeze({ label: 'Super-heavy', newtons: 74.4e6, engines: 33, propellant: 'methane', burnSeconds: 160, launchDegrees: 90, efficiencyPercent: .4 })
   ]),
   /** Class C: an ascent's schedule for every size; the throttle-down follows Falcon 9's webcast telemetry (47–65 s at about 75 %). */
   defaultAscent: Object.freeze({ pitchKickAtSeconds: 10, pitchKickDegrees: 1, throttleDownSeconds: 47, throttleUpSeconds: 65, throttlePercent: 75 }),
   /**
    * Class C: a salvo as Boomtect's barrage lays it out, salvos even over its span and each moved by up to this share of
-   * their interval. Defaults a multiple launcher's six rockets one at a time over 30 s from launchers within 5 m.
+   * their interval. A salvo defaults to the Artillery category's rocket, a multiple launcher's six one at a time over 30 s from launchers within 5 m.
    */
   salvoJitter: .15,
-  defaultSalvo: Object.freeze({ rounds: 1, salvoSize: 1, salvoSeconds: 30, salvoSpreadSeconds: 1, launcherRadiusMetres: 5, headingSpreadDegrees: 2, launchSpreadDegrees: 1, thrustSpreadPercent: 5 })
+  salvoLayout: Object.freeze({ roundCount: 6, salvoSize: 1, salvoSeconds: 30, salvoSpreadSeconds: 1, launcherRadiusMetres: 5, headingSpreadDegrees: 2, launchSpreadDegrees: 1, thrustSpreadPercent: 5 })
 });
 
 export const VOLCANO = Object.freeze({

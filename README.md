@@ -32,8 +32,8 @@ the flight, then delays, spreads, and filters that sound on its way there.
   full afterburner.
 - **Mach, height, heading, climb, acceleration, turn, flight time** — The
   flight, subsonic.
-- **Aircraft** — A formation flying a V behind the leader, each aircraft
-  with its own seed.
+- **Formation** — Its own kind: aircraft flying a V behind the leader, each
+  with its own seed, their spacing in its details.
 - **Turbomachinery** — A small turbine's blade-passing whine rising with
   power, and a turbofan's fan hump.
 - **Details** — Start point, onset, seed, engine count, the engine's nozzle pressure
@@ -44,7 +44,7 @@ the flight, then delays, spreads, and filters that sound on its way there.
 
 - **Category** — Hobby, artillery, sounding, small, medium, and heavy
   launchers, and super-heavy: sets thrust, engines, propellant, burn time,
-  launch angle, and rounds in one step.
+  and launch angle in one step.
 - **Size** — Total thrust from a 10 N hobby motor to a 100 MN super-heavy
   launcher; nozzle, mass, burn time, and water on the pad follow.
 - **Propellant** — Solid, kerosene, methane, or hydrogen: a faster exhaust
@@ -53,12 +53,11 @@ the flight, then delays, spreads, and filters that sound on its way there.
 - **Heading, launch angle, burn time, pitch kick** — The ascent: liftoff,
   straight up or at a slant off a rail, a pitch kick, and a gravity turn to
   engine cut-off.
-- **Rounds** — A salvo from a multiple launcher: each round the same rocket
-  with its own seed, launch time, launcher, heading, angle, and thrust.
+- **Salvo** — Its own kind: a multiple launcher's rounds, each the same
+  rocket with its own seed, launch time, launcher, heading, angle, and thrust;
+  rounds per salvo, spread, launcher radius, and spreads in its details.
 - **Details** — Engine count, thrust, exhaust velocity, nozzle diameter,
-  acoustic efficiency, mass, throttle-down around max-Q, water on the pad, and
-  the salvo's rounds per salvo, duration, spread, launcher radius, and
-  heading, angle, and thrust spreads.
+  acoustic efficiency, mass, throttle-down around max-Q, and water on the pad.
 - **Source** — Sound power from thrust and exhaust velocity, with the
   spectrum and directivity of BYU's SATURN model; low frequencies radiate
   toward the plume and start once the plume has left the pad.

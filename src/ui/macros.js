@@ -98,16 +98,16 @@ const onset = {
   entry: { unit: 's', get: item => item.startSeconds, set: (item, value) => { item.startSeconds = value; } }
 };
 
-const jetAircraft = {
+const formationCount = {
   label: 'Aircraft',
-  read: item => clamp01(logPosition(item.formation.aircraft, range('aircraft'))),
-  write: (item, t) => { item.formation = { ...item.formation, aircraft: Math.round(logValue(t, range('aircraft'))) }; },
-  show: item => `${item.formation.aircraft}`,
-  entry: { get: item => item.formation.aircraft, set: (item, value) => { item.formation = { ...item.formation, aircraft: value }; } }
+  read: item => clamp01(logPosition(item.memberCount, range('memberCount'))),
+  write: (item, t) => { item.memberCount = Math.round(logValue(t, range('memberCount'))); },
+  show: item => `${item.memberCount}`,
+  entry: { get: item => item.memberCount, set: (item, value) => { item.memberCount = value; } }
 };
 
 export function macrosFor(emitter, { onset: withOnset = false } = {}) {
-  const list = [jetCategory, power, machNumber, flightHeight, flightHeading, flightClimb, flightAcceleration, flightTurn, flightTime, jetAircraft];
+  const list = [...(emitter.kind === 'formation' ? [formationCount] : []), jetCategory, power, machNumber, flightHeight, flightHeading, flightClimb, flightAcceleration, flightTurn, flightTime];
   return withOnset ? [...list, onset] : list;
 }
 
@@ -183,16 +183,24 @@ const rocketLaunch = {
   entry: { unit: '°', get: item => item.launchDegrees, set: (item, value) => { item.launchDegrees = value; } }
 };
 
-const rocketRounds = {
+const salvoRounds = {
   label: 'Rounds',
-  read: item => clamp01(logPosition(item.salvo.rounds, range('rounds'))),
-  write: (item, t) => { item.salvo = { ...item.salvo, rounds: Math.round(logValue(t, range('rounds'))) }; },
-  show: item => `${item.salvo.rounds}`,
-  entry: { get: item => item.salvo.rounds, set: (item, value) => { item.salvo = { ...item.salvo, rounds: value }; } }
+  read: item => clamp01(logPosition(item.roundCount, range('roundCount'))),
+  write: (item, t) => { item.roundCount = Math.round(logValue(t, range('roundCount'))); },
+  show: item => `${item.roundCount}`,
+  entry: { get: item => item.roundCount, set: (item, value) => { item.roundCount = value; } }
+};
+
+const salvoDuration = {
+  label: 'Duration',
+  read: item => item.salvoSeconds / range('salvoSeconds')[1],
+  write: (item, t) => { item.salvoSeconds = Math.round(t * range('salvoSeconds')[1]); },
+  show: item => `${item.salvoSeconds} s`,
+  entry: { unit: 's', get: item => item.salvoSeconds, set: (item, value) => { item.salvoSeconds = value; } }
 };
 
 export function rocketMacros(emitter, { onset: withOnset = false } = {}) {
-  const list = [rocketCategory, rocketSize, rocketPropellant, flightHeading, rocketLaunch, rocketBurn, rocketKick, rocketRounds];
+  const list = [...(emitter.kind === 'salvo' ? [salvoRounds, salvoDuration] : []), rocketCategory, rocketSize, rocketPropellant, flightHeading, rocketLaunch, rocketBurn, rocketKick];
   return withOnset ? [...list, onset] : list;
 }
 

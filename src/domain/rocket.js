@@ -87,7 +87,7 @@ export function directivityRow(strouhal, out, offset) {
   }
 }
 
-/** A rocket set to a category's thrust, engines, propellant, burn, launch angle, efficiency and rounds; the ascent's schedule and the salvo's layout kept. */
+/** A rocket set to a category's thrust, engines, propellant, burn, launch angle and efficiency; the ascent's schedule kept. */
 export function categoryRocket(item, category) {
   const sized = sizedRocket(category.newtons, category.engines, category.propellant, category.thrustToWeight);
   return {
@@ -95,8 +95,7 @@ export function categoryRocket(item, category) {
     propellant: category.propellant,
     launchDegrees: category.launchDegrees,
     engine: { ...item.engine, ...sized.engine, efficiencyPercent: category.efficiencyPercent },
-    ascent: { ...item.ascent, ...sized.ascent, burnSeconds: category.burnSeconds },
-    salvo: { ...item.salvo, rounds: category.rounds }
+    ascent: { ...item.ascent, ...sized.ascent, burnSeconds: category.burnSeconds }
   };
 }
 

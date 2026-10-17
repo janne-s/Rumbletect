@@ -10,6 +10,6 @@ const tracks = new Map();
 
 export const cachedTracks = (emitter, scene) => (emitter.kind === 'volcano'
   ? cached(tracks, emitter, [], () => [ventPath(emitter)])
-  : emitter.kind === 'rocket'
+  : emitter.kind === 'rocket' || emitter.kind === 'salvo'
   ? cached(tracks, emitter, [], () => salvoRounds(emitter).map(ascentPath))
   : cached(tracks, emitter, [scene.air, emitter.autoDuration ? scene.receivers.map(receiver => receiver.positionMetres) : null], () => formationJets(emitter).map(member => jetPath(member, scene))));

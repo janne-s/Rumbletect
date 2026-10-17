@@ -5,7 +5,7 @@ import { join } from 'node:path';
 import { ROCKET } from '../src/domain/constants.js';
 import { categoryRocket } from '../src/domain/rocket.js';
 import { salvoRounds } from '../src/domain/salvo.js';
-import { defaultRocket, defaultScene, parseScene } from '../src/domain/scene.js';
+import { defaultSalvo, defaultScene, parseScene } from '../src/domain/scene.js';
 import { prepareScene, renderReceiver } from '../src/domain/render.js';
 import { encodeFloat32Wav } from '../src/shared/domain/wav.js';
 
@@ -13,9 +13,9 @@ const [folder, distanceText = '300', roundsText = '6', seedText = '1', secondsTe
 const distance = Number(distanceText);
 mkdirSync(folder, { recursive: true });
 const base = defaultScene('rocket');
-const rocket = categoryRocket(defaultRocket(undefined, Number(seedText)), ROCKET.categories.find(category => category.label === categoryLabel));
+const salvo = Number(roundsText) > 1;
+const rocket = { ...categoryRocket(defaultSalvo(undefined, Number(seedText)), ROCKET.categories.find(category => category.label === categoryLabel)), ...(salvo ? { roundCount: Number(roundsText), salvoSeconds: Number(secondsText) } : {}), kind: salvo ? 'salvo' : 'rocket' };
 rocket.startMetres = { ...rocket.startMetres, z: 2 };
-rocket.salvo = { ...rocket.salvo, rounds: Number(roundsText), salvoSeconds: Number(secondsText) };
 const scene = parseScene({
   ...base,
   air: { ...base.air, refraction: false },
