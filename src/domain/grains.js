@@ -64,18 +64,18 @@ const catmullRom = (samples, position) => {
 };
 
 /**
- * A jet as grains along its flight (`tect-shared-interfaces.md`, grains): sine-windowed frames at half overlap,
- * each heard toward a path's departure. Its Doppler shift and −10 log|1 − M cos ψ| (Stone et al. 2003, eq. 2)
- * come with the grain, so they count once. Ahead of a supersonic jet's Mach cone the factor is negative and the
- * grain arrives reversed.
+ * Grains along a path (`tect-shared-interfaces.md`, grains): sine-windowed frames at half overlap, each heard toward
+ * a path's departure. `source.components(state)` gives a grain's source state or null when it is silent;
+ * `source.spectra(components, inletDegrees, frequencies)` its shaped and plain PSDs at 1 m, inlet 0 ahead along its
+ * axis; `source.packetHz(components)` the corner of its intermittency; `source.axis` and `source.place` optionally
+ * its axis and emission point when they differ from its flight. Its Doppler shift and −10 log|1 − M cos ψ|
+ * (Stone et al. 2003, eq. 2) come with the grain, so they count once. Ahead of a supersonic grain's Mach cone the
+ * factor is negative and the grain arrives reversed.
  */
-export function jetGrains(emitter, scene) {
+export function pathGrains(emitter, scene, path, source) {
   const { air } = scene;
   const sampleRate = scene.render.sampleRate;
   const sound = speedOfSound(air.temperatureCelsius);
-  const path = jetPath(emitter, scene);
-  const jet = jetOfEngine(emitter.engine, air.temperatureCelsius);
-  const shape = waveformShape({ skewness: JET.largeScaleSkewness, kurtosis: JET.largeScaleKurtosis });
   const grainSeconds = GRAIN / sampleRate;
   const hopSeconds = grainSeconds / 2;
   const duration = (path.seconds.length - 1) * path.step;
@@ -86,10 +86,12 @@ export function jetGrains(emitter, scene) {
     const centre = path.seconds[0] + index * hopSeconds;
     const { position, velocity } = sampled(path, centre);
     const speed = Math.hypot(velocity.x, velocity.y, velocity.z);
-    const components = jetComponents(jet, { temperatureCelsius: air.temperatureCelsius, flightMetresPerSecond: speed });
-    const side = jetSpectra(components, 90, frequencies);
-    const power = [...side.large, ...side.fine].reduce((sum, value) => sum + value, 0) * binHz;
-    grains.push({ centre, position, velocity, speed, components, amplitude: Math.sqrt(power), heard: power > 0 });
+    const components = source.components({ seconds: centre, position, velocity, speed });
+    if (!components) { grains.push({ heard: false }); continue; }
+    const axis = source.axis?.(components, velocity, speed) ?? null;
+    const side = source.spectra(components, 90, frequencies);
+    const power = [...side.shaped, ...side.plain].reduce((sum, value) => sum + value, 0) * binHz;
+    grains.push({ centre, position: source.place?.(components, position, axis) ?? position, velocity, speed, axis, components, amplitude: Math.sqrt(power), heard: power > 0 });
   }
   const rows = grains.flatMap((grain, index) => (!grain.heard ? [] : [{
     positionMetres: grain.position, direction: null, elementMetres: 0, emissionSeconds: grain.centre - grainSeconds, amplitudePaMetres: grain.amplitude,
@@ -103,18 +105,19 @@ export function jetGrains(emitter, scene) {
     const signed = 1 - mach * cosine;
     const compression = Math.sign(signed || 1) * Math.max(JET_FLIGHT.smallestCompression, Math.abs(signed));
     const squeeze = Math.abs(compression);
-    const inletDegrees = Math.acos(Math.max(-1, Math.min(1, cosine))) * 180 / Math.PI;
-    const { large, fine } = jetSpectra(grain.components, inletDegrees, frequencies);
-    const cutoff = grain.components.large.peakHz / JET.packetCycles;
+    const axial = grain.axis ? grain.axis.x * departure.x + grain.axis.y * departure.y + grain.axis.z * departure.z : cosine;
+    const inletDegrees = Math.acos(Math.max(-1, Math.min(1, axial))) * 180 / Math.PI;
+    const { shaped: shapedPsd, plain } = source.spectra(grain.components, inletDegrees, frequencies);
+    const cutoff = source.packetHz(grain.components);
     const lowPass = frequencies.map(frequency => (frequency > 0 ? 1 / (1 + (frequency / cutoff) ** 2) : 0));
     const lowPassSum = lowPass.reduce((sum, value) => sum + value, 0) * binHz;
     const stream = (psd, salt) => gaussianFrame(createRandom((emitter.seed ^ Math.imul(index + 1, 0x27d4eb2d) ^ salt) >>> 0), psd, sampleRate);
-    const fineFrame = stream(fine, STREAMS.fine);
-    const largeFrame = stream(large, STREAMS.large);
+    const plainFrame = stream(plain, STREAMS.fine);
+    const shapedFrame = stream(shapedPsd, STREAMS.large);
     const envelope = stream(lowPass.map(value => value / lowPassSum), STREAMS.envelope);
-    const rms = Math.sqrt(large.reduce((sum, value) => sum + value, 0) * binHz);
-    const shaped = shapeWaveform(largeFrame, () => rms, envelope, shape);
-    const real = Float64Array.from(WINDOW, (window, sample) => window * (shaped[sample] + fineFrame[sample]));
+    const rms = Math.sqrt(shapedPsd.reduce((sum, value) => sum + value, 0) * binHz);
+    const shaped = shapeWaveform(shapedFrame, () => rms, envelope, source.shape);
+    const real = Float64Array.from(WINDOW, (window, sample) => window * (shaped[sample] + plainFrame[sample]));
     const imaginary = new Float64Array(GRAIN);
     fft(real, imaginary);
     const limit = SYNTHESIS.bandLimitShare * sampleRate * squeeze / binHz;
@@ -136,4 +139,17 @@ export function jetGrains(emitter, scene) {
   }
 
   return { sources: sourceTable(rows), rows, emission };
+}
+
+const JET_SHAPE = waveformShape({ skewness: JET.largeScaleSkewness, kurtosis: JET.largeScaleKurtosis });
+
+export function jetGrains(emitter, scene) {
+  const { air } = scene;
+  const jet = jetOfEngine(emitter.engine, air.temperatureCelsius);
+  return pathGrains(emitter, scene, jetPath(emitter, scene), {
+    components: ({ speed }) => jetComponents(jet, { temperatureCelsius: air.temperatureCelsius, flightMetresPerSecond: speed }),
+    spectra: (components, inletDegrees, frequencies) => { const { large, fine } = jetSpectra(components, inletDegrees, frequencies); return { shaped: large, plain: fine }; },
+    packetHz: components => components.large.peakHz / JET.packetCycles,
+    shape: JET_SHAPE
+  });
 }
