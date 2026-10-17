@@ -242,12 +242,15 @@ export const ROCKET = Object.freeze({
    * The category slider's steps. Medium is Falcon 9's thrust, engines and propellant (B); super-heavy Starship's, with
    * SATURN's 0.4 % for Flight 6 (B); heavy three medium cores; the smaller ones typical, class C: a 10 N hobby motor, an
    * artillery rocket off a tilted tube, a sounding rocket's booster (Terrier class), a small four-engine launcher like Firefly Alpha (0.73 MN).
-   * The artillery rocket is GMLRS-sized (about 300 kg); its thrust-to-weight lets a 4 s burn reach about Mach 2.5, as GMLRS and ATACMS do; the sounding
+   * The artillery rocket is a 122 mm Grad (BM-21, APR-40, M-92 Vulkan; the owner's recordings 10 and 11): about 66 kg with
+   * 20 kg of propellant burnt in 2 s to about 690 m/s, so about 21 kN and a thrust-to-weight of 33. The heavy artillery
+   * rocket is GMLRS-sized (about 300 kg); its thrust-to-weight lets a 4 s burn reach about Mach 2.5, as GMLRS and ATACMS do; the sounding
    * rocket's a Terrier booster's 6 s burn to about Mach 3 (C).
    */
   categories: Object.freeze([
     Object.freeze({ label: 'Hobby', newtons: 10, engines: 1, propellant: 'solid', burnSeconds: 2, launchDegrees: 85, efficiencyPercent: .3 }),
-    Object.freeze({ label: 'Artillery', newtons: 50e3, engines: 1, propellant: 'solid', burnSeconds: 4, launchDegrees: 50, efficiencyPercent: .3, thrustToWeight: 20 }),
+    Object.freeze({ label: 'Artillery', newtons: 21e3, engines: 1, propellant: 'solid', burnSeconds: 2, launchDegrees: 50, efficiencyPercent: .3, thrustToWeight: 33 }),
+    Object.freeze({ label: 'Heavy artillery', newtons: 50e3, engines: 1, propellant: 'solid', burnSeconds: 4, launchDegrees: 50, efficiencyPercent: .3, thrustToWeight: 20 }),
     Object.freeze({ label: 'Sounding', newtons: 250e3, engines: 1, propellant: 'solid', burnSeconds: 6, launchDegrees: 85, efficiencyPercent: .3, thrustToWeight: 15 }),
     Object.freeze({ label: 'Small launcher', newtons: .73e6, engines: 4, propellant: 'kerosene', burnSeconds: 160, launchDegrees: 90, efficiencyPercent: .3 }),
     Object.freeze({ label: 'Medium launcher', newtons: 7.6e6, engines: 9, propellant: 'kerosene', burnSeconds: 150, launchDegrees: 90, efficiencyPercent: .3 }),
@@ -258,10 +261,10 @@ export const ROCKET = Object.freeze({
   defaultAscent: Object.freeze({ pitchKickAtSeconds: 10, pitchKickDegrees: 1, throttleDownSeconds: 47, throttleUpSeconds: 65, throttlePercent: 75 }),
   /**
    * Class C: a salvo as Boomtect's barrage lays it out, salvos even over its span and each moved by up to this share of
-   * their interval. A salvo defaults to the Artillery category's rocket, a multiple launcher's six one at a time over 30 s from launchers within 5 m.
+   * their interval. A salvo defaults to a 122 mm launcher's full load, 40 Artillery rockets one at a time over 20 s (BM-21, APR-40, M-92 Vulkan).
    */
   salvoJitter: .15,
-  salvoLayout: Object.freeze({ roundCount: 6, salvoSize: 1, salvoSeconds: 30, salvoSpreadSeconds: 1, launcherRadiusMetres: 5, headingSpreadDegrees: 2, launchSpreadDegrees: 1, thrustSpreadPercent: 5 })
+  salvoLayout: Object.freeze({ roundCount: 40, salvoSize: 1, salvoSeconds: 20, salvoSpreadSeconds: 0, launcherRadiusMetres: 2, headingSpreadDegrees: 2, launchSpreadDegrees: 1, thrustSpreadPercent: 5 })
 });
 
 export const VOLCANO = Object.freeze({

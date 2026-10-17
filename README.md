@@ -42,8 +42,8 @@ the flight, then delays, spreads, and filters that sound on its way there.
 
 ## Rocket
 
-- **Category** — Hobby, artillery, sounding, small, medium, and heavy
-  launchers, and super-heavy: sets thrust, engines, propellant, burn time,
+- **Category** — Hobby, 122 mm artillery, heavy artillery, sounding, small,
+  medium, and heavy launchers, and super-heavy: sets thrust, engines, propellant, burn time,
   and launch angle in one step.
 - **Size** — Total thrust from a 10 N hobby motor to a 100 MN super-heavy
   launcher; nozzle, mass, burn time, and water on the pad follow.
@@ -53,7 +53,8 @@ the flight, then delays, spreads, and filters that sound on its way there.
 - **Heading, launch angle, burn time, pitch kick** — The ascent: liftoff,
   straight up or at a slant off a rail, a pitch kick, and a gravity turn to
   engine cut-off.
-- **Salvo** — Its own kind: a multiple launcher's rounds, each the same
+- **Salvo** — Its own kind, by default a 122 mm launcher's 40 rounds in 20 s:
+  a multiple launcher's rounds, each the same
   rocket with its own seed, launch time, launcher, heading, angle, and thrust;
   rounds per salvo, spread, launcher radius, and spreads in its details.
 - **Details** — Engine count, thrust, exhaust velocity, nozzle diameter,
