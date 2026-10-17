@@ -106,8 +106,26 @@ const formationCount = {
   entry: { get: item => item.memberCount, set: (item, value) => { item.memberCount = value; } }
 };
 
+const SPACING_SPAN = Object.freeze([5, 2000]);
+const TRAIL_RATIO = 1.5;
+
+/** The formation's lateral spacing; the trail spacing keeps its ratio to it. */
+const formationSpacing = {
+  label: 'Spacing',
+  read: item => clamp01(logPosition(Math.max(SPACING_SPAN[0], item.lateralSpacingMetres), SPACING_SPAN)),
+  write: (item, t) => setSpacing(item, Math.round(logValue(t, SPACING_SPAN))),
+  show: item => metres(item.lateralSpacingMetres),
+  entry: { units: METRES, get: item => item.lateralSpacingMetres, set: (item, value) => setSpacing(item, value) }
+};
+
+function setSpacing(item, lateral) {
+  const ratio = item.lateralSpacingMetres > 0 ? item.trailSpacingMetres / item.lateralSpacingMetres : TRAIL_RATIO;
+  item.lateralSpacingMetres = Math.min(range('lateralSpacingMetres')[1], lateral);
+  item.trailSpacingMetres = Math.min(range('trailSpacingMetres')[1], Math.round(item.lateralSpacingMetres * ratio));
+}
+
 export function macrosFor(emitter, { onset: withOnset = false } = {}) {
-  const list = [...(emitter.kind === 'formation' ? [formationCount] : []), jetCategory, power, machNumber, flightHeight, flightHeading, flightClimb, flightAcceleration, flightTurn, flightTime];
+  const list = [...(emitter.kind === 'formation' ? [formationCount, formationSpacing] : []), jetCategory, power, machNumber, flightHeight, flightHeading, flightClimb, flightAcceleration, flightTurn, flightTime];
   return withOnset ? [...list, onset] : list;
 }
 

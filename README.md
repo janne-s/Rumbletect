@@ -33,7 +33,7 @@ the flight, then delays, spreads, and filters that sound on its way there.
 - **Mach, height, heading, climb, acceleration, turn, flight time** — The
   flight, subsonic.
 - **Formation** — Its own kind: aircraft flying a V behind the leader, each
-  with its own seed, their spacing in its details.
+  with its own seed; Spacing sets how far apart, the trail in its details.
 - **Turbomachinery** — A small turbine's blade-passing whine rising with
   power, and a turbofan's fan hump.
 - **Details** — Start point, onset, seed, engine count, the engine's nozzle pressure
