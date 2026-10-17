@@ -118,6 +118,8 @@ export function vehicleOf(emitter) {
 /** Class B: Mathews & Gee 2025 eq. 8, the overall sound power of the plume in watts at a share of full thrust. */
 export const soundPowerWatts = (vehicle, throttle = 1) => .5 * vehicle.efficiency * vehicle.totalThrustNewtons * throttle * vehicle.exitVelocityMetresPerSecond;
 
+export const ignitionSecondsOf = vehicle => Math.max(ROCKET.shortestIgnitionSeconds, ROCKET.ignitionSeconds * Math.cbrt(Math.min(1, vehicle.totalThrustNewtons / ROCKET.ignitionReferenceNewtons)));
+
 export const peakFrequencyHz = vehicle => SPECTRUM.peakStrouhal * vehicle.exitVelocityMetresPerSecond / vehicle.effectiveDiameterMetres;
 
 const smoothStep = value => { const t = Math.min(1, Math.max(0, value)); return t * t * (3 - 2 * t); };
@@ -204,6 +206,7 @@ export function rocketSource(emitter, scene, path) {
   const diameter = vehicle.effectiveDiameterMetres;
   const velocity = vehicle.exitVelocityMetresPerSecond;
   const padHeight = emitter.startMetres.z;
+  const ignitionSeconds = ignitionSecondsOf(vehicle);
   const tables = new WeakMap();
   const tableFor = frequencies => {
     if (!tables.has(frequencies)) tables.set(frequencies, spectralTable(frequencies, diameter, velocity));
@@ -214,7 +217,7 @@ export function rocketSource(emitter, scene, path) {
     components({ seconds, position }) {
       const since = seconds - emitter.startSeconds;
       if (since < 0) return null;
-      const ignition = Math.min(1, since / ROCKET.ignitionSeconds);
+      const ignition = Math.min(1, since / ignitionSeconds);
       const [low, high] = ROCKET.ignitionCornerHz;
       return {
         watts: soundPowerWatts(vehicle, path.throttle[sampleIndex(seconds)]) * ignition,

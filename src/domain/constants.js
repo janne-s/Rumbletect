@@ -176,8 +176,14 @@ export const ROCKET = Object.freeze({
   packetCycles: 4,
   /** Class B: liquid engines are held down until running, SpaceX's T0 3 s after ignition (Hart et al. 2025); solid motors lift off at ignition. */
   holdSeconds: 3,
-  /** Class C: the spectrum opens from low to high frequencies over about 1.2 s at ignition (owner's Starship recordings 4 and 7). */
+  /**
+   * Class C: the spectrum opens from low to high frequencies over about 1.2 s at a super-heavy's ignition (owner's
+   * Starship recordings 4 and 7, 74.4 MN, engines started in turn); smaller rockets as the cube root of thrust, a
+   * 100 kN motor in about 0.13 s, never under 0.05 s.
+   */
   ignitionSeconds: 1.2,
+  ignitionReferenceNewtons: 74.4e6,
+  shortestIgnitionSeconds: .05,
   ignitionCornerHz: Object.freeze([10, 20000]),
   /** Class C: frequencies whose source has not yet left the flame deflector (Mathews 2025, plume emergence) radiate without directivity, this much weaker. */
   padLossDecibels: 6,
