@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { ascentPath, directivityDecibels, normalizedPowerDecibels, sizedRocket, sourceLocationMetres } from '../src/domain/rocket.js';
+import { ascentPath, categoryRocket, directivityDecibels, nearestCategory, normalizedPowerDecibels, sizedRocket, sourceLocationMetres } from '../src/domain/rocket.js';
+import { ROCKET } from '../src/domain/constants.js';
 import { defaultRocket, defaultScene, parseScene, readScene } from '../src/domain/scene.js';
 import { prepareScene, renderReceiver } from '../src/domain/render.js';
 
@@ -84,4 +85,16 @@ test('a rocket launched at a slant keeps its angle off the rail, then curves und
   assert.ok(Math.abs(angle(early) - 50) < .5, `${angle(early)}°`);
   assert.ok(angle(path.speed.length - 1) < 50 && path.z.at(-1) > rocket.startMetres.z);
   assert.equal(path.seconds[0], rocket.startSeconds);
+});
+
+test('categories rise in thrust, each reads back as itself, and every one flies above its pad', () => {
+  const thrusts = ROCKET.categories.map(category => category.newtons);
+  assert.deepEqual(thrusts, [...thrusts].sort((a, b) => a - b));
+  const scene = defaultScene('rocket');
+  for (const category of ROCKET.categories) {
+    const rocket = parseScene({ ...scene, emitters: [categoryRocket(scene.emitters[0], category)] }).emitters[0];
+    assert.equal(nearestCategory(rocket), category);
+    const path = ascentPath(rocket);
+    assert.ok(Math.min(...path.z) >= rocket.startMetres.z - 1e-6 && path.z.at(-1) > rocket.startMetres.z + 10, `${category.label}: ${path.z.at(-1)} m`);
+  }
 });

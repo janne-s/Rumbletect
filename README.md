@@ -34,6 +34,9 @@ the flight, then delays, spreads, and filters that sound on its way there.
 
 ## Rocket
 
+- **Category** — Hobby, artillery, sounding, small, medium, and heavy
+  launchers, and super-heavy: sets thrust, engines, propellant, burn time,
+  and launch angle in one step.
 - **Size** — Total thrust from a 10 N hobby motor to a 100 MN super-heavy
   launcher; nozzle, mass, burn time, and water on the pad follow.
 - **Propellant** — Solid, kerosene, methane, or hydrogen: a faster exhaust

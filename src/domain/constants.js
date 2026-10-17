@@ -147,6 +147,20 @@ export const ROCKET = Object.freeze({
     waterFromNewtons: 1e6,
     totalNewtons: Object.freeze([10, 1e8])
   }),
+  /**
+   * The category slider's steps. Medium is Falcon 9's thrust, engines and propellant (B); super-heavy Starship's, with
+   * SATURN's 0.4 % for Flight 6 (B); heavy three medium cores; the smaller ones typical, class C: a 10 N hobby motor, an
+   * artillery rocket off a tilted tube, a sounding rocket's booster (Terrier class), a small four-engine launcher like Firefly Alpha (0.73 MN).
+   */
+  categories: Object.freeze([
+    Object.freeze({ label: 'Hobby', newtons: 10, engines: 1, propellant: 'solid', burnSeconds: 2, launchDegrees: 85, efficiencyPercent: .3 }),
+    Object.freeze({ label: 'Artillery', newtons: 100e3, engines: 1, propellant: 'solid', burnSeconds: 4, launchDegrees: 50, efficiencyPercent: .3 }),
+    Object.freeze({ label: 'Sounding', newtons: 250e3, engines: 1, propellant: 'solid', burnSeconds: 20, launchDegrees: 85, efficiencyPercent: .3 }),
+    Object.freeze({ label: 'Small launcher', newtons: .73e6, engines: 4, propellant: 'kerosene', burnSeconds: 160, launchDegrees: 90, efficiencyPercent: .3 }),
+    Object.freeze({ label: 'Medium launcher', newtons: 7.6e6, engines: 9, propellant: 'kerosene', burnSeconds: 150, launchDegrees: 90, efficiencyPercent: .3 }),
+    Object.freeze({ label: 'Heavy launcher', newtons: 22.8e6, engines: 27, propellant: 'kerosene', burnSeconds: 150, launchDegrees: 90, efficiencyPercent: .3 }),
+    Object.freeze({ label: 'Super-heavy', newtons: 74.4e6, engines: 33, propellant: 'methane', burnSeconds: 160, launchDegrees: 90, efficiencyPercent: .4 })
+  ]),
   /** Class C: an ascent's schedule for every size; the throttle-down follows Falcon 9's webcast telemetry (47–65 s at about 75 %). */
   defaultAscent: Object.freeze({ pitchKickAtSeconds: 10, pitchKickDegrees: 1, throttleDownSeconds: 47, throttleUpSeconds: 65, throttlePercent: 75 })
 });

@@ -1,7 +1,7 @@
 import { engineAtPower, powerLabel, powerOfEngine } from '../domain/engine.js';
 import { PARAMETERS } from '../domain/scene.js';
 import { ROCKET } from '../domain/constants.js';
-import { sizedRocket } from '../domain/rocket.js';
+import { categoryRocket, nearestCategory, sizedRocket } from '../domain/rocket.js';
 import { clamp01, logPosition, logValue, METRES, metres } from '../shared/ui/macros.js';
 
 const range = key => [PARAMETERS[key].minimum, PARAMETERS[key].maximum];
@@ -84,6 +84,19 @@ export function macrosFor(emitter, { onset: withOnset = false } = {}) {
   return withOnset ? [...list, onset] : list;
 }
 
+const CATEGORIES = ROCKET.categories;
+
+const rocketCategory = {
+  label: 'Category',
+  read: item => CATEGORIES.indexOf(nearestCategory(item)) / (CATEGORIES.length - 1),
+  write: (item, t) => {
+    const category = CATEGORIES[Math.round(t * (CATEGORIES.length - 1))];
+    if (category === nearestCategory(item)) return;
+    Object.assign(item, categoryRocket(item, category));
+  },
+  show: item => nearestCategory(item).label
+};
+
 const SIZE_SPAN = ROCKET.sizing.totalNewtons;
 const totalOf = item => item.engine.engines * item.engine.thrustKilonewtons * 1000;
 
@@ -142,6 +155,6 @@ const rocketLaunch = {
 };
 
 export function rocketMacros(emitter, { onset: withOnset = false } = {}) {
-  const list = [rocketSize, rocketPropellant, flightHeading, rocketLaunch, rocketBurn, rocketKick];
+  const list = [rocketCategory, rocketSize, rocketPropellant, flightHeading, rocketLaunch, rocketBurn, rocketKick];
   return withOnset ? [...list, onset] : list;
 }

@@ -85,6 +85,21 @@ export function directivityRow(strouhal, out, offset) {
   }
 }
 
+/** A rocket set to a category's thrust, engines, propellant, burn, launch angle and efficiency; the ascent's schedule kept. */
+export function categoryRocket(item, category) {
+  const sized = sizedRocket(category.newtons, category.engines, category.propellant);
+  return {
+    ...item,
+    propellant: category.propellant,
+    launchDegrees: category.launchDegrees,
+    engine: { ...item.engine, ...sized.engine, efficiencyPercent: category.efficiencyPercent },
+    ascent: { ...item.ascent, ...sized.ascent, burnSeconds: category.burnSeconds }
+  };
+}
+
+/** The category whose thrust is nearest, in octaves, to the rocket's. */
+export const nearestCategory = emitter => ROCKET.categories.reduce((best, category) => (Math.abs(Math.log(category.newtons / totalThrustNewtons(emitter))) < Math.abs(Math.log(best.newtons / totalThrustNewtons(emitter))) ? category : best));
+
 export const sourceLocationMetres = (strouhal, diameterMetres) => ROCKET.sourceLocation.coefficient * strouhal ** ROCKET.sourceLocation.exponent * diameterMetres;
 
 export function vehicleOf(emitter) {
