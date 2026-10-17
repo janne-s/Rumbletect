@@ -63,6 +63,14 @@ const catmullRom = (samples, position) => {
   return b + .5 * t * (c - a + t * (2 * a - 5 * b + 4 * c - d + t * (3 * (b - c) + d - a)));
 };
 
+/** The renderer drops each frame's DC, so a grain carrying a mean would step at frame edges; a sine taper removes it. */
+function removeMean(samples, first, last, sum) {
+  const span = last - first + 2;
+  let weights = 0;
+  for (let sample = first; sample <= last; sample += 1) weights += Math.sin(Math.PI * (sample - first + 1) / span);
+  for (let sample = first; sample <= last; sample += 1) samples[sample] -= sum * Math.sin(Math.PI * (sample - first + 1) / span) / weights;
+}
+
 /**
  * Grains along a path (`tect-shared-interfaces.md`, grains): sine-windowed frames at half overlap, each heard toward
  * a path's departure. `source.components(state)` gives a grain's source state or null when it is silent;
@@ -131,9 +139,13 @@ export function pathGrains(emitter, scene, path, source) {
     const outImaginary = new Float64Array(plan.size);
     const gain = 1 / (Math.sqrt(squeeze) * grain.amplitude * sampleRate);
     const half = GRAIN * squeeze / 2;
-    for (let sample = Math.max(0, Math.floor(GRAIN - half) - 2); sample <= Math.min(plan.size - 1, Math.ceil(GRAIN + half) + 2); sample += 1) {
+    const [first, last] = [Math.max(0, Math.floor(GRAIN - half) - 2), Math.min(plan.size - 1, Math.ceil(GRAIN + half) + 2)];
+    let sum = 0;
+    for (let sample = first; sample <= last; sample += 1) {
       out[sample] = gain * catmullRom(real, GRAIN / 2 + (sample - GRAIN) / compression);
+      sum += out[sample];
     }
+    removeMean(out, first, last, sum);
     fft(out, outImaginary);
     return { re: out, im: outImaginary };
   }
