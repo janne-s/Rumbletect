@@ -107,7 +107,7 @@ export const ROCKET = Object.freeze({
   /** Class B: no intermittency; the owner's unlimited Starship recording 7 has kurtosis 3.0 at 7.7 km, as Gaussian noise. */
   kurtosis: 3,
   packetCycles: 4,
-  /** Class B: SpaceX's T0 is 3 s after engine ignition (Hart et al. 2025); the vehicle is held until then. */
+  /** Class B: liquid engines are held down until running, SpaceX's T0 3 s after ignition (Hart et al. 2025); solid motors lift off at ignition. */
   holdSeconds: 3,
   /** Class C: the spectrum opens from low to high frequencies over about 1.2 s at ignition (owner's Starship recordings 4 and 7). */
   ignitionSeconds: 1.2,
@@ -123,24 +123,28 @@ export const ROCKET = Object.freeze({
   /** Echoes and scattering arrive after the direct sound; the ascent ends this much before the render's span would. */
   renderMarginSeconds: 40,
   gravity: 9.80665,
-  vehicles: Object.freeze({
-    /**
-     * Merlin 1D: Kellison et al. 2026 table 1 (B). Mass, kick and throttle fitted to webcast telemetry of Bangabandhu-1
-     * and CRS-12 (shahar603/Telemetry-Data): throttle-down 47–65 s, MECO 150 s (C).
-     */
-    falcon9: Object.freeze({
-      label: 'Falcon 9',
-      engine: Object.freeze({ engines: 9, thrustKilonewtons: 845, exitVelocityMetresPerSecond: 2984, exitDiameterMetres: .92, efficiencyPercent: .3 }),
-      ascent: Object.freeze({ liftoffMassTonnes: 560, burnSeconds: 150, pitchKickAtSeconds: 10, pitchKickDegrees: 1, throttleDownSeconds: 47, throttleUpSeconds: 65, throttlePercent: 75, water: true })
-    }),
-    /**
-     * Raptor 2: 74.4 MN and 127 GW for 33 engines (Gee et al. 2025), d_e 1.306 m (FAA 2022, appendix G); η 0.4 % as SATURN
-     * for Flight 6 (Mathews 2025) (B). Mass, kick and throttle fitted loosely to IFT-2's staging at about 70 km near T+160 s (webcast, C); without drag it flies too fast.
-     */
-    starship: Object.freeze({
-      label: 'Starship',
-      engine: Object.freeze({ engines: 33, thrustKilonewtons: 2254.5, exitVelocityMetresPerSecond: 3414, exitDiameterMetres: 1.306, efficiencyPercent: .4 }),
-      ascent: Object.freeze({ liftoffMassTonnes: 5200, burnSeconds: 160, pitchKickAtSeconds: 12, pitchKickDegrees: 2, throttleDownSeconds: 50, throttleUpSeconds: 70, throttlePercent: 80, water: true })
-    })
-  })
+  /**
+   * Exhaust velocity by propellant, class B: solid RSRM ≈ 2 500 m/s and GEM 63XL ≈ 2 470 m/s; kerosene Merlin 1D 2 984 m/s
+   * (Kellison et al. 2026); methane Raptor 2 3 414 m/s (Gee et al. 2025) and BE-4 ≈ 3 180 m/s; hydrogen near the top of
+   * the typical 2 400–4 000 m/s (Lubert et al. 2022, table I). Liftoff thrust-to-weight, class C.
+   */
+  propellants: Object.freeze({
+    solid: Object.freeze({ label: 'Solid', exitVelocityMetresPerSecond: 2500, thrustToWeight: 3 }),
+    kerosene: Object.freeze({ label: 'Kerosene', exitVelocityMetresPerSecond: 2984, thrustToWeight: 1.36 }),
+    methane: Object.freeze({ label: 'Methane', exitVelocityMetresPerSecond: 3300, thrustToWeight: 1.45 }),
+    hydrogen: Object.freeze({ label: 'Hydrogen', exitVelocityMetresPerSecond: 4000, thrustToWeight: 1.3 })
+  }),
+  /**
+   * Class C: sizing from total thrust. The exit diameter grows as √F (the same chamber pressure and expansion), its
+   * factor the geometric mean of Merlin 1D, Raptor 2, RD-180, Alpha, SRTM and GEM-60 (0.30–1.43 m, within 30 %).
+   * Burn time from a hobby motor's 2 s to a first stage's 150 s. Water on pads for vehicles of 1 MN and more.
+   */
+  sizing: Object.freeze({
+    diameterPerRootNewton: 9.2e-4,
+    burnSeconds: Object.freeze([Object.freeze([10, 2]), Object.freeze([1e3, 5]), Object.freeze([1e5, 60]), Object.freeze([1e6, 120]), Object.freeze([7e6, 150])]),
+    waterFromNewtons: 1e6,
+    totalNewtons: Object.freeze([10, 1e8])
+  }),
+  /** Class C: an ascent's schedule for every size; the throttle-down follows Falcon 9's webcast telemetry (47–65 s at about 75 %). */
+  defaultAscent: Object.freeze({ pitchKickAtSeconds: 10, pitchKickDegrees: 1, throttleDownSeconds: 47, throttleUpSeconds: 65, throttlePercent: 75 })
 });

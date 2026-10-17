@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { ascentPath, directivityDecibels, normalizedPowerDecibels, sourceLocationMetres } from '../src/domain/rocket.js';
+import { ascentPath, directivityDecibels, normalizedPowerDecibels, sizedRocket, sourceLocationMetres } from '../src/domain/rocket.js';
 import { defaultRocket, defaultScene, parseScene, readScene } from '../src/domain/scene.js';
 import { prepareScene, renderReceiver } from '../src/domain/render.js';
 
@@ -23,7 +23,7 @@ test('low frequencies radiate toward the plume axis, high ones near 70°, and th
   assert.ok(sourceLocationMetres(.001, 2.76) > sourceLocationMetres(.1, 2.76));
 });
 
-test('the Falcon 9 ascent follows its webcast telemetry within a tenth up to T+100 s', () => {
+test('the default rocket, Falcon 9\'s size and propellant, follows its webcast telemetry within a tenth up to T+100 s', () => {
   const path = ascentPath(defaultRocket());
   const at = seconds => Math.round((seconds + path.heldSeconds) / path.step);
   for (const [seconds, kilometres, speed] of [[30, 1.93, 146], [60, 8.91, 337], [100, 25.49, 874]]) {
@@ -33,7 +33,7 @@ test('the Falcon 9 ascent follows its webcast telemetry within a tenth up to T+1
   assert.equal(path.z[0], path.z[at(0)]);
 });
 
-test('a Falcon 9 is about 135 dB at 1 km over grass, as measured', () => {
+test('the default rocket, Falcon 9\'s size, is about 135 dB at 1 km over grass, as measured', () => {
   const base = defaultScene('rocket');
   const rocket = defaultRocket();
   rocket.ascent.burnSeconds = 30;
@@ -55,8 +55,21 @@ test('a Falcon 9 is about 135 dB at 1 km over grass, as measured', () => {
 test('a rocket read from a document takes defaults for what is missing and brings values into range', () => {
   const scene = defaultScene('rocket');
   const { ascent, ...rest } = scene.emitters[0];
-  const read = readScene({ ...scene, emitters: [{ ...rest, vehicle: 'starship', engine: { ...rest.engine, engines: 400 } }] });
+  const read = readScene({ ...scene, emitters: [{ ...rest, engine: { ...rest.engine, engines: 400 } }] });
   assert.equal(read.emitters[0].engine.engines, 60);
-  assert.equal(read.emitters[0].ascent.liftoffMassTonnes, 5200);
-  assert.throws(() => parseScene({ ...scene, emitters: [{ ...scene.emitters[0], vehicle: 'balloon' }] }));
+  assert.equal(read.emitters[0].ascent.burnSeconds, scene.emitters[0].ascent.burnSeconds);
+  assert.throws(() => parseScene({ ...scene, emitters: [{ ...scene.emitters[0], propellant: 'gunpowder' }] }));
+});
+
+test('sizing reaches known engines within a third and scales from a hobby motor to a super-heavy', () => {
+  const merlin = sizedRocket(7.6e6, 9, 'kerosene').engine;
+  const raptor = sizedRocket(74.4e6, 33, 'methane').engine;
+  assert.ok(Math.abs(merlin.exitDiameterMetres / .92 - 1) < .33 && Math.abs(raptor.exitDiameterMetres / 1.306 - 1) < .33);
+  const hobby = sizedRocket(10, 1, 'solid');
+  assert.ok(hobby.engine.exitDiameterMetres < .01 && hobby.ascent.burnSeconds <= 3 && !hobby.ascent.water);
+  assert.ok(sizedRocket(74.4e6, 33, 'methane').ascent.water);
+  const scene = defaultScene('rocket');
+  const small = { ...scene.emitters[0], propellant: 'solid', engine: { ...scene.emitters[0].engine, ...hobby.engine }, ascent: { ...scene.emitters[0].ascent, ...hobby.ascent } };
+  const path = ascentPath(parseScene({ ...scene, emitters: [small] }).emitters[0]);
+  assert.ok(path.z.at(-1) > small.startMetres.z + 20, `${path.z.at(-1)} m`);
 });

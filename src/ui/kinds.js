@@ -1,15 +1,15 @@
 import { VIEW } from '../domain/constants.js';
 import { jetOfEngine, powerLabel, powerOfEngine } from '../domain/engine.js';
 import { jetComponents, speedOfSound } from '../domain/jet.js';
-import { defaultJet, defaultRocket, ROCKET_VEHICLES } from '../domain/scene.js';
+import { defaultJet, defaultRocket, PROPELLANTS } from '../domain/scene.js';
 import { RENDER, ROCKET } from '../domain/constants.js';
 import { heardSteps } from '../domain/rocket-grains.js';
-import { peakFrequencyHz, soundPowerWatts, vehicleOf } from '../domain/rocket.js';
+import { peakFrequencyHz, sizedRocket, soundPowerWatts, totalThrustNewtons, vehicleOf } from '../domain/rocket.js';
 import { newSeed } from '../shared/domain/random.js';
 import { formatMetres } from '../shared/ui/canvas.js';
 import { checkboxField, numberField, pointFields, seedField, selectField, textField } from './fields.js';
 import { cachedTracks } from './geometry-cache.js';
-import { macrosFor, rocketMacros } from './macros.js';
+import { macrosFor, rocketMacros, thrustLabel } from './macros.js';
 import { machCone } from '../shared/domain/trajectory.js';
 
 const flownSeconds = (emitter, scene) => { const [path] = cachedTracks(emitter, scene); return Math.round((path.seconds.length - 1) * path.step); };
@@ -87,18 +87,18 @@ function warnings(emitter, scene) {
 
 function rocketSummary(emitter) {
   const vehicle = vehicleOf(emitter);
-  const name = ROCKET.vehicles[emitter.vehicle]?.label ?? 'Custom';
-  return `${name}, ${emitter.engine.engines} × ${Math.round(emitter.engine.thrustKilonewtons)} kN · ${(10 * Math.log10(soundPowerWatts(vehicle) / 1e-12)).toFixed(0)} dB power · burns ${emitter.ascent.burnSeconds} s`;
+  const engines = emitter.engine.engines === 1 ? '1 engine' : `${emitter.engine.engines} engines`;
+  return `${ROCKET.propellants[emitter.propellant].label}, ${engines}, ${thrustLabel(totalThrustNewtons(emitter))} · ${(10 * Math.log10(soundPowerWatts(vehicle) / 1e-12)).toFixed(0)} dB power · burns ${emitter.ascent.burnSeconds} s`;
 }
 
 function rocketDetails(emitter, { updateEmitter }) {
   const set = key => value => updateEmitter(emitter.id, item => { item[key] = value; });
-  const setIn = (group, key) => value => updateEmitter(emitter.id, item => { item[group] = { ...item[group], [key]: value }; item.vehicle = 'custom'; });
-  const choose = vehicle => updateEmitter(emitter.id, item => {
-    if (vehicle === 'custom') { item.vehicle = 'custom'; return; }
-    const preset = defaultRocket(item.id, vehicle, item.seed);
-    Object.assign(item, { vehicle, engine: preset.engine, ascent: preset.ascent });
-    if (ROCKET_VEHICLES.some(key => ROCKET.vehicles[key].label === item.name)) item.name = preset.name;
+  const setIn = (group, key) => value => updateEmitter(emitter.id, item => { item[group] = { ...item[group], [key]: value }; });
+  const choose = propellant => updateEmitter(emitter.id, item => {
+    const sized = sizedRocket(totalThrustNewtons(item), item.engine.engines, propellant);
+    item.propellant = propellant;
+    item.engine = { ...item.engine, exitVelocityMetresPerSecond: sized.engine.exitVelocityMetresPerSecond };
+    item.ascent = { ...item.ascent, liftoffMassTonnes: sized.ascent.liftoffMassTonnes };
   });
   const section = (title, build) => ({ title, build });
   const vehicle = vehicleOf(emitter);
@@ -110,12 +110,12 @@ function rocketDetails(emitter, { updateEmitter }) {
       pointFields(container, { label: 'Nozzles on the pad', point: emitter.startMetres, onCommit: set('startMetres') });
       numberField(container, { key: 'headingDegrees', value: emitter.headingDegrees, onCommit: set('headingDegrees') });
     }),
-    section('Vehicle', container => {
-      selectField(container, { label: 'Vehicle', value: emitter.vehicle, options: [...ROCKET_VEHICLES.map(key => [key, ROCKET.vehicles[key].label]), ['custom', 'Custom']], onCommit: choose });
+    section('Engines', container => {
+      selectField(container, { label: 'Propellant', value: emitter.propellant, options: PROPELLANTS.map(key => [key, ROCKET.propellants[key].label]), reliability: 'B', onCommit: choose });
       ['engines', 'thrustKilonewtons', 'exitVelocityMetresPerSecond', 'exitDiameterMetres', 'efficiencyPercent'].forEach(key => numberField(container, { key, value: emitter.engine[key], onCommit: setIn('engine', key) }));
       const note = document.createElement('p');
       note.className = 'field-note';
-      note.textContent = `Plume ${vehicle.effectiveDiameterMetres.toFixed(2)} m across, peak ${peakFrequencyHz(vehicle).toFixed(1)} Hz`;
+      note.textContent = `${thrustLabel(totalThrustNewtons(emitter))} in all · plume ${vehicle.effectiveDiameterMetres < 1 ? `${Math.round(vehicle.effectiveDiameterMetres * 100)} cm` : `${vehicle.effectiveDiameterMetres.toFixed(2)} m`} across · peak ${peakFrequencyHz(vehicle) < 100 ? peakFrequencyHz(vehicle).toFixed(1) : Math.round(peakFrequencyHz(vehicle))} Hz`;
       container.append(note);
     }),
     section('Ascent', container => {

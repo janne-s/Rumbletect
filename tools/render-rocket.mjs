@@ -1,16 +1,21 @@
-// Renders a rocket preset to an omni microphone over flat grass and prints its levels.
-// node tools/render-rocket.mjs <folder> <falcon9|starship> <distance metres> [seconds] [seed] writes rocket-<vehicle>-<distance>m.wav.
+// Renders a rocket to an omni microphone over flat grass and prints its levels.
+// node tools/render-rocket.mjs <folder> <total thrust MN> <engines> <solid|kerosene|methane|hydrogen> <distance metres> [seconds] [seed] [efficiency %]
+// writes rocket-<thrust>MN-<distance>m.wav. Falcon 9: 7.6 9 kerosene; Starship: 74.4 33 methane 0.4.
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { defaultRocket, defaultScene, parseScene } from '../src/domain/scene.js';
+import { sizedRocket } from '../src/domain/rocket.js';
 import { prepareScene, renderReceiver } from '../src/domain/render.js';
 import { encodeFloat32Wav } from '../src/shared/domain/wav.js';
 
-const [folder, vehicle = 'falcon9', distanceText = '1000', secondsText, seedText = '1'] = process.argv.slice(2);
+const [folder, thrustText = '7.6', enginesText = '9', propellant = 'kerosene', distanceText = '1000', secondsText, seedText = '1', efficiencyText] = process.argv.slice(2);
+const vehicle = `${thrustText}MN`;
 const distance = Number(distanceText);
 mkdirSync(folder, { recursive: true });
 const base = defaultScene('rocket');
-const rocket = defaultRocket(undefined, vehicle, Number(seedText));
+const rocket = defaultRocket(undefined, Number(seedText));
+const sized = sizedRocket(Number(thrustText) * 1e6, Number(enginesText), propellant);
+Object.assign(rocket, { propellant, engine: { ...rocket.engine, ...sized.engine, ...(efficiencyText ? { efficiencyPercent: Number(efficiencyText) } : {}) }, ascent: { ...rocket.ascent, ...sized.ascent } });
 if (secondsText) rocket.ascent.burnSeconds = Number(secondsText);
 const scene = parseScene({
   ...base,

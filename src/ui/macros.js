@@ -1,5 +1,7 @@
 import { engineAtPower, powerLabel, powerOfEngine } from '../domain/engine.js';
 import { PARAMETERS } from '../domain/scene.js';
+import { ROCKET } from '../domain/constants.js';
+import { sizedRocket } from '../domain/rocket.js';
 import { clamp01, logPosition, logValue, METRES, metres } from '../shared/ui/macros.js';
 
 const range = key => [PARAMETERS[key].minimum, PARAMETERS[key].maximum];
@@ -82,13 +84,38 @@ export function macrosFor(emitter, { onset: withOnset = false } = {}) {
   return withOnset ? [...list, onset] : list;
 }
 
-const rocketThrottle = {
-  label: 'Throttle',
-  read: item => (item.ascent.throttlePercent - range('throttlePercent')[0]) / (range('throttlePercent')[1] - range('throttlePercent')[0]),
-  write: (item, t) => { item.ascent = { ...item.ascent, throttlePercent: Math.round(range('throttlePercent')[0] + t * (range('throttlePercent')[1] - range('throttlePercent')[0])) }; },
-  show: item => `${item.ascent.throttlePercent} % at max-Q`,
-  entry: { unit: '%', get: item => item.ascent.throttlePercent, set: (item, value) => { item.ascent = { ...item.ascent, throttlePercent: value }; } }
+const SIZE_SPAN = ROCKET.sizing.totalNewtons;
+const totalOf = item => item.engine.engines * item.engine.thrustKilonewtons * 1000;
+
+const rocketSize = {
+  label: 'Size',
+  read: item => clamp01(logPosition(totalOf(item), SIZE_SPAN)),
+  write: (item, t) => {
+    const sized = sizedRocket(+logValue(t, SIZE_SPAN).toPrecision(2), item.engine.engines, item.propellant);
+    item.engine = { ...item.engine, ...sized.engine };
+    item.ascent = { ...item.ascent, ...sized.ascent };
+  },
+  show: item => thrustLabel(totalOf(item)),
+  entry: { unit: 'kN', get: item => totalOf(item) / 1000, set: (item, value) => { const sized = sizedRocket(value * 1000, item.engine.engines, item.propellant); item.engine = { ...item.engine, ...sized.engine }; item.ascent = { ...item.ascent, ...sized.ascent }; } }
 };
+
+const PROPELLANT_KEYS = Object.keys(ROCKET.propellants);
+
+const rocketPropellant = {
+  label: 'Propellant',
+  read: item => PROPELLANT_KEYS.indexOf(item.propellant) / (PROPELLANT_KEYS.length - 1),
+  write: (item, t) => {
+    const propellant = PROPELLANT_KEYS[Math.round(t * (PROPELLANT_KEYS.length - 1))];
+    if (propellant === item.propellant) return;
+    const sized = sizedRocket(totalOf(item), item.engine.engines, propellant);
+    item.propellant = propellant;
+    item.engine = { ...item.engine, exitVelocityMetresPerSecond: sized.engine.exitVelocityMetresPerSecond };
+    item.ascent = { ...item.ascent, liftoffMassTonnes: sized.ascent.liftoffMassTonnes };
+  },
+  show: item => ROCKET.propellants[item.propellant].label
+};
+
+export const thrustLabel = newtons => (newtons >= 1e6 ? `${+(newtons / 1e6).toPrecision(3)} MN` : newtons >= 1e3 ? `${+(newtons / 1e3).toPrecision(3)} kN` : `${+newtons.toPrecision(3)} N`);
 
 const rocketBurn = {
   label: 'Burn time',
@@ -106,15 +133,7 @@ const rocketKick = {
   entry: { unit: '°', get: item => item.ascent.pitchKickDegrees, set: (item, value) => { item.ascent = { ...item.ascent, pitchKickDegrees: value }; } }
 };
 
-const rocketEfficiency = {
-  label: 'Efficiency',
-  read: item => clamp01(logPosition(item.engine.efficiencyPercent, range('efficiencyPercent'))),
-  write: (item, t) => { item.engine = { ...item.engine, efficiencyPercent: +logValue(t, range('efficiencyPercent')).toFixed(3) }; },
-  show: item => `${item.engine.efficiencyPercent} %`,
-  entry: { unit: '%', get: item => item.engine.efficiencyPercent, set: (item, value) => { item.engine = { ...item.engine, efficiencyPercent: value }; } }
-};
-
 export function rocketMacros(emitter, { onset: withOnset = false } = {}) {
-  const list = [flightHeading, rocketThrottle, rocketBurn, rocketKick, rocketEfficiency];
+  const list = [rocketSize, rocketPropellant, flightHeading, rocketBurn, rocketKick];
   return withOnset ? [...list, onset] : list;
 }

@@ -1,4 +1,5 @@
 import { MODEL_VERSION, ROCKET } from './constants.js';
+import { sizedRocket } from './rocket.js';
 import { engineAtPower } from './engine.js';
 import { createScene } from '../shared/domain/scene.js';
 
@@ -18,9 +19,9 @@ const RUMBLETECT_PARAMETERS = Object.freeze({
   engines: { minimum: 1, maximum: 60, unit: '', label: 'Engines', reliability: null, integer: true },
   thrustKilonewtons: { minimum: .01, maximum: 10000, unit: 'kN', label: 'Thrust per engine', reliability: 'B' },
   exitVelocityMetresPerSecond: { minimum: 500, maximum: 5000, unit: 'm/s', label: 'Exhaust velocity', reliability: 'B' },
-  exitDiameterMetres: { minimum: .005, maximum: 5, unit: 'm', label: 'Nozzle exit diameter', reliability: 'B' },
+  exitDiameterMetres: { minimum: .001, maximum: 6, unit: 'm', label: 'Nozzle exit diameter', reliability: 'B' },
   efficiencyPercent: { minimum: .05, maximum: 1, unit: '%', label: 'Acoustic efficiency', reliability: 'B' },
-  liftoffMassTonnes: { minimum: .001, maximum: 10000, unit: 't', label: 'Liftoff mass', reliability: 'C' },
+  liftoffMassTonnes: { minimum: .00001, maximum: 10000, unit: 't', label: 'Liftoff mass', reliability: 'C' },
   burnSeconds: { minimum: 1, maximum: 590, unit: 's', label: 'Burn time', reliability: 'C' },
   pitchKickAtSeconds: { minimum: 0, maximum: 120, unit: 's', label: 'Pitch kick at', reliability: 'C' },
   pitchKickDegrees: { minimum: 0, maximum: 45, unit: '°', label: 'Pitch kick', reliability: 'C' },
@@ -29,7 +30,7 @@ const RUMBLETECT_PARAMETERS = Object.freeze({
   throttlePercent: { minimum: 30, maximum: 100, unit: '%', label: 'Throttle', reliability: 'C' }
 });
 
-export const ROCKET_VEHICLES = Object.freeze(Object.keys(ROCKET.vehicles));
+export const PROPELLANTS = Object.freeze(Object.keys(ROCKET.propellants));
 
 const JET_NUMBERS = Object.freeze(['startSeconds', 'headingDegrees', 'climbDegrees', 'mach', 'accelerationMetresPerSecondSquared', 'turnDegreesPerSecond']);
 
@@ -49,16 +50,16 @@ export function defaultJet(id = 'jet-1', name = 'Jet', seed = 20261015) {
   };
 }
 
-export function defaultRocket(id = 'rocket-1', vehicle = 'falcon9', seed = 20261017) {
-  const preset = ROCKET.vehicles[vehicle];
+export function defaultRocket(id = 'rocket-1', seed = 20261017) {
+  const sized = sizedRocket(7.6e6, 9, 'kerosene');
   return {
-    id, name: preset.label, kind: 'rocket', enabled: true, seed,
-    vehicle,
+    id, name: 'Rocket', kind: 'rocket', enabled: true, seed,
+    propellant: 'kerosene',
     startSeconds: 0,
     startMetres: { x: 0, y: 0, z: 10 },
     headingDegrees: 90,
-    engine: { ...preset.engine },
-    ascent: { ...preset.ascent }
+    engine: { ...sized.engine, efficiencyPercent: .3 },
+    ascent: { ...ROCKET.defaultAscent, ...sized.ascent }
   };
 }
 
@@ -68,11 +69,11 @@ const ROCKET_ENGINE_NUMBERS = Object.freeze(['engines', 'thrustKilonewtons', 'ex
 const ROCKET_ASCENT_NUMBERS = Object.freeze(['liftoffMassTonnes', 'burnSeconds', 'pitchKickAtSeconds', 'pitchKickDegrees', 'throttleDownSeconds', 'throttleUpSeconds', 'throttlePercent']);
 
 function readRocket(value, { check, point, numbers }, path) {
-  check(value.vehicle === 'custom' || ROCKET_VEHICLES.includes(value.vehicle), `${path}.vehicle is not supported.`);
+  check(PROPELLANTS.includes(value.propellant), `${path}.propellant is not supported.`);
   check(value.engine && typeof value.engine === 'object' && value.ascent && typeof value.ascent === 'object', `${path} needs an engine and an ascent.`);
   check(typeof value.ascent.water === 'boolean', `${path}.ascent.water must be true or false.`);
   return {
-    vehicle: value.vehicle,
+    propellant: value.propellant,
     startMetres: point(value.startMetres, `${path}.startMetres`),
     ...numbers(value, ['startSeconds', 'headingDegrees'], path),
     engine: numbers(value.engine, ROCKET_ENGINE_NUMBERS, `${path}.engine`),
@@ -108,7 +109,7 @@ export const { PARAMETERS, MODES, defaultScene, parseScene, readScene, serialize
   },
   kinds: {
     jet: { defaults: () => defaultJet(), read: readJet },
-    rocket: { defaults: item => defaultRocket(undefined, ROCKET_VEHICLES.includes(item?.vehicle) ? item.vehicle : undefined), read: readRocket }
+    rocket: { defaults: () => defaultRocket(), read: readRocket }
   },
   parameters: RUMBLETECT_PARAMETERS
 });

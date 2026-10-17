@@ -34,12 +34,15 @@ the flight, then delays, spreads, and filters that sound on its way there.
 
 ## Rocket
 
-- **Falcon 9 and Starship** — Launch from the pad: ignition, three seconds
-  held down, liftoff, pitch kick, and a gravity turn to engine cut-off.
-- **Heading, throttle, burn time, pitch kick, efficiency** — The ascent and
-  how much of the plume's power becomes sound.
-- **Details** — Engines, thrust, exhaust velocity, nozzle diameter, mass,
-  throttle-down around max-Q, and water on the pad.
+- **Size** — Total thrust from a 10 N hobby motor to a 100 MN super-heavy
+  launcher; nozzle, mass, burn time, and water on the pad follow.
+- **Propellant** — Solid, kerosene, methane, or hydrogen: a faster exhaust
+  sounds higher. Liquid engines are held on the pad for three seconds, solid
+  motors lift off at ignition.
+- **Heading, burn time, pitch kick** — The ascent: liftoff, pitch kick, and a
+  gravity turn to engine cut-off.
+- **Details** — Engine count, thrust, exhaust velocity, nozzle diameter,
+  acoustic efficiency, mass, throttle-down around max-Q, and water on the pad.
 - **Source** — Sound power from thrust and exhaust velocity, with the
   spectrum and directivity of BYU's SATURN model; low frequencies radiate
   toward the plume and start once the plume has left the pad.

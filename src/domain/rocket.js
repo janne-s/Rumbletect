@@ -39,6 +39,29 @@ export function directivityDecibels(strouhal, degrees) {
   return edge + at(FORWARD.low) + (at(FORWARD.high) - at(FORWARD.low)) * blend;
 }
 
+export const totalThrustNewtons = emitter => emitter.engine.engines * emitter.engine.thrustKilonewtons * 1000;
+
+function typicalBurnSeconds(newtons) {
+  const table = ROCKET.sizing.burnSeconds;
+  if (newtons <= table[0][0]) return table[0][1];
+  for (let index = 1; index < table.length; index += 1) {
+    const [[f0, s0], [f1, s1]] = [table[index - 1], table[index]];
+    if (newtons <= f1) return Math.round(s0 + (s1 - s0) * Math.log(newtons / f0) / Math.log(f1 / f0));
+  }
+  return table.at(-1)[1];
+}
+
+/** Class C: a rocket of this total thrust, engine count and propellant: per-engine thrust, nozzle, mass, burn and water. */
+export function sizedRocket(totalNewtons, engines, propellant) {
+  const { exitVelocityMetresPerSecond, thrustToWeight } = ROCKET.propellants[propellant];
+  const perEngine = totalNewtons / engines;
+  const round = (value, digits) => +value.toPrecision(digits);
+  return {
+    engine: { engines, thrustKilonewtons: round(perEngine / 1000, 4), exitVelocityMetresPerSecond, exitDiameterMetres: round(ROCKET.sizing.diameterPerRootNewton * Math.sqrt(perEngine), 3) },
+    ascent: { liftoffMassTonnes: round(totalNewtons / (thrustToWeight * ROCKET.gravity) / 1000, 4), burnSeconds: typicalBurnSeconds(totalNewtons), water: totalNewtons >= ROCKET.sizing.waterFromNewtons }
+  };
+}
+
 export const sourceLocationMetres = (strouhal, diameterMetres) => ROCKET.sourceLocation.coefficient * strouhal ** ROCKET.sourceLocation.exponent * diameterMetres;
 
 export function vehicleOf(emitter) {
@@ -67,14 +90,14 @@ export function throttleAt(ascent, secondsAfterRelease) {
 }
 
 /**
- * Class C: the ascent in the vertical plane of the launch heading, held on the pad for `ROCKET.holdSeconds`, then a
+ * Class C: the ascent in the vertical plane of the launch heading, liquid engines held on the pad for `ROCKET.holdSeconds`, then a
  * vertical rise, a pitch kick and a gravity turn under thrust, mass flow F/U_e and gravity, no drag and a flat Earth.
  * The path is sampled like `flightPath` and ends at engine cut-off.
  */
 export function ascentPath(emitter) {
   const vehicle = vehicleOf(emitter);
   const { ascent } = emitter;
-  const hold = ROCKET.holdSeconds;
+  const hold = emitter.propellant === 'solid' ? 0 : ROCKET.holdSeconds;
   const total = hold + ascent.burnSeconds;
   const steps = Math.min(TRAJECTORY.maximumSteps, Math.max(2, Math.ceil(total / TRAJECTORY.stepSeconds)));
   const step = total / steps;
