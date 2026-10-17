@@ -32,6 +32,18 @@ the flight, then delays, spreads, and filters that sound on its way there.
 - **Details** — Start point, onset, seed, and the engine's nozzle pressure
   ratio, jet temperature, and nozzle diameter.
 
+## Rocket
+
+- **Falcon 9 and Starship** — Launch from the pad: ignition, three seconds
+  held down, liftoff, pitch kick, and a gravity turn to engine cut-off.
+- **Heading, throttle, burn time, pitch kick, efficiency** — The ascent and
+  how much of the plume's power becomes sound.
+- **Details** — Engines, thrust, exhaust velocity, nozzle diameter, mass,
+  throttle-down around max-Q, and water on the pad.
+- **Source** — Sound power from thrust and exhaust velocity, with the
+  spectrum and directivity of BYU's SATURN model; low frequencies radiate
+  toward the plume and start once the plume has left the pad.
+
 ## Air and ground
 
 - **Air absorption** — ISO 9613-1 at the frequency that arrives.
