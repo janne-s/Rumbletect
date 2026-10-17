@@ -263,12 +263,20 @@ export function mergedGrains(members) {
   return { sources: sourceTable(rows), rows, emission };
 }
 
-/** Class C: a formation's jets, the shared V with a seed for each aircraft, the leader's its own; any other jet is its only member. */
+/**
+ * Class C: a formation's jets, the shared V with each rank `verticalSpacingMetres` higher (lower when negative), a seed
+ * for each aircraft, the leader's its own; any other jet is its only member.
+ */
 export function formationJets(emitter) {
   if (emitter.kind !== 'formation') return [emitter];
   const random = createRandom(emitter.seed);
   return formationMembers(emitter, emitter.memberCount, emitter.lateralSpacingMetres, emitter.trailSpacingMetres)
-    .map((member, index) => ({ ...member, kind: 'jet', seed: index === 0 ? emitter.seed : Math.floor(random() * 0x100000000) }));
+    .map((member, index) => ({
+      ...member,
+      kind: 'jet',
+      seed: index === 0 ? emitter.seed : Math.floor(random() * 0x100000000),
+      startMetres: { ...member.startMetres, z: Math.max(0, member.startMetres.z + Math.ceil(index / 2) * emitter.verticalSpacingMetres) }
+    }));
 }
 
 const JET_SHAPE = waveformShape({ skewness: JET.largeScaleSkewness, kurtosis: JET.largeScaleKurtosis });

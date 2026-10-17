@@ -32,6 +32,7 @@ const RUMBLETECT_PARAMETERS = Object.freeze({
   memberCount: { minimum: 2, maximum: 24, unit: '', label: 'Aircraft', reliability: null, integer: true },
   lateralSpacingMetres: { minimum: 0, maximum: 2000, unit: 'm', label: 'Lateral spacing', reliability: null },
   trailSpacingMetres: { minimum: 0, maximum: 3000, unit: 'm', label: 'Trail spacing', reliability: null },
+  verticalSpacingMetres: { minimum: -1000, maximum: 1000, unit: 'm', label: 'Vertical spacing', reliability: null },
   ventDiameterMetres: { minimum: 1, maximum: 500, unit: 'm', label: 'Vent diameter', reliability: 'C' },
   ventVelocityMetresPerSecond: { minimum: 10, maximum: 600, unit: 'm/s', label: 'Exit velocity', reliability: 'C' },
   gasTemperatureKelvin: { minimum: 300, maximum: 1600, unit: 'K', label: 'Gas temperature', reliability: 'C' },
@@ -53,7 +54,7 @@ const RUMBLETECT_PARAMETERS = Object.freeze({
 export const PROPELLANTS = Object.freeze(Object.keys(ROCKET.propellants));
 
 /** Class C: a close formation, wingtips some 10 m apart. */
-const FORMATION_LAYOUT = Object.freeze({ memberCount: 4, lateralSpacingMetres: 20, trailSpacingMetres: 30 });
+const FORMATION_LAYOUT = Object.freeze({ memberCount: 4, lateralSpacingMetres: 20, trailSpacingMetres: 30, verticalSpacingMetres: 0 });
 
 const JET_NUMBERS = Object.freeze(['startSeconds', 'headingDegrees', 'climbDegrees', 'mach', 'accelerationMetresPerSecondSquared', 'turnDegreesPerSecond']);
 

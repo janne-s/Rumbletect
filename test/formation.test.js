@@ -30,3 +30,9 @@ test('a formation\'s grains are every aircraft\'s', () => {
   assert.equal(all.rows.length, single.reduce((sum, item) => sum + item.rows.length, 0));
   assert.equal(new Set(all.rows.map(row => row.noiseSeed)).size, all.rows.length);
 });
+
+test('a formation\'s ranks step up by its vertical spacing, never below the ground', async () => {
+  const members = formationJets({ ...defaultFormation(), memberCount: 5, verticalSpacingMetres: 50 });
+  assert.deepEqual(members.map(member => member.startMetres.z), [300, 350, 350, 400, 400]);
+  assert.ok(formationJets({ ...defaultFormation(), memberCount: 5, verticalSpacingMetres: -1000 }).every(member => member.startMetres.z >= 0));
+});

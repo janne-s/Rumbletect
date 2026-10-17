@@ -56,7 +56,7 @@ function details(emitter, { updateEmitter, scene }) {
       note.textContent = `Jet ${Math.round(jet.velocityMetresPerSecond)} m/s · ${jet.temperatureRatio.toFixed(2)} × ambient temperature`;
       container.append(note);
     }),
-    ...(emitter.kind === 'formation' ? [section('Formation', numbers(['memberCount', 'lateralSpacingMetres', 'trailSpacingMetres']))] : [])
+    ...(emitter.kind === 'formation' ? [section('Formation', numbers(['memberCount', 'lateralSpacingMetres', 'trailSpacingMetres', 'verticalSpacingMetres']))] : [])
   ];
 }
 

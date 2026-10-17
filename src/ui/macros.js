@@ -145,10 +145,11 @@ const rocketCategory = {
 const SIZE_SPAN = ROCKET.sizing.totalNewtons;
 const totalOf = item => item.engine.engines * item.engine.thrustKilonewtons * 1000;
 
+/** A new size keeps the rocket's burn time and thrust-to-weight; Category sets a typical burn. */
 const resize = (item, newtons) => {
   const sized = sizedRocket(newtons, item.engine.engines, item.propellant, liftoffThrustToWeight(item));
   item.engine = { ...item.engine, ...sized.engine };
-  item.ascent = { ...item.ascent, ...sized.ascent };
+  item.ascent = { ...item.ascent, ...sized.ascent, burnSeconds: item.ascent.burnSeconds };
 };
 
 const rocketSize = {
