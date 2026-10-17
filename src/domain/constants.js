@@ -153,12 +153,13 @@ export const ROCKET = Object.freeze({
    * The category slider's steps. Medium is Falcon 9's thrust, engines and propellant (B); super-heavy Starship's, with
    * SATURN's 0.4 % for Flight 6 (B); heavy three medium cores; the smaller ones typical, class C: a 10 N hobby motor, an
    * artillery rocket off a tilted tube, a sounding rocket's booster (Terrier class), a small four-engine launcher like Firefly Alpha (0.73 MN).
-   * The artillery rocket's thrust-to-weight lets a 4 s burn reach about Mach 2.5, as GMLRS and ATACMS do (C).
+   * The artillery rocket's thrust-to-weight lets a 4 s burn reach about Mach 2.5, as GMLRS and ATACMS do; the sounding
+   * rocket's a Terrier booster's 6 s burn to about Mach 3 (C).
    */
   categories: Object.freeze([
     Object.freeze({ label: 'Hobby', newtons: 10, engines: 1, propellant: 'solid', burnSeconds: 2, launchDegrees: 85, efficiencyPercent: .3, rounds: 1 }),
     Object.freeze({ label: 'Artillery', newtons: 100e3, engines: 1, propellant: 'solid', burnSeconds: 4, launchDegrees: 50, efficiencyPercent: .3, rounds: 6, thrustToWeight: 20 }),
-    Object.freeze({ label: 'Sounding', newtons: 250e3, engines: 1, propellant: 'solid', burnSeconds: 20, launchDegrees: 85, efficiencyPercent: .3, rounds: 1 }),
+    Object.freeze({ label: 'Sounding', newtons: 250e3, engines: 1, propellant: 'solid', burnSeconds: 6, launchDegrees: 85, efficiencyPercent: .3, rounds: 1, thrustToWeight: 15 }),
     Object.freeze({ label: 'Small launcher', newtons: .73e6, engines: 4, propellant: 'kerosene', burnSeconds: 160, launchDegrees: 90, efficiencyPercent: .3, rounds: 1 }),
     Object.freeze({ label: 'Medium launcher', newtons: 7.6e6, engines: 9, propellant: 'kerosene', burnSeconds: 150, launchDegrees: 90, efficiencyPercent: .3, rounds: 1 }),
     Object.freeze({ label: 'Heavy launcher', newtons: 22.8e6, engines: 27, propellant: 'kerosene', burnSeconds: 150, launchDegrees: 90, efficiencyPercent: .3, rounds: 1 }),

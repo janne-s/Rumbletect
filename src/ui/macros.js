@@ -79,8 +79,16 @@ const onset = {
   entry: { unit: 's', get: item => item.startSeconds, set: (item, value) => { item.startSeconds = value; } }
 };
 
+const jetAircraft = {
+  label: 'Aircraft',
+  read: item => clamp01(logPosition(item.formation.aircraft, range('aircraft'))),
+  write: (item, t) => { item.formation = { ...item.formation, aircraft: Math.round(logValue(t, range('aircraft'))) }; },
+  show: item => `${item.formation.aircraft}`,
+  entry: { get: item => item.formation.aircraft, set: (item, value) => { item.formation = { ...item.formation, aircraft: value }; } }
+};
+
 export function macrosFor(emitter, { onset: withOnset = false } = {}) {
-  const list = [power, machNumber, flightHeight, flightHeading, flightClimb, flightAcceleration, flightTurn, flightTime];
+  const list = [power, machNumber, flightHeight, flightHeading, flightClimb, flightAcceleration, flightTurn, flightTime, jetAircraft];
   return withOnset ? [...list, onset] : list;
 }
 

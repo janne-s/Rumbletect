@@ -29,8 +29,11 @@ the flight, then delays, spreads, and filters that sound on its way there.
 - **Power** — Idle through military power to full afterburner.
 - **Mach, height, heading, climb, acceleration, turn, flight time** — The
   flight, subsonic.
-- **Details** — Start point, onset, seed, and the engine's nozzle pressure
-  ratio, jet temperature, and nozzle diameter.
+- **Aircraft** — A formation flying a V behind the leader, each aircraft
+  with its own seed.
+- **Details** — Start point, onset, seed, the engine's nozzle pressure
+  ratio, jet temperature, and nozzle diameter, and the formation's lateral
+  and trail spacing.
 
 ## Rocket
 
@@ -64,6 +67,8 @@ the flight, then delays, spreads, and filters that sound on its way there.
 
 ## Output
 
+- **Length** — Up to 400 s from the first arrival; later sound is left out
+  and the render says so.
 - **Level** — Peak at −3 dBFS or a fixed full scale in pascals.
 - **Spatial** — Ambisonics up to third order, heard binaurally.
 - **Export** — The scene, a stereo mix, one file per microphone, and AmbiX.

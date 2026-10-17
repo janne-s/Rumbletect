@@ -1,8 +1,7 @@
 import { RENDER, ROCKET } from './constants.js';
-import { pathGrains } from './grains.js';
+import { mergedGrains, pathGrains } from './grains.js';
 import { ascentPath, rocketSource } from './rocket.js';
 import { salvoRounds } from './salvo.js';
-import { sourceTable } from '../shared/domain/source-table.js';
 import { waveformShape } from './waveform.js';
 import { speedOfSoundMetresPerSecond } from '../shared/domain/air.js';
 
@@ -37,17 +36,5 @@ export function heardAscents(emitter, scene) {
   return rounds.flatMap((round, index) => (counts[index] > 1 ? [{ round, path: kept(paths[index], counts[index]) }] : []));
 }
 
-/** The salvo's rounds as one emitter: each round's grains, their noise seeds offset so that `emission` finds the round. */
-export function rocketGrains(emitter, scene) {
-  const rounds = heardAscents(emitter, scene).map(({ round, path }) => pathGrains(round, scene, path, { ...rocketSource(round, scene, path), shape: ROCKET_SHAPE }));
-  if (rounds.length === 1) return rounds[0];
-  const offsets = [];
-  const rows = rounds.flatMap(({ rows }, index) => {
-    const offset = index === 0 ? 0 : offsets[index - 1] + Math.max(0, ...rounds[index - 1].rows.map(row => row.noiseSeed)) + 1;
-    offsets.push(offset);
-    return rows.map(row => ({ ...row, noiseSeed: row.noiseSeed + offset }));
-  });
-  const owner = seed => { let index = offsets.length - 1; while (offsets[index] > seed) index -= 1; return index; };
-  const emission = (seed, departure, plan) => { const index = owner(seed); return rounds[index].emission(seed - offsets[index], departure, plan); };
-  return { sources: sourceTable(rows), rows, emission };
-}
+/** The salvo's rounds as one emitter. */
+export const rocketGrains = (emitter, scene) => mergedGrains(heardAscents(emitter, scene).map(({ round, path }) => pathGrains(round, scene, path, { ...rocketSource(round, scene, path), shape: ROCKET_SHAPE })));

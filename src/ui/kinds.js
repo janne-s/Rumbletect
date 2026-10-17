@@ -16,12 +16,14 @@ const flownSeconds = (emitter, scene) => { const [path] = cachedTracks(emitter, 
 
 function summary(emitter, scene) {
   const jet = jetOfEngine(emitter.engine, scene.air.temperatureCelsius);
-  return `${powerLabel(powerOfEngine(emitter.engine))}, jet ${Math.round(jet.velocityMetresPerSecond)} m/s · Mach ${emitter.mach.toFixed(2)} at ${formatMetres(emitter.startMetres.z)} for ${flownSeconds(emitter, scene)} s`;
+  const { aircraft } = emitter.formation;
+  return `${aircraft > 1 ? `${aircraft} aircraft, ` : ''}${powerLabel(powerOfEngine(emitter.engine))}, jet ${Math.round(jet.velocityMetresPerSecond)} m/s · Mach ${emitter.mach.toFixed(2)} at ${formatMetres(emitter.startMetres.z)} for ${flownSeconds(emitter, scene)} s`;
 }
 
 function details(emitter, { updateEmitter, scene }) {
   const set = key => value => updateEmitter(emitter.id, item => { item[key] = value; });
   const setEngine = key => value => updateEmitter(emitter.id, item => { item.engine = { ...item.engine, [key]: value }; });
+  const setFormation = key => value => updateEmitter(emitter.id, item => { item.formation = { ...item.formation, [key]: value }; });
   const section = (title, build) => ({ title, build });
   const numbers = keys => container => keys.forEach(key => numberField(container, { key, value: emitter[key], onCommit: set(key) }));
   const jet = jetOfEngine(emitter.engine, scene.air.temperatureCelsius);
@@ -51,6 +53,10 @@ function details(emitter, { updateEmitter, scene }) {
       note.className = 'field-note';
       note.textContent = `Jet ${Math.round(jet.velocityMetresPerSecond)} m/s · ${jet.temperatureRatio.toFixed(2)} × ambient temperature`;
       container.append(note);
+    }),
+    section('Formation', container => {
+      numberField(container, { key: 'aircraft', value: emitter.formation.aircraft, onCommit: setFormation('aircraft') });
+      if (emitter.formation.aircraft > 1) ['lateralSpacingMetres', 'trailSpacingMetres'].forEach(key => numberField(container, { key, value: emitter.formation[key], onCommit: setFormation(key) }));
     })
   ];
 }
@@ -61,7 +67,7 @@ function amplitudes(emitter, scene) {
   const { air } = scene;
   const components = jetComponents(jetOfEngine(emitter.engine, air.temperatureCelsius), { temperatureCelsius: air.temperatureCelsius, flightMetresPerSecond: emitter.mach * speedOfSound(air.temperatureCelsius) });
   const amplitude = 10 ** (components.large.decibels / 20) * 20e-6 * components.diameterMetres * Math.sqrt(components.large.peakHz);
-  return new Map([[`${emitter.id}:0`, { amplitude, frequencyHz: components.large.peakHz }]]);
+  return new Map(Array.from({ length: emitter.formation.aircraft }, (_, member) => [`${emitter.id}:${member}`, { amplitude, frequencyHz: components.large.peakHz }]));
 }
 
 function wavefrontSources(emitter, scene, placedPoint, candidates, fronts = VIEW.wavefront.flightFronts) {

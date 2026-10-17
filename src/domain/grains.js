@@ -5,7 +5,7 @@ import { shapeWaveform, waveformShape } from './waveform.js';
 import { fft } from '../shared/domain/fft.js';
 import { createRandom, normalDeviate } from '../shared/domain/random.js';
 import { sourceTable } from '../shared/domain/source-table.js';
-import { flightPath } from '../shared/domain/trajectory.js';
+import { flightPath, formationMembers } from '../shared/domain/trajectory.js';
 import { PARAMETERS } from './scene.js';
 
 const GRAIN = PROPAGATION.grainSamples;
@@ -155,15 +155,41 @@ export function pathGrains(emitter, scene, path, source) {
   return { sources: sourceTable(rows), rows, emission };
 }
 
+/** Several emitters' grains as one: noise seeds offset per member so that `emission` finds the member's own. */
+export function mergedGrains(members) {
+  if (members.length === 1) return members[0];
+  const offsets = [];
+  let next = 0;
+  const rows = members.flatMap(({ rows }) => {
+    const offset = next;
+    offsets.push(offset);
+    next = offset + Math.max(-1, ...rows.map(row => row.noiseSeed)) + 1;
+    return rows.map(row => ({ ...row, noiseSeed: row.noiseSeed + offset }));
+  });
+  const owner = seed => { let index = offsets.length - 1; while (offsets[index] > seed) index -= 1; return index; };
+  const emission = (seed, departure, plan) => { const index = owner(seed); return members[index].emission(seed - offsets[index], departure, plan); };
+  return { sources: sourceTable(rows), rows, emission };
+}
+
+/** Class C: a jet's formation, the shared V with a seed for each aircraft; one aircraft is the jet itself. */
+export function formationJets(emitter) {
+  const { aircraft, lateralSpacingMetres, trailSpacingMetres } = emitter.formation;
+  if (aircraft <= 1) return [emitter];
+  const random = createRandom(emitter.seed);
+  return formationMembers(emitter, aircraft, lateralSpacingMetres, trailSpacingMetres)
+    .map((member, index) => ({ ...member, seed: index === 0 ? emitter.seed : Math.floor(random() * 0x100000000), formation: { ...emitter.formation, aircraft: 1 } }));
+}
+
 const JET_SHAPE = waveformShape({ skewness: JET.largeScaleSkewness, kurtosis: JET.largeScaleKurtosis });
 
 export function jetGrains(emitter, scene) {
   const { air } = scene;
   const jet = jetOfEngine(emitter.engine, air.temperatureCelsius);
-  return pathGrains(emitter, scene, jetPath(emitter, scene), {
+  const source = {
     components: ({ speed }) => jetComponents(jet, { temperatureCelsius: air.temperatureCelsius, flightMetresPerSecond: speed }),
     spectra: (components, inletDegrees, frequencies) => { const { large, fine } = jetSpectra(components, inletDegrees, frequencies); return { shaped: large, plain: fine }; },
     packetHz: components => components.large.peakHz / JET.packetCycles,
     shape: JET_SHAPE
-  });
+  };
+  return mergedGrains(formationJets(emitter).map(member => pathGrains(member, scene, jetPath(member, scene), source)));
 }

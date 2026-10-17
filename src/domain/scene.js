@@ -29,6 +29,9 @@ const RUMBLETECT_PARAMETERS = Object.freeze({
   throttleUpSeconds: { minimum: 0, maximum: 590, unit: 's', label: 'Throttle up at', reliability: 'C' },
   throttlePercent: { minimum: 30, maximum: 100, unit: '%', label: 'Throttle', reliability: 'C' },
   launchDegrees: { minimum: 5, maximum: 90, unit: '°', label: 'Launch angle', reliability: null },
+  aircraft: { minimum: 1, maximum: 24, unit: '', label: 'Aircraft', reliability: null, integer: true },
+  lateralSpacingMetres: { minimum: 0, maximum: 2000, unit: 'm', label: 'Lateral spacing', reliability: null },
+  trailSpacingMetres: { minimum: 0, maximum: 3000, unit: 'm', label: 'Trail spacing', reliability: null },
   rounds: { minimum: 1, maximum: 48, unit: '', label: 'Rounds', reliability: null, integer: true },
   salvoSize: { minimum: 1, maximum: 24, unit: '', label: 'Rounds per salvo', reliability: null, integer: true },
   salvoSeconds: { minimum: 0, maximum: 300, unit: 's', label: 'Duration', reliability: null },
@@ -40,6 +43,9 @@ const RUMBLETECT_PARAMETERS = Object.freeze({
 });
 
 export const PROPELLANTS = Object.freeze(Object.keys(ROCKET.propellants));
+
+/** Class C: a close formation, wingtips some 10 m apart. */
+const JET_FORMATION = Object.freeze({ aircraft: 1, lateralSpacingMetres: 20, trailSpacingMetres: 30 });
 
 const JET_NUMBERS = Object.freeze(['startSeconds', 'headingDegrees', 'climbDegrees', 'mach', 'accelerationMetresPerSecondSquared', 'turnDegreesPerSecond']);
 
@@ -55,7 +61,8 @@ export function defaultJet(id = 'jet-1', name = 'Jet', seed = 20261015) {
     turnDegreesPerSecond: 0,
     durationSeconds: 33,
     autoDuration: false,
-    engine: engineAtPower(.75)
+    engine: engineAtPower(.75),
+    formation: { ...JET_FORMATION }
   };
 }
 
@@ -106,7 +113,8 @@ function readJet(value, { check, number, point, numbers }, path) {
       pressureRatio: number(engine.pressureRatio, 'pressureRatio', `${path}.engine.pressureRatio`),
       totalTemperatureKelvin: number(engine.totalTemperatureKelvin, 'totalTemperatureKelvin', `${path}.engine.totalTemperatureKelvin`),
       diameterMetres: number(engine.diameterMetres, 'nozzleDiameterMetres', `${path}.engine.diameterMetres`)
-    }
+    },
+    formation: numbers(value.formation, Object.keys(JET_FORMATION), `${path}.formation`)
   };
 }
 
@@ -118,7 +126,7 @@ export const { PARAMETERS, MODES, defaultScene, parseScene, readScene, serialize
   anchor: emitterAnchor,
   modes: {
     jet: { kinds: ['jet'], emitter: () => defaultJet(), receiverMetres: { x: 0, y: 0, z: 1.7 } },
-    rocket: { kinds: ['rocket'], emitter: () => defaultRocket(), receiverMetres: { x: 0, y: -3000, z: 1.7 } }
+    rocket: { kinds: ['rocket'], emitter: () => defaultRocket(), receiverMetres: { x: -1500, y: -2600, z: 1.7 } }
   },
   kinds: {
     jet: { defaults: () => defaultJet(), read: readJet },
