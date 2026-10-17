@@ -2,11 +2,11 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import { defaultJet, defaultScene, parseScene } from '../src/domain/scene.js';
 import { prepareScene, renderReceiver } from '../src/domain/render.js';
-import { jetOfEngine } from '../src/domain/engine.js';
+import { engineAtPower, jetOfEngine } from '../src/domain/engine.js';
 import { nearListen } from '../src/domain/near-listen.js';
 import { speedOfSound } from '../src/domain/jet.js';
 
-const shortFlight = { ...defaultJet(), startMetres: { x: -600, y: 0, z: 300 }, durationSeconds: 8 };
+const shortFlight = { ...defaultJet(), engine: { ...defaultJet().engine, ...engineAtPower(.15) }, startMetres: { x: -600, y: 0, z: 300 }, durationSeconds: 8 };
 
 function scene({ ground = true } = {}) {
   const base = defaultScene();
@@ -27,7 +27,7 @@ const centre = (samples, startSeconds, sampleRate) => {
   return startSeconds + weighted / sum / sampleRate;
 };
 
-test('the jet as grains through the shared propagation is as loud as the near listen of the same flight, ground and all', () => {
+test('a jet below crackle, as grains through the shared propagation, is as loud as the near listen of the same flight, ground and all', () => {
   for (const ground of [false, true]) {
     const value = scene({ ground });
     const grains = renderReceiver(prepareScene(value), value.receivers[0], value);
@@ -55,10 +55,11 @@ test('a grain\'s paths share its phases, so the same seed renders the same sound
 
 test('a supersonic jet is heard from behind its Mach cone, its approach reversed, and silent once it outruns its jet', () => {
   const value = scene();
-  const fast = { ...value, emitters: [{ ...value.emitters[0], mach: 1.6, startMetres: { x: -3000, y: 0, z: 300 } }] };
+  const military = { ...value.emitters[0], engine: defaultJet().engine };
+  const fast = { ...value, emitters: [{ ...military, mach: 1.6, startMetres: { x: -3000, y: 0, z: 300 } }] };
   const result = renderReceiver(prepareScene(fast), fast.receivers[0], fast);
   assert.ok(result.samples.every(Number.isFinite) && result.peakPa > 0);
-  const outrun = { ...value, emitters: [{ ...value.emitters[0], mach: 2.5 }] };
+  const outrun = { ...value, emitters: [{ ...military, mach: 2.5 }] };
   assert.equal(prepareScene(outrun)[0].sources.length, 0);
 });
 

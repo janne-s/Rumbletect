@@ -38,6 +38,13 @@ export const JET = Object.freeze({
    * +10 log(D_j / D_ref). D_ref fitted to Khavaran & Bridges over 50–165°, M_a 0.5–1.4, T_s 1.0 and 2.7 (residuals ±10 dB, hot slow jets low).
    */
   levelReferenceDiameterMetres: .0712,
+  /**
+   * Class C: crackle, the steepening index of `steepen`, grows from nothing where the large eddies convect at
+   * `crackleConvection[0]` times the speed of sound to its full value at `crackleConvection[1]` (Ffowcs Williams et
+   * al. 1975: crackle needs supersonic convection; F-35 at military and afterburner power, Gee et al. 2013).
+   */
+  crackleIndex: .8,
+  crackleConvection: Object.freeze([.8, 1.6]),
   /** Class C: turbomachinery radiates forward and to the side; aft of 90° it falls by this much at 180°. A hump is this many octaves wide (standard deviation). */
   turbomachineryAftDecibels: 10,
   humpOctaves: .25,
@@ -171,6 +178,8 @@ export const ROCKET = Object.freeze({
   }),
   /** Class B: pressure skewness 0.3–0.7 near the peak direction at 18–80 D_e, RSRM (Gee et al. 2012). */
   skewness: .4,
+  /** Class C: a rocket's plume always convects supersonically, so it crackles at this steepening index. */
+  crackleIndex: .8,
   /** Class B: no intermittency; the owner's unlimited Starship recording 7 has kurtosis 3.0 at 7.7 km, as Gaussian noise. */
   kurtosis: 3,
   packetCycles: 4,
@@ -218,6 +227,13 @@ export const ROCKET = Object.freeze({
    */
   sizing: Object.freeze({
     diameterPerRootNewton: 9.2e-4,
+    /**
+     * Class C: small solid motors burn at high chamber pressure, so their nozzles are smaller for their thrust: the exit
+     * taken as 70 % of the body, Terrier Mk 70 0.457 m at about 258 kN and MLRS 0.227 m (Skyrocket, designation-systems),
+     * 6e-4 √F; large solid boosters return to the common factor between 0.3 and 3 MN.
+     */
+    smallSolidDiameterPerRootNewton: 6e-4,
+    smallSolidNewtons: Object.freeze([3e5, 3e6]),
     burnSeconds: Object.freeze([Object.freeze([10, 2]), Object.freeze([1e3, 5]), Object.freeze([1e5, 60]), Object.freeze([1e6, 120]), Object.freeze([7e6, 150])]),
     waterFromNewtons: 1e6,
     totalNewtons: Object.freeze([10, 1e8])
@@ -226,12 +242,12 @@ export const ROCKET = Object.freeze({
    * The category slider's steps. Medium is Falcon 9's thrust, engines and propellant (B); super-heavy Starship's, with
    * SATURN's 0.4 % for Flight 6 (B); heavy three medium cores; the smaller ones typical, class C: a 10 N hobby motor, an
    * artillery rocket off a tilted tube, a sounding rocket's booster (Terrier class), a small four-engine launcher like Firefly Alpha (0.73 MN).
-   * The artillery rocket's thrust-to-weight lets a 4 s burn reach about Mach 2.5, as GMLRS and ATACMS do; the sounding
+   * The artillery rocket is GMLRS-sized (about 300 kg); its thrust-to-weight lets a 4 s burn reach about Mach 2.5, as GMLRS and ATACMS do; the sounding
    * rocket's a Terrier booster's 6 s burn to about Mach 3 (C).
    */
   categories: Object.freeze([
     Object.freeze({ label: 'Hobby', newtons: 10, engines: 1, propellant: 'solid', burnSeconds: 2, launchDegrees: 85, efficiencyPercent: .3 }),
-    Object.freeze({ label: 'Artillery', newtons: 100e3, engines: 1, propellant: 'solid', burnSeconds: 4, launchDegrees: 50, efficiencyPercent: .3, thrustToWeight: 20 }),
+    Object.freeze({ label: 'Artillery', newtons: 50e3, engines: 1, propellant: 'solid', burnSeconds: 4, launchDegrees: 50, efficiencyPercent: .3, thrustToWeight: 20 }),
     Object.freeze({ label: 'Sounding', newtons: 250e3, engines: 1, propellant: 'solid', burnSeconds: 6, launchDegrees: 85, efficiencyPercent: .3, thrustToWeight: 15 }),
     Object.freeze({ label: 'Small launcher', newtons: .73e6, engines: 4, propellant: 'kerosene', burnSeconds: 160, launchDegrees: 90, efficiencyPercent: .3 }),
     Object.freeze({ label: 'Medium launcher', newtons: 7.6e6, engines: 9, propellant: 'kerosene', burnSeconds: 150, launchDegrees: 90, efficiencyPercent: .3 }),

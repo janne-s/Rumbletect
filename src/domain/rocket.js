@@ -53,13 +53,20 @@ function typicalBurnSeconds(newtons) {
   return table.at(-1)[1];
 }
 
+function diameterPerRootNewton(newtons, propellant) {
+  const { diameterPerRootNewton: common, smallSolidDiameterPerRootNewton: small, smallSolidNewtons: [from, to] } = ROCKET.sizing;
+  if (propellant !== 'solid') return common;
+  const share = Math.min(1, Math.max(0, Math.log(newtons / from) / Math.log(to / from)));
+  return small + (common - small) * share;
+}
+
 /** Class C: a rocket of this total thrust, engine count and propellant: per-engine thrust, nozzle, mass, burn and water. */
 export function sizedRocket(totalNewtons, engines, propellant, thrustToWeight = ROCKET.propellants[propellant].thrustToWeight) {
   const { exitVelocityMetresPerSecond } = ROCKET.propellants[propellant];
   const perEngine = totalNewtons / engines;
   const round = (value, digits) => +value.toPrecision(digits);
   return {
-    engine: { engines, thrustKilonewtons: round(perEngine / 1000, 4), exitVelocityMetresPerSecond, exitDiameterMetres: round(ROCKET.sizing.diameterPerRootNewton * Math.sqrt(perEngine), 3) },
+    engine: { engines, thrustKilonewtons: round(perEngine / 1000, 4), exitVelocityMetresPerSecond, exitDiameterMetres: round(diameterPerRootNewton(perEngine, propellant) * Math.sqrt(perEngine), 3) },
     ascent: { liftoffMassTonnes: round(totalNewtons / (thrustToWeight * ROCKET.gravity) / 1000, 4), burnSeconds: typicalBurnSeconds(totalNewtons), water: totalNewtons >= ROCKET.sizing.waterFromNewtons }
   };
 }
@@ -249,6 +256,7 @@ export function rocketSource(emitter, scene, path) {
       }
       return { shaped, plain };
     },
-    packetHz: () => peakFrequencyHz(vehicle) / ROCKET.packetCycles
+    packetHz: () => peakFrequencyHz(vehicle) / ROCKET.packetCycles,
+    crackle: () => ({ index: ROCKET.crackleIndex, hz: peakFrequencyHz(vehicle) })
   };
 }

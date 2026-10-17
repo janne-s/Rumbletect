@@ -80,6 +80,36 @@ const catmullRom = (samples, position) => {
   return b + .5 * t * (c - a + t * (2 * a - 5 * b + 4 * c - d + t * (3 * (b - c) + d - a)));
 };
 
+/**
+ * Class C: crackle as simple-wave steepening (Earnshaw): each sample moves earlier by k p, so compressions run ahead
+ * and their fronts close into shocks, rises sharp and falls slow. `index` is the share of the shock-formation distance
+ * a sine at `hz` with the frame's rms has travelled: at 1 its steepest point just becomes a shock. Where fronts would
+ * fold over they become a jump. The rms is kept.
+ */
+export function steepen(samples, index, hz, sampleRate) {
+  if (!(index > 0) || !(hz > 0)) return samples;
+  const count = samples.length;
+  let power = 0;
+  for (let sample = 0; sample < count; sample += 1) power += samples[sample] ** 2;
+  if (!(power > 0)) return samples;
+  const shift = index * sampleRate / (2 * Math.PI * hz * Math.sqrt(2 * power / count));
+  const times = new Float64Array(count);
+  for (let sample = 0; sample < count; sample += 1) times[sample] = Math.max(sample ? times[sample - 1] : -Infinity, sample - shift * samples[sample]);
+  const out = new Float64Array(count);
+  let at = 0;
+  for (let sample = 0; sample < count; sample += 1) {
+    while (at < count - 2 && times[at + 1] <= sample) at += 1;
+    const span = times[at + 1] - times[at];
+    const share = span > 0 ? Math.min(1, Math.max(0, (sample - times[at]) / span)) : 1;
+    out[sample] = samples[at] + (samples[at + 1] - samples[at]) * share;
+  }
+  let kept = 0;
+  for (let sample = 0; sample < count; sample += 1) kept += out[sample] ** 2;
+  const gain = kept > 0 ? Math.sqrt(power / kept) : 0;
+  for (let sample = 0; sample < count; sample += 1) out[sample] *= gain;
+  return out;
+}
+
 /** The renderer drops each frame's DC, so a grain carrying a mean would step at frame edges; a sine taper removes it. */
 function removeMean(samples, first, last, sum) {
   const span = last - first + 2;
@@ -146,7 +176,10 @@ export function pathGrains(emitter, scene, path, unbanded, band = 'full') {
     const envelope = stream(lowPass.map(value => value / lowPassSum), STREAMS.envelope);
     const rms = Math.sqrt(shapedPsd.reduce((sum, value) => sum + value, 0) * binHz);
     const shaped = shapeWaveform(shapedFrame, () => rms, envelope, source.shape);
-    const real = Float64Array.from(WINDOW, (window, sample) => window * (shaped[sample] + plainFrame[sample]));
+    const crackle = source.crackle?.(grain.components);
+    const mixed = Float64Array.from(shaped, (value, sample) => value + plainFrame[sample]);
+    const combined = crackle ? steepen(mixed, crackle.index, crackle.hz, sampleRate) : mixed;
+    const real = Float64Array.from(WINDOW, (window, sample) => window * combined[sample]);
     const imaginary = new Float64Array(GRAIN);
     fft(real, imaginary);
     const limit = SYNTHESIS.bandLimitShare * sampleRate * squeeze / binHz;
@@ -294,6 +327,10 @@ export function jetGrains(emitter, scene, band = 'full') {
       return engines === 1 ? { shaped: large, plain: fine } : { shaped: large.map(value => value * engines), plain: fine.map(value => value * engines) };
     },
     packetHz: components => components.large.peakHz / JET.packetCycles,
+    crackle: components => {
+      const [from, to] = JET.crackleConvection;
+      return { index: JET.crackleIndex * Math.min(1, Math.max(0, (components.staticConvection - from) / (to - from))), hz: components.large.peakHz };
+    },
     shape: JET_SHAPE
   };
   return mergedGrains(formationJets(emitter).map(member => pathGrains(member, scene, jetPath(member, scene), source, band)));

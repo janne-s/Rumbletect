@@ -60,7 +60,8 @@ the flight, then delays, spreads, and filters that sound on its way there.
   acoustic efficiency, mass, throttle-down around max-Q, and water on the pad.
 - **Source** — Sound power from thrust and exhaust velocity, with the
   spectrum and directivity of BYU's SATURN model; low frequencies radiate
-  toward the plume and start once the plume has left the pad.
+  toward the plume and start once the plume has left the pad; the plume
+  crackles.
 
 ## Volcano
 
@@ -105,6 +106,7 @@ the flight, then delays, spreads, and filters that sound on its way there.
 | Skewness, intermittency | Gee et al. 2013; fitted to recordings | B, C |
 | Engine settings | from published thrust and mass flow; a heavy bomber's turbofans as one mixed jet | C |
 | Turbomachinery tones and fan hump | fitted to model-turbine and B-52 recordings | C |
+| Crackle | simple-wave steepening of each grain, set by the jet's convection Mach number | C |
 | Rocket source | SATURN, Mathews 2025 | B |
 | Ascent, sizing, salvo | assumed | C |
 | Eruption jet | Tam's spectra as fitted to volcano infrasound (Matoza et al., Gestrich et al. 2021); vents and velocities assumed | B, C |
