@@ -69,12 +69,9 @@ function amplitudes(emitter, scene) {
   return new Map(Array.from({ length: emitter.kind === 'formation' ? emitter.memberCount : 1 }, (_, member) => [`${emitter.id}:${member}`, { amplitude, frequencyHz: components.large.peakHz }]));
 }
 
-function wavefrontSources(emitter, scene, placedPoint, candidates, fronts = VIEW.wavefront.flightFronts) {
-  cachedTracks(emitter, scene).forEach((path, member) => {
-    const every = Math.max(1, Math.ceil(path.seconds.length / fronts));
-    const spacingSeconds = every * path.step;
-    for (let index = 0; index < path.seconds.length; index += every) candidates.push({ point: { x: path.x[index], y: path.y[index], z: path.z[index] }, emitted: path.seconds[index], group: `${emitter.id}:${member}`, spacingSeconds });
-  });
+/** One front per member, from where its sound starts: later fronts lie inside it while it is subsonic, and the Mach cone shows the rest. */
+function wavefrontSources(emitter, scene, placedPoint, candidates) {
+  cachedTracks(emitter, scene).forEach((path, member) => candidates.push({ point: { x: path.x[0], y: path.y[0], z: path.z[0] }, emitted: path.seconds[0], group: `${emitter.id}:${member}` }));
 }
 
 function warnings(emitter, scene) {
@@ -205,7 +202,7 @@ const VOLCANO_PANEL = Object.freeze({
   tracks: (emitter, scene) => cachedTracks(emitter, scene),
   cone: () => null,
   amplitudes: volcanoAmplitudes,
-  wavefrontSources: (emitter, scene, placedPoint, candidates) => wavefrontSources(emitter, scene, placedPoint, candidates, VIEW.wavefront.spheres),
+  wavefrontSources,
   mergesSources: false,
   warnings: () => []
 });
@@ -251,7 +248,7 @@ const KIND_PANELS_EXTENDED = {
     tracks: (emitter, scene) => cachedTracks(emitter, scene),
     cone: machCone,
     amplitudes: rocketAmplitudes,
-    wavefrontSources: (emitter, scene, placedPoint, candidates) => wavefrontSources(emitter, scene, placedPoint, candidates, VIEW.wavefront.spheres),
+    wavefrontSources,
     mergesSources: false,
     warnings: rocketWarnings
   }),
