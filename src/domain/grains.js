@@ -1,9 +1,9 @@
-import { JET, JET_FLIGHT, PROPAGATION, SYNTHESIS } from './constants.js';
+import { JET, JET_FLIGHT, LOW_BAND, PROPAGATION, SYNTHESIS } from './constants.js';
 import { jetOfEngine, powerOfEngine } from './engine.js';
 import { addTurbomachinery, referencePower, turbomachineryAt } from './turbomachinery.js';
 import { jetComponents, jetSpectra, speedOfSound } from './jet.js';
 import { shapeWaveform, waveformShape } from './waveform.js';
-import { fft } from '../shared/domain/fft.js';
+import { fft, nextPowerOfTwo } from '../shared/domain/fft.js';
 import { createRandom, normalDeviate } from '../shared/domain/random.js';
 import { sourceTable } from '../shared/domain/source-table.js';
 import { flightPath, formationMembers } from '../shared/domain/trajectory.js';
@@ -11,7 +11,7 @@ import { PARAMETERS } from './scene.js';
 
 const GRAIN = PROPAGATION.grainSamples;
 const WINDOW = Float64Array.from({ length: GRAIN }, (_, index) => Math.sin(Math.PI * (index + .5) / GRAIN));
-const STREAMS = Object.freeze({ fine: 0, large: 0x9e3779b9, envelope: 0x85ebca6b });
+const STREAMS = Object.freeze({ fine: 0, large: 0x9e3779b9, envelope: 0x85ebca6b, low: 0xc2b2ae35 });
 
 /**
  * The jet's flight in still air of the ground's temperature, as the near listen flew it. With `autoDuration` it
@@ -42,18 +42,34 @@ function sampled(path, seconds) {
   return { position: { x: at(path.x), y: at(path.y), z: at(path.z) }, velocity: { x: at(path.vx), y: at(path.vy), z: at(path.vz) } };
 }
 
-function gaussianFrame(random, psd, sampleRate) {
-  const real = new Float64Array(GRAIN);
-  const imaginary = new Float64Array(GRAIN);
-  for (let bin = 1; bin < GRAIN / 2; bin += 1) {
-    const scale = Math.sqrt(GRAIN * sampleRate * psd[bin] / 4);
+function gaussianFrame(random, psd, sampleRate, size = GRAIN) {
+  const real = new Float64Array(size);
+  const imaginary = new Float64Array(size);
+  for (let bin = 1; bin < size / 2; bin += 1) {
+    const scale = Math.sqrt(size * sampleRate * psd[bin] / 4);
     real[bin] = scale * normalDeviate(random);
     imaginary[bin] = scale * normalDeviate(random);
-    real[GRAIN - bin] = real[bin];
-    imaginary[GRAIN - bin] = -imaginary[bin];
+    real[size - bin] = real[bin];
+    imaginary[size - bin] = -imaginary[bin];
   }
   fft(real, imaginary, true);
   return real;
+}
+
+const lowShare = frequency => 1 / (1 + (frequency / LOW_BAND.crossoverHz) ** 4);
+
+/** A source's spectra restricted to one band: 'low', 'high', or 'full' (unsplit). */
+function banded(source, band) {
+  if (band === 'full') return source;
+  const share = band === 'low' ? lowShare : frequency => 1 - lowShare(frequency);
+  return {
+    ...source,
+    spectra(components, inletDegrees, frequencies) {
+      const { shaped, plain } = source.spectra(components, inletDegrees, frequencies);
+      const weights = frequencies.map(share);
+      return { shaped: shaped.map((value, index) => value * weights[index]), plain: plain.map((value, index) => value * weights[index]) };
+    }
+  };
 }
 
 const catmullRom = (samples, position) => {
@@ -81,7 +97,9 @@ function removeMean(samples, first, last, sum) {
  * (Stone et al. 2003, eq. 2) come with the grain, so they count once. Ahead of a supersonic grain's Mach cone the
  * factor is negative and the grain arrives reversed.
  */
-export function pathGrains(emitter, scene, path, source) {
+export function pathGrains(emitter, scene, path, unbanded, band = 'full') {
+  if (band === 'low') return lowBandGrains(emitter, scene, path, banded(unbanded, 'low'));
+  const source = banded(unbanded, band);
   const { air } = scene;
   const sampleRate = scene.render.sampleRate;
   const sound = speedOfSound(air.temperatureCelsius);
@@ -156,6 +174,79 @@ export function pathGrains(emitter, scene, path, source) {
   return { sources: sourceTable(rows), rows, emission };
 }
 
+const LOW_WINDOW = Float64Array.from({ length: LOW_BAND.internalSamples }, (_, index) => Math.sin(Math.PI * (index + .5) / LOW_BAND.internalSamples));
+
+/**
+ * The low band's grains along a path: each a Gaussian frame of `LOW_BAND.internalSamples` at a low rate, sine-windowed,
+ * and its spectrum evaluated directly on the render frame's bins up to `LOW_BAND.highestFrequencyHz`. Time is scaled by
+ * the grain's Doppler compression as in the short grains, and reversed ahead of a supersonic grain's Mach cone.
+ */
+function lowBandGrains(emitter, scene, path, source) {
+  const sampleRate = scene.render.sampleRate;
+  const sound = speedOfSound(scene.air.temperatureCelsius);
+  const size = LOW_BAND.internalSamples;
+  const grainSamples = nextPowerOfTwo(Math.round(LOW_BAND.grainSeconds * sampleRate));
+  const grainSeconds = grainSamples / sampleRate;
+  const rate = size / grainSeconds;
+  const frequencies = Array.from({ length: size / 2 + 1 }, (_, bin) => bin * rate / size);
+  const binHz = rate / size;
+  const duration = (path.seconds.length - 1) * path.step;
+  const grains = [];
+  for (let index = 0; index * grainSeconds / 2 <= duration; index += 1) {
+    const centre = path.seconds[0] + index * grainSeconds / 2;
+    const { position, velocity } = sampled(path, centre);
+    const speed = Math.hypot(velocity.x, velocity.y, velocity.z);
+    const components = source.components({ seconds: centre, position, velocity, speed });
+    if (!components) { grains.push({ heard: false }); continue; }
+    const axis = source.axis?.(components, velocity, speed) ?? null;
+    const side = source.spectra(components, 90, frequencies);
+    let sum = 0;
+    for (const part of [side.shaped, side.plain]) for (let bin = 1; bin < part.length; bin += 1) sum += part[bin];
+    const power = sum * binHz;
+    grains.push({ centre, position: source.place?.(components, position, axis) ?? position, velocity, speed, axis, components, amplitude: Math.sqrt(power), heard: power > 0 });
+  }
+  const rows = grains.flatMap((grain, index) => (!grain.heard ? [] : [{
+    positionMetres: grain.position, direction: null, elementMetres: 0, emissionSeconds: grain.centre - grainSeconds, amplitudePaMetres: grain.amplitude,
+    pulse: 'grain', noiseSeed: index, durationSeconds: grainSeconds, decay: 0, spanSeconds: 2 * grainSeconds, linearRadiusMetres: 0
+  }]));
+
+  function emission(index, departure, plan) {
+    const grain = grains[index];
+    const cosine = grain.speed > 0 ? (grain.velocity.x * departure.x + grain.velocity.y * departure.y + grain.velocity.z * departure.z) / grain.speed : 1;
+    const signed = 1 - grain.speed / sound * cosine;
+    const compression = Math.sign(signed || 1) * Math.max(JET_FLIGHT.smallestCompression, Math.abs(signed));
+    const squeeze = Math.abs(compression);
+    const axial = grain.axis ? grain.axis.x * departure.x + grain.axis.y * departure.y + grain.axis.z * departure.z : cosine;
+    const inletDegrees = Math.acos(Math.max(-1, Math.min(1, axial))) * 180 / Math.PI;
+    const { shaped, plain } = source.spectra(grain.components, inletDegrees, frequencies);
+    const psd = shaped.map((value, bin) => value + plain[bin]);
+    const frame = gaussianFrame(createRandom((emitter.seed ^ Math.imul(index + 1, 0x27d4eb2d) ^ STREAMS.low) >>> 0), psd, rate, size);
+    let mean = 0;
+    for (let sample = 0; sample < size; sample += 1) { frame[sample] *= LOW_WINDOW[sample]; mean += frame[sample]; }
+    removeMean(frame, 0, size - 1, mean);
+    const bins = Math.min(plan.size / 2, Math.ceil(LOW_BAND.highestFrequencyHz * plan.size / sampleRate) + 2);
+    const re = new Float64Array(bins);
+    const im = new Float64Array(bins);
+    const step = squeeze / rate / (Math.sqrt(squeeze) * grain.amplitude);
+    const omega = 2 * Math.PI * sampleRate / plan.size;
+    for (let sample = 0; sample < size; sample += 1) {
+      const value = frame[sample] * step;
+      if (value === 0) continue;
+      const seconds = grainSeconds + (sample + .5 - size / 2) * compression / rate;
+      const [stepRe, stepIm] = [Math.cos(omega * seconds), -Math.sin(omega * seconds)];
+      let [phaseRe, phaseIm] = [stepRe, stepIm];
+      for (let bin = 1; bin < bins; bin += 1) {
+        re[bin] += value * phaseRe;
+        im[bin] += value * phaseIm;
+        [phaseRe, phaseIm] = [phaseRe * stepRe - phaseIm * stepIm, phaseRe * stepIm + phaseIm * stepRe];
+      }
+    }
+    return { re, im };
+  }
+
+  return { sources: sourceTable(rows), rows, emission };
+}
+
 /** Several emitters' grains as one: noise seeds offset per member so that `emission` finds the member's own. */
 export function mergedGrains(members) {
   if (members.length === 1) return members[0];
@@ -183,7 +274,7 @@ export function formationJets(emitter) {
 
 const JET_SHAPE = waveformShape({ skewness: JET.largeScaleSkewness, kurtosis: JET.largeScaleKurtosis });
 
-export function jetGrains(emitter, scene) {
+export function jetGrains(emitter, scene, band = 'full') {
   const { air } = scene;
   const jet = jetOfEngine(emitter.engine, air.temperatureCelsius);
   const { engines } = emitter.engine;
@@ -198,5 +289,5 @@ export function jetGrains(emitter, scene) {
     packetHz: components => components.large.peakHz / JET.packetCycles,
     shape: JET_SHAPE
   };
-  return mergedGrains(formationJets(emitter).map(member => pathGrains(member, scene, jetPath(member, scene), source)));
+  return mergedGrains(formationJets(emitter).map(member => pathGrains(member, scene, jetPath(member, scene), source, band)));
 }

@@ -64,6 +64,13 @@ export const JET_FLIGHT = Object.freeze({
   hearingDecibels: 30
 });
 
+/**
+ * Infrasound: below the crossover each source also emits long grains, synthesised at a low internal rate and evaluated
+ * only up to `highestFrequencyHz`; the short grains take the rest. The bands split power by complementary fourth-order
+ * shares, so their sum is the source's spectrum.
+ */
+export const LOW_BAND = Object.freeze({ crossoverHz: 20, grainSeconds: .68, internalSamples: 256, highestFrequencyHz: 60 });
+
 export const SYNTHESIS = Object.freeze({
   frameSamples: 4096,
   bandLimitShare: .45,

@@ -37,4 +37,4 @@ export function heardAscents(emitter, scene) {
 }
 
 /** The salvo's rounds as one emitter. */
-export const rocketGrains = (emitter, scene) => mergedGrains(heardAscents(emitter, scene).map(({ round, path }) => pathGrains(round, scene, path, { ...rocketSource(round, scene, path), shape: ROCKET_SHAPE })));
+export const rocketGrains = (emitter, scene, band = 'full') => mergedGrains(heardAscents(emitter, scene).map(({ round, path }) => pathGrains(round, scene, path, { ...rocketSource(round, scene, path), shape: ROCKET_SHAPE }, band)));

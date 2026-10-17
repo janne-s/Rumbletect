@@ -34,6 +34,8 @@ the flight, then delays, spreads, and filters that sound on its way there.
   flight, subsonic.
 - **Aircraft** — A formation flying a V behind the leader, each aircraft
   with its own seed.
+- **Turbomachinery** — A small turbine's blade-passing whine rising with
+  power, and a turbofan's fan hump.
 - **Details** — Start point, onset, seed, engine count, the engine's nozzle pressure
   ratio, jet temperature, and nozzle diameter, and the formation's lateral
   and trail spacing.
@@ -68,7 +70,14 @@ the flight, then delays, spreads, and filters that sound on its way there.
 - **Intensity, duration, pulsing, pulse period, rise, fade** — The
   eruption's strength and its course in time.
 - **Source** — The roar of a hot jet rising from the vent, as volcano
-  infrasound studies model it, heard down to about 12 Hz.
+  infrasound studies model it.
+
+## Infrasound
+
+- **Low band** — Every source reaches down to about 1.5 Hz: long grains
+  carry what lies below 20 Hz, short grains the rest, so a rocket's or an
+  eruption's rumble is in the exported files even where speakers cannot
+  play it.
 
 ## Air and ground
 
@@ -96,6 +105,7 @@ the flight, then delays, spreads, and filters that sound on its way there.
 | Flight effects | Stone, Krejsa & Clark 2003 | B, combined C |
 | Skewness, intermittency | Gee et al. 2013; fitted to recordings | B, C |
 | Engine settings | from published thrust and mass flow; a heavy bomber's turbofans as one mixed jet | C |
+| Turbomachinery tones and fan hump | fitted to model-turbine and B-52 recordings | C |
 | Rocket source | SATURN, Mathews 2025 | B |
 | Ascent, sizing, salvo | assumed | C |
 | Eruption jet | Tam's spectra as fitted to volcano infrasound (Matoza et al., Gestrich et al. 2021); vents and velocities assumed | B, C |
