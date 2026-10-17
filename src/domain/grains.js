@@ -98,7 +98,9 @@ export function pathGrains(emitter, scene, path, source) {
     if (!components) { grains.push({ heard: false }); continue; }
     const axis = source.axis?.(components, velocity, speed) ?? null;
     const side = source.spectra(components, 90, frequencies);
-    const power = [...side.shaped, ...side.plain].reduce((sum, value) => sum + value, 0) * binHz;
+    let sum = 0;
+    for (const part of [side.shaped, side.plain]) for (let bin = 0; bin < part.length; bin += 1) sum += part[bin];
+    const power = sum * binHz;
     grains.push({ centre, position: source.place?.(components, position, axis) ?? position, velocity, speed, axis, components, amplitude: Math.sqrt(power), heard: power > 0 });
   }
   const rows = grains.flatMap((grain, index) => (!grain.heard ? [] : [{

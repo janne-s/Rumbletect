@@ -62,6 +62,29 @@ export function sizedRocket(totalNewtons, engines, propellant) {
   };
 }
 
+const GRID_COLUMNS = Array.from({ length: 181 }, (_, degrees) => bracket(SATURN_DIRECTIVITY.degrees, Math.min(degrees, ROCKET.directivityEdgeDegrees)));
+const GRID_FORWARD = Array.from({ length: 181 }, (_, degrees) => {
+  if (degrees <= ROCKET.directivityEdgeDegrees) return null;
+  const [a, b, share] = bracket(FORWARD.degrees, degrees);
+  const at = values => values[a] + (values[b] - values[a]) * share;
+  return [at(FORWARD.low), at(FORWARD.high)];
+});
+
+/** `directivityDecibels` every degree from 0° to 180° as linear intensity ratios, written into `out` from `offset`. */
+export function directivityRow(strouhal, out, offset) {
+  const [r0, r1, rs] = bracket(TABLE_LOG_STROUHAL, Math.log(strouhal));
+  const [first, second] = [SATURN_DIRECTIVITY.decibels[r0], SATURN_DIRECTIVITY.decibels[r1]];
+  const blend = Math.min(1, Math.max(0, Math.log(strouhal / FORWARD.lowStrouhal) / Math.log(FORWARD.highStrouhal / FORWARD.lowStrouhal)));
+  for (let degrees = 0; degrees < GRID_COLUMNS.length; degrees += 1) {
+    const [c0, c1, cs] = GRID_COLUMNS[degrees];
+    const low = first[c0] + (first[c1] - first[c0]) * cs;
+    let decibels = low + (second[c0] + (second[c1] - second[c0]) * cs - low) * rs;
+    const forward = GRID_FORWARD[degrees];
+    if (forward) decibels += forward[0] + (forward[1] - forward[0]) * blend;
+    out[offset + degrees] = 10 ** (decibels / 10);
+  }
+}
+
 export const sourceLocationMetres = (strouhal, diameterMetres) => ROCKET.sourceLocation.coefficient * strouhal ** ROCKET.sourceLocation.exponent * diameterMetres;
 
 export function vehicleOf(emitter) {
@@ -136,6 +159,21 @@ export function ascentPath(emitter) {
 }
 
 const up = { x: 0, y: 0, z: 1 };
+const GRID_DEGREES = 181;
+
+/** Per frequency, once per rocket: SATURN's power as a linear share per unit Sr, the source's distance behind the nozzle, and its directivity every degree. */
+function spectralTable(frequencies, diameter, velocity) {
+  const power = new Float64Array(frequencies.length);
+  const location = new Float64Array(frequencies.length);
+  const directivity = new Float32Array(frequencies.length * GRID_DEGREES);
+  for (let index = 1; index < frequencies.length; index += 1) {
+    const strouhal = frequencies[index] * diameter / velocity;
+    power[index] = 10 ** (normalizedPowerDecibels(strouhal) / 10);
+    location[index] = sourceLocationMetres(strouhal, diameter);
+    directivityRow(strouhal, directivity, index * GRID_DEGREES);
+  }
+  return { power, location, directivity };
+}
 
 /**
  * The rocket's source along its ascent for `pathGrains`: power from thrust (B), SATURN's spectrum and directivity (B),
@@ -148,6 +186,11 @@ export function rocketSource(emitter, scene, path) {
   const diameter = vehicle.effectiveDiameterMetres;
   const velocity = vehicle.exitVelocityMetresPerSecond;
   const padHeight = emitter.startMetres.z;
+  const tables = new WeakMap();
+  const tableFor = frequencies => {
+    if (!tables.has(frequencies)) tables.set(frequencies, spectralTable(frequencies, diameter, velocity));
+    return tables.get(frequencies);
+  };
   const sampleIndex = seconds => Math.min(path.seconds.length - 1, Math.max(0, Math.round((seconds - path.seconds[0]) / path.step)));
   return {
     components({ seconds, position }) {
@@ -168,19 +211,21 @@ export function rocketSource(emitter, scene, path) {
       return { x: position.x - axis.x * behind, y: position.y - axis.y * behind, z: Math.max(padHeight, position.z - axis.z * behind) };
     },
     spectra(components, inletDegrees, frequencies) {
-      const plumeDegrees = 180 - inletDegrees;
+      const table = tableFor(frequencies);
       const shaped = new Float64Array(frequencies.length);
       const plain = new Float64Array(frequencies.length);
       const perHz = components.watts * diameter / velocity * impedance / (4 * Math.PI);
       const padGain = 10 ** (-(ROCKET.padLossDecibels + (components.water ? ROCKET.waterDecibels : 0)) / 10);
-      frequencies.forEach((frequency, index) => {
-        if (frequency <= 0) return;
-        const strouhal = frequency * diameter / velocity;
-        const opening = 1 / (1 + (frequency / components.cornerHz) ** 4);
-        const emerged = sourceLocationMetres(strouhal, diameter) <= components.climbMetres;
-        const directivity = emerged ? 10 ** (directivityDecibels(strouhal, plumeDegrees) / 10) : padGain;
-        shaped[index] = perHz * 10 ** (normalizedPowerDecibels(strouhal) / 10) * directivity * opening;
-      });
+      const plume = Math.min(GRID_DEGREES - 1, Math.max(0, 180 - inletDegrees));
+      const below = Math.min(GRID_DEGREES - 2, Math.floor(plume));
+      const share = plume - below;
+      for (let index = 1; index < frequencies.length; index += 1) {
+        const ratio = frequencies[index] / components.cornerHz;
+        const opening = 1 / (1 + ratio * ratio * ratio * ratio);
+        const row = index * GRID_DEGREES;
+        const directivity = table.location[index] <= components.climbMetres ? table.directivity[row + below] + (table.directivity[row + below + 1] - table.directivity[row + below]) * share : padGain;
+        shaped[index] = perHz * table.power[index] * directivity * opening;
+      }
       return { shaped, plain };
     },
     packetHz: () => peakFrequencyHz(vehicle) / ROCKET.packetCycles
