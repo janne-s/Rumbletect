@@ -47,17 +47,18 @@ export function jetComponents(jet, { temperatureCelsius, flightMetresPerSecond =
   const largeExponent = large.velocityExponent[0] + large.velocityExponent[1] * ratio;
   const fineExponent = fine.velocityExponent[0] + fine.velocityExponent[1] / ratio ** fine.velocityExponent[2];
   const staticConvection = JET_FLIGHT.convectionRatio * jet.velocityMetresPerSecond / sound;
+  const size = 10 * Math.log10(jet.diameterMetres / JET.levelReferenceDiameterMetres);
   return {
     sound,
     diameterMetres: jet.diameterMetres,
     staticConvection,
     flightConvection: JET_FLIGHT.convectionRatio * (jet.velocityMetresPerSecond - flightMetresPerSecond) / sound,
     large: {
-      decibels: large.base + large.temperature / ratio ** large.temperatureExponent + 10 * largeExponent * acoustic,
+      decibels: large.base + large.temperature / ratio ** large.temperatureExponent + 10 * largeExponent * acoustic + size,
       peakHz: JET.largePeakStrouhal * velocity / jet.diameterMetres
     },
     fine: {
-      decibels: fine.base + fine.temperature / ratio ** fine.temperatureExponent + 10 * fineExponent * acoustic,
+      decibels: fine.base + fine.temperature / ratio ** fine.temperatureExponent + 10 * fineExponent * acoustic + size,
       peakHz: JET.finePeakStrouhal * velocity / jet.diameterMetres
     }
   };

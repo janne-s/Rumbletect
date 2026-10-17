@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { effectiveVelocity, fineSimilarityDecibels, flightConvectionDecibels, jetComponents, jetSpectra, largeSimilarityDecibels, speedOfSound } from '../src/domain/jet.js';
-import { REFERENCE_SOUND_PRESSURE_PA } from '../src/domain/constants.js';
+import { JET, REFERENCE_SOUND_PRESSURE_PA } from '../src/domain/constants.js';
 
 const close = (actual, expected, tolerance, label) => assert.ok(Math.abs(actual - expected) <= tolerance, `${label}: ${actual} vs ${expected}`);
 const jet = { diameterMetres: .9, velocityMetresPerSecond: 650, temperatureRatio: 2.6 };
@@ -18,11 +18,12 @@ test('both similarity spectra are continuous and peak at 0 dB at their peak freq
   }
 });
 
-test('static levels follow Tam et al. eqs. 7 and 9', () => {
+test('static levels follow Tam et al. eqs. 7 and 9, raised by 10 log of the nozzle\'s size over the laboratory\'s', () => {
   const components = jetComponents(jet, { temperatureCelsius: 15 });
   const acoustic = Math.log10(650 / speedOfSound(15));
-  close(components.large.decibels, 75 + 46 / 2.6 ** .3 + 10 * (10.06 - .495 * 2.6) * acoustic, 1e-9, 'A');
-  close(components.fine.decibels, 83.2 + 19.3 / 2.6 ** .62 + 10 * (6.4 + 1.2 / 2.6 ** 1.4) * acoustic, 1e-9, 'B');
+  const size = 10 * Math.log10(.9 / JET.levelReferenceDiameterMetres);
+  close(components.large.decibels, 75 + 46 / 2.6 ** .3 + 10 * (10.06 - .495 * 2.6) * acoustic + size, 1e-9, 'A');
+  close(components.fine.decibels, 83.2 + 19.3 / 2.6 ** .62 + 10 * (6.4 + 1.2 / 2.6 ** 1.4) * acoustic + size, 1e-9, 'B');
   close(components.large.peakHz * .9 / 650, .19, 1e-12, 'St_L');
   close(components.fine.peakHz * .9 / 650, .45, 1e-12, 'St_F');
 });
@@ -45,4 +46,17 @@ test('without flight nothing changes, and flight lowers the aft noise', () => {
   const flying = jetComponents(jet, { temperatureCelsius: 15, flightMetresPerSecond: 150 });
   const aft = frequencies => jetSpectra(flying, 150, frequencies).large[0] / jetSpectra(still, 150, frequencies).large[0];
   assert.ok(aft([100]) < 1);
+});
+
+test('OASPL at 100 D_j does not depend on the nozzle\'s size and lies near Khavaran & Bridges\'s', () => {
+  const frequencies = [];
+  for (let x = Math.log(1e-3); x < Math.log(2e5); x += .01) frequencies.push(Math.exp(x));
+  const oaspl = diameter => {
+    const components = jetComponents({ diameterMetres: diameter, velocityMetresPerSecond: speedOfSound(15), temperatureRatio: 2.7 }, { temperatureCelsius: 15 });
+    const { large, fine } = jetSpectra(components, 140, frequencies);
+    const sum = frequencies.reduce((total, frequency, index) => total + (large[index] + fine[index]) * frequency * .01, 0);
+    return 10 * Math.log10(sum / (100 * diameter) ** 2 / REFERENCE_SOUND_PRESSURE_PA ** 2);
+  };
+  close(oaspl(.05), oaspl(50), .01, 'size');
+  close(oaspl(1), 107, 6, 'Khavaran & Bridges at 140°');
 });

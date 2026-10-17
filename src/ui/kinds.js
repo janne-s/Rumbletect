@@ -1,7 +1,7 @@
 import { ENGINE, VIEW } from '../domain/constants.js';
 import { jetOfEngine, powerLabel, powerOfEngine } from '../domain/engine.js';
 import { jetComponents, speedOfSound } from '../domain/jet.js';
-import { defaultJet, defaultRocket, PROPELLANTS } from '../domain/scene.js';
+import { defaultJet, defaultRocket, defaultVolcano, PROPELLANTS } from '../domain/scene.js';
 import { RENDER, ROCKET } from '../domain/constants.js';
 import { heardCounts } from '../domain/rocket-grains.js';
 import { peakFrequencyHz, sizedRocket, soundPowerWatts, totalThrustNewtons, vehicleOf } from '../domain/rocket.js';
@@ -9,7 +9,8 @@ import { newSeed } from '../shared/domain/random.js';
 import { formatMetres } from '../shared/ui/canvas.js';
 import { checkboxField, numberField, pointFields, seedField, selectField, textField } from './fields.js';
 import { cachedTracks } from './geometry-cache.js';
-import { macrosFor, rocketMacros, thrustLabel } from './macros.js';
+import { macrosFor, rocketMacros, thrustLabel, volcanoMacros } from './macros.js';
+import { volcanoCategory } from '../domain/volcano.js';
 import { machCone } from '../shared/domain/trajectory.js';
 
 const flownSeconds = (emitter, scene) => { const [path] = cachedTracks(emitter, scene); return Math.round((path.seconds.length - 1) * path.step); };
@@ -163,7 +164,59 @@ function rocketWarnings(emitter, scene) {
   ];
 }
 
+function volcanoSummary(emitter) {
+  const { ventDiameterMetres, ventVelocityMetresPerSecond } = emitter.jet;
+  const peak = .19 * ventVelocityMetresPerSecond / ventDiameterMetres;
+  return `${volcanoCategory(emitter.category).label}, vent ${formatMetres(ventDiameterMetres)} at ${Math.round(ventVelocityMetresPerSecond)} m/s · peak ${peak < 10 ? peak.toFixed(1) : Math.round(peak)} Hz · ${emitter.eruption.eruptionSeconds} s`;
+}
+
+function volcanoDetails(emitter, { updateEmitter }) {
+  const set = key => value => updateEmitter(emitter.id, item => { item[key] = value; });
+  const setIn = (group, key) => value => updateEmitter(emitter.id, item => { item[group] = { ...item[group], [key]: value }; });
+  const section = (title, build) => ({ title, build });
+  return [
+    section('Placement', container => {
+      textField(container, { label: 'Name', value: emitter.name, onCommit: set('name') });
+      seedField(container, { value: emitter.seed, onCommit: set('seed'), onNew: () => set('seed')(newSeed()) });
+      numberField(container, { key: 'startSeconds', value: emitter.startSeconds, onCommit: set('startSeconds') });
+      pointFields(container, { label: 'Vent', point: emitter.ventMetres, onCommit: set('ventMetres') });
+    }),
+    section('Jet', container => ['ventDiameterMetres', 'ventVelocityMetresPerSecond', 'gasTemperatureKelvin'].forEach(key => numberField(container, { key, value: emitter.jet[key], onCommit: setIn('jet', key) }))),
+    section('Eruption', container => ['eruptionSeconds', 'riseSeconds', 'fadeSeconds', 'pulsePeriodSeconds', 'pulseDepthPercent'].forEach(key => numberField(container, { key, value: emitter.eruption[key], onCommit: setIn('eruption', key) })))
+  ];
+}
+
+function volcanoAmplitudes(emitter, scene) {
+  const { air } = scene;
+  const components = jetComponents({ diameterMetres: emitter.jet.ventDiameterMetres, velocityMetresPerSecond: emitter.jet.ventVelocityMetresPerSecond, temperatureRatio: emitter.jet.gasTemperatureKelvin / (air.temperatureCelsius + 273.15) }, { temperatureCelsius: air.temperatureCelsius });
+  const amplitude = 10 ** (components.large.decibels / 20) * 20e-6 * components.diameterMetres * Math.sqrt(components.large.peakHz);
+  return new Map([[`${emitter.id}:0`, { amplitude, frequencyHz: Math.max(20, components.large.peakHz) }]]);
+}
+
 export const isSupersonic = (emitter, scene) => cachedTracks(emitter, scene)[0].speed.some(speed => speed >= speedOfSound(scene.air.temperatureCelsius));
+
+const VOLCANO_PANEL = Object.freeze({
+  label: () => 'Volcano',
+  summary: volcanoSummary,
+  macros: volcanoMacros,
+  details: volcanoDetails,
+  seeded: () => true,
+  anchorName: () => 'vent',
+  info: () => [],
+  bounds: (emitter, scene, include) => { include(emitter.ventMetres); include({ ...emitter.ventMetres, z: emitter.ventMetres.z + 5 * emitter.jet.ventDiameterMetres }); },
+  measure: pathPoints,
+  move: () => false,
+  groundAnchored: () => false,
+  timeline: () => [],
+  alwaysTimed: () => false,
+  eventSeconds: 0,
+  tracks: (emitter, scene) => cachedTracks(emitter, scene),
+  cone: () => null,
+  amplitudes: volcanoAmplitudes,
+  wavefrontSources: (emitter, scene, placedPoint, candidates) => wavefrontSources(emitter, scene, placedPoint, candidates, VIEW.wavefront.spheres),
+  mergesSources: false,
+  warnings: () => []
+});
 
 export const KIND_PANELS = Object.freeze({
   jet: Object.freeze({
@@ -209,10 +262,12 @@ export const KIND_PANELS = Object.freeze({
     wavefrontSources: (emitter, scene, placedPoint, candidates) => wavefrontSources(emitter, scene, placedPoint, candidates, VIEW.wavefront.spheres),
     mergesSources: false,
     warnings: rocketWarnings
-  })
+  }),
+  volcano: VOLCANO_PANEL
 });
 
 export const ADD_EMITTERS = Object.freeze({
   jet: Object.freeze({ create: defaultJet, label: 'Jet', mode: 'jet' }),
-  rocket: Object.freeze({ create: defaultRocket, label: 'Rocket', mode: 'rocket' })
+  rocket: Object.freeze({ create: defaultRocket, label: 'Rocket', mode: 'rocket' }),
+  volcano: Object.freeze({ create: defaultVolcano, label: 'Volcano', mode: 'volcano' })
 });

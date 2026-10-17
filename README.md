@@ -1,6 +1,6 @@
 # Rumbletect: Design the rumble
 
-Rumbletect designs the continuous sound of jets from their physics. Plan a
+Rumbletect designs the continuous sound of jets, rockets, and eruptions from their physics. Plan a
 flight in 3D, set the engine's power, place microphones, and hear the flyover:
 its roar, its rumble from behind, the ground's comb, and the air's swirl. Listen
 in mono, as a spaced stereo pair, or binaurally on headphones, and export WAV or
@@ -61,6 +61,15 @@ the flight, then delays, spreads, and filters that sound on its way there.
   spectrum and directivity of BYU's SATURN model; low frequencies radiate
   toward the plume and start once the plume has left the pad.
 
+## Volcano
+
+- **Category** — Lava fountain, sub-Plinian, or Plinian eruption jet: sets
+  the vent, its exit velocity, and gas temperature.
+- **Intensity, duration, pulsing, pulse period, rise, fade** — The
+  eruption's strength and its course in time.
+- **Source** — The roar of a hot jet rising from the vent, as volcano
+  infrasound studies model it, heard down to about 12 Hz.
+
 ## Air and ground
 
 - **Air absorption** — ISO 9613-1 at the frequency that arrives.
@@ -81,6 +90,7 @@ the flight, then delays, spreads, and filters that sound on its way there.
 | Part | Source | Class |
 | --- | --- | --- |
 | Mixing noise spectra | Tam, Golebiowski & Seiner 1996 | B |
+| Mixing noise level with size | Khavaran & Bridges 2009, fitted | B |
 | Peak frequencies | full-scale F-35AA and F-22A, Gee, Neilsen & Wall 2013 | B, fitted C |
 | Directivity | Tam 1996 figs. 6–7 | B |
 | Flight effects | Stone, Krejsa & Clark 2003 | B, combined C |
@@ -88,6 +98,7 @@ the flight, then delays, spreads, and filters that sound on its way there.
 | Engine settings | from published thrust and mass flow; a heavy bomber's turbofans as one mixed jet | C |
 | Rocket source | SATURN, Mathews 2025 | B |
 | Ascent, sizing, salvo | assumed | C |
+| Eruption jet | Tam's spectra as fitted to volcano infrasound (Matoza et al., Gestrich et al. 2021); vents and velocities assumed | B, C |
 | Jet velocity | ideal nozzle | A |
 | Air absorption | ISO 9613-1 | B |
 | Ground reflection | Delany–Bazley, Weyl–Van der Pol | B |

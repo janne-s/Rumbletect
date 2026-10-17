@@ -52,5 +52,22 @@ export function kindViews() {
       ];
     }
   };
-  return { jet, rocket };
+  const volcano = {
+    ...jet,
+    handles: emitter => [{ type: 'emitter', id: emitter.id, field: 'ventMetres', point: emitter.ventMetres, role: 'start' }],
+    selectedPoints: emitter => [emitter.ventMetres],
+    label: emitter => emitter.ventMetres,
+    extent(emitter, { includeExtent, scene }) {
+      const paths = cachedTracks(emitter, scene);
+      includeExtent(paths, () => [emitter.ventMetres, { ...emitter.ventMetres, z: emitter.ventMetres.z + 5 * emitter.jet.ventDiameterMetres }]);
+    },
+    draw(context, emitter, { frame }, { colors, selected }) {
+      const vent = frame.project(emitter.ventMetres);
+      const top = frame.project({ ...emitter.ventMetres, z: emitter.ventMetres.z + 5 * emitter.jet.ventDiameterMetres });
+      context.strokeStyle = selected ? colors.accent : colors.end;
+      context.lineWidth = selected ? 2.4 : 2;
+      context.beginPath(); context.moveTo(vent.x, vent.y); context.lineTo(top.x, top.y); context.stroke();
+    }
+  };
+  return { jet, rocket, volcano };
 }

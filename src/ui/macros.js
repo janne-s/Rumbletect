@@ -1,6 +1,7 @@
 import { ENGINE_CLASSES, engineAtPower, engineOfClass, powerLabel, powerOfEngine } from '../domain/engine.js';
 import { PARAMETERS } from '../domain/scene.js';
-import { ENGINE, ROCKET } from '../domain/constants.js';
+import { ENGINE, ROCKET, VOLCANO } from '../domain/constants.js';
+import { volcanoCategory } from '../domain/volcano.js';
 import { categoryRocket, liftoffThrustToWeight, nearestCategory, sizedRocket } from '../domain/rocket.js';
 import { clamp01, logPosition, logValue, METRES, metres } from '../shared/ui/macros.js';
 
@@ -192,5 +193,61 @@ const rocketRounds = {
 
 export function rocketMacros(emitter, { onset: withOnset = false } = {}) {
   const list = [rocketCategory, rocketSize, rocketPropellant, flightHeading, rocketLaunch, rocketBurn, rocketKick, rocketRounds];
+  return withOnset ? [...list, onset] : list;
+}
+
+const VOLCANO_CATEGORIES = VOLCANO.categories;
+
+const volcanoKind = {
+  label: 'Category',
+  read: item => VOLCANO_CATEGORIES.indexOf(volcanoCategory(item.category)) / (VOLCANO_CATEGORIES.length - 1),
+  write: (item, t) => {
+    const category = VOLCANO_CATEGORIES[Math.round(t * (VOLCANO_CATEGORIES.length - 1))];
+    if (category.key === item.category) return;
+    const { ventDiameterMetres, ventVelocityMetresPerSecond, gasTemperatureKelvin } = category;
+    item.category = category.key;
+    item.jet = { ventDiameterMetres, ventVelocityMetresPerSecond, gasTemperatureKelvin };
+  },
+  show: item => volcanoCategory(item.category).label
+};
+
+const INTENSITY_SPAN = Object.freeze([.25, 1.5]);
+
+const volcanoIntensity = {
+  label: 'Intensity',
+  read: item => clamp01(logPosition(item.jet.ventVelocityMetresPerSecond / volcanoCategory(item.category).ventVelocityMetresPerSecond, INTENSITY_SPAN)),
+  write: (item, t) => {
+    const velocity = Math.round(logValue(t, INTENSITY_SPAN) * volcanoCategory(item.category).ventVelocityMetresPerSecond);
+    item.jet = { ...item.jet, ventVelocityMetresPerSecond: Math.min(range('ventVelocityMetresPerSecond')[1], Math.max(range('ventVelocityMetresPerSecond')[0], velocity)) };
+  },
+  show: item => `${Math.round(item.jet.ventVelocityMetresPerSecond)} m/s`,
+  entry: { unit: 'm/s', get: item => item.jet.ventVelocityMetresPerSecond, set: (item, value) => { item.jet = { ...item.jet, ventVelocityMetresPerSecond: value }; } }
+};
+
+const eruptionSlider = (key, label, span, unit = 's') => ({
+  label,
+  read: item => clamp01(logPosition(Math.max(span[0], item.eruption[key]), span)),
+  write: (item, t) => { item.eruption = { ...item.eruption, [key]: Math.round(logValue(t, span)) }; },
+  show: item => `${item.eruption[key]} ${unit}`,
+  entry: { unit, get: item => item.eruption[key], set: (item, value) => { item.eruption = { ...item.eruption, [key]: value }; } }
+});
+
+const volcanoPulsing = {
+  label: 'Pulsing',
+  read: item => item.eruption.pulseDepthPercent / 100,
+  write: (item, t) => { item.eruption = { ...item.eruption, pulseDepthPercent: Math.round(t * 100) }; },
+  show: item => `${item.eruption.pulseDepthPercent} %`,
+  entry: { unit: '%', get: item => item.eruption.pulseDepthPercent, set: (item, value) => { item.eruption = { ...item.eruption, pulseDepthPercent: value }; } }
+};
+
+export function volcanoMacros(emitter, { onset: withOnset = false } = {}) {
+  const list = [
+    volcanoKind, volcanoIntensity,
+    eruptionSlider('eruptionSeconds', 'Duration', [range('eruptionSeconds')[0], range('eruptionSeconds')[1]]),
+    volcanoPulsing,
+    eruptionSlider('pulsePeriodSeconds', 'Pulse period', [range('pulsePeriodSeconds')[0], range('pulsePeriodSeconds')[1]]),
+    eruptionSlider('riseSeconds', 'Rise', [1, range('riseSeconds')[1]]),
+    eruptionSlider('fadeSeconds', 'Fade', [1, range('fadeSeconds')[1]])
+  ];
   return withOnset ? [...list, onset] : list;
 }

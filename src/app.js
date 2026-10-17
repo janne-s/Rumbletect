@@ -21,7 +21,8 @@ startFrame({
   add: ADD_EMITTERS,
   modes: {
     jet: { label: 'Jet', button: 'fa-jet-fighter', icon: 'fa-jet-fighter' },
-    rocket: { label: 'Rocket', button: 'fa-rocket', icon: 'fa-rocket' }
+    rocket: { label: 'Rocket', button: 'fa-rocket', icon: 'fa-rocket' },
+    volcano: { label: 'Volcano', button: 'fa-volcano', icon: 'fa-volcano' }
   },
   preferences: { cone: true },
   toggles: {

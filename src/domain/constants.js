@@ -32,6 +32,12 @@ export const JET = Object.freeze({
    * 0.9–1 kHz sideways (Gee, Neilsen & Wall 2013, Acoustics Today, fig. 11), St 0.1–0.3 aft; the values are
    * fitted to those peaks for the default jet (class C). Tam 1996 fig. 10 gives half of it for laboratory jets.
    */
+  /**
+   * Class B: Tam's levels are dB per Hz at r = D_j for laboratory nozzles. Sound power grows with nozzle area, so OASPL at
+   * 100 D_j does not depend on size (Khavaran & Bridges 2009 fig. 2.1); with peaks at a fixed Strouhal number that takes
+   * +10 log(D_j / D_ref). D_ref fitted to Khavaran & Bridges over 50–165°, M_a 0.5–1.4, T_s 1.0 and 2.7 (residuals ±10 dB, hot slow jets low).
+   */
+  levelReferenceDiameterMetres: .0712,
   largePeakStrouhal: .19,
   finePeakStrouhal: .45,
   /** Class B: pressure skewness 0.15–0.4 made at the source, F-35AA at military power (Gee, Neilsen & Wall 2013, fig. 10). */
@@ -214,4 +220,22 @@ export const ROCKET = Object.freeze({
    */
   salvoJitter: .15,
   defaultSalvo: Object.freeze({ rounds: 1, salvoSize: 1, salvoSeconds: 30, salvoSpreadSeconds: 1, launcherRadiusMetres: 5, headingSpreadDegrees: 2, launchSpreadDegrees: 1, thrustSpreadPercent: 5 })
+});
+
+export const VOLCANO = Object.freeze({
+  /**
+   * Class C: the category slider's eruption jets, vent diameter, exit velocity and gas temperature. A Kīlauea-type lava
+   * fountain (fissure 8, 2018, studied with jet-noise scaling by Gestrich et al. 2022), a sub-Plinian and a Plinian jet
+   * (Mount St. Helens and Tungurahua, Matoza et al. 2009). Ash loading is not in Tam's data.
+   */
+  categories: Object.freeze([
+    Object.freeze({ key: 'fountain', label: 'Lava fountain', ventDiameterMetres: 15, ventVelocityMetresPerSecond: 60, gasTemperatureKelvin: 1300 }),
+    Object.freeze({ key: 'subplinian', label: 'Sub-Plinian', ventDiameterMetres: 40, ventVelocityMetresPerSecond: 150, gasTemperatureKelvin: 1000 }),
+    Object.freeze({ key: 'plinian', label: 'Plinian', ventDiameterMetres: 100, ventVelocityMetresPerSecond: 250, gasTemperatureKelvin: 1000 })
+  ]),
+  /** Class C: the mixing noise is placed this many vent diameters above the vent, near the end of the jet's potential core. */
+  sourceDiameters: 5,
+  /** Class C: an eruption's slow pulsing modulates its exit velocity sinusoidally with a seeded phase wander. */
+  pulseWander: .3,
+  defaultEruption: Object.freeze({ eruptionSeconds: 120, riseSeconds: 10, fadeSeconds: 20, pulsePeriodSeconds: 8, pulseDepthPercent: 30 })
 });

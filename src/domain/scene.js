@@ -1,4 +1,4 @@
-import { MODEL_VERSION, ROCKET } from './constants.js';
+import { MODEL_VERSION, ROCKET, VOLCANO } from './constants.js';
 import { sizedRocket } from './rocket.js';
 import { ENGINE_CLASSES, engineOfClass } from './engine.js';
 import { createScene } from '../shared/domain/scene.js';
@@ -32,6 +32,14 @@ const RUMBLETECT_PARAMETERS = Object.freeze({
   aircraft: { minimum: 1, maximum: 24, unit: '', label: 'Aircraft', reliability: null, integer: true },
   lateralSpacingMetres: { minimum: 0, maximum: 2000, unit: 'm', label: 'Lateral spacing', reliability: null },
   trailSpacingMetres: { minimum: 0, maximum: 3000, unit: 'm', label: 'Trail spacing', reliability: null },
+  ventDiameterMetres: { minimum: 1, maximum: 500, unit: 'm', label: 'Vent diameter', reliability: 'C' },
+  ventVelocityMetresPerSecond: { minimum: 10, maximum: 600, unit: 'm/s', label: 'Exit velocity', reliability: 'C' },
+  gasTemperatureKelvin: { minimum: 300, maximum: 1600, unit: 'K', label: 'Gas temperature', reliability: 'C' },
+  eruptionSeconds: { minimum: 5, maximum: 400, unit: 's', label: 'Duration', reliability: null },
+  riseSeconds: { minimum: 0, maximum: 120, unit: 's', label: 'Rise', reliability: null },
+  fadeSeconds: { minimum: 0, maximum: 300, unit: 's', label: 'Fade', reliability: null },
+  pulsePeriodSeconds: { minimum: 1, maximum: 120, unit: 's', label: 'Pulse period', reliability: 'C' },
+  pulseDepthPercent: { minimum: 0, maximum: 100, unit: '%', label: 'Pulse depth', reliability: 'C' },
   rounds: { minimum: 1, maximum: 48, unit: '', label: 'Rounds', reliability: null, integer: true },
   salvoSize: { minimum: 1, maximum: 24, unit: '', label: 'Rounds per salvo', reliability: null, integer: true },
   salvoSeconds: { minimum: 0, maximum: 300, unit: 's', label: 'Duration', reliability: null },
@@ -82,7 +90,31 @@ export function defaultRocket(id = 'rocket-1', seed = 20261017) {
   };
 }
 
-export const emitterAnchor = emitter => emitter.startMetres;
+export function defaultVolcano(id = 'volcano-1', seed = 20261018) {
+  const { key, ventDiameterMetres, ventVelocityMetresPerSecond, gasTemperatureKelvin } = VOLCANO.categories.at(-1);
+  return {
+    id, name: 'Volcano', kind: 'volcano', enabled: true, seed,
+    category: key,
+    startSeconds: 0,
+    ventMetres: { x: 0, y: 0, z: 0 },
+    jet: { ventDiameterMetres, ventVelocityMetresPerSecond, gasTemperatureKelvin },
+    eruption: { ...VOLCANO.defaultEruption }
+  };
+}
+
+const VOLCANO_CATEGORIES = Object.freeze(VOLCANO.categories.map(category => category.key));
+
+function readVolcano(value, { point, numbers }, path) {
+  return {
+    category: VOLCANO_CATEGORIES.includes(value.category) ? value.category : VOLCANO_CATEGORIES.at(-1),
+    ventMetres: point(value.ventMetres, `${path}.ventMetres`),
+    ...numbers(value, ['startSeconds'], path),
+    jet: numbers(value.jet, ['ventDiameterMetres', 'ventVelocityMetresPerSecond', 'gasTemperatureKelvin'], `${path}.jet`),
+    eruption: numbers(value.eruption, Object.keys(VOLCANO.defaultEruption), `${path}.eruption`)
+  };
+}
+
+export const emitterAnchor = emitter => emitter.ventMetres ?? emitter.startMetres;
 
 const ROCKET_ENGINE_NUMBERS = Object.freeze(['engines', 'thrustKilonewtons', 'exitVelocityMetresPerSecond', 'exitDiameterMetres', 'efficiencyPercent']);
 const SALVO_NUMBERS = Object.freeze(Object.keys(ROCKET.defaultSalvo));
@@ -129,11 +161,13 @@ export const { PARAMETERS, MODES, defaultScene, parseScene, readScene, serialize
   anchor: emitterAnchor,
   modes: {
     jet: { kinds: ['jet'], emitter: () => defaultJet(), receiverMetres: { x: 0, y: 0, z: 1.7 } },
-    rocket: { kinds: ['rocket'], emitter: () => defaultRocket(), receiverMetres: { x: -1500, y: -2600, z: 1.7 } }
+    rocket: { kinds: ['rocket'], emitter: () => defaultRocket(), receiverMetres: { x: -1500, y: -2600, z: 1.7 } },
+    volcano: { kinds: ['volcano'], emitter: () => defaultVolcano(), receiverMetres: { x: -3000, y: -4000, z: 1.7 } }
   },
   kinds: {
     jet: { defaults: () => defaultJet(), read: readJet },
-    rocket: { defaults: () => defaultRocket(), read: readRocket }
+    rocket: { defaults: () => defaultRocket(), read: readRocket },
+    volcano: { defaults: () => defaultVolcano(), read: readVolcano }
   },
   parameters: RUMBLETECT_PARAMETERS
 });
