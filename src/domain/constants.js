@@ -38,6 +38,9 @@ export const JET = Object.freeze({
    * +10 log(D_j / D_ref). D_ref fitted to Khavaran & Bridges over 50–165°, M_a 0.5–1.4, T_s 1.0 and 2.7 (residuals ±10 dB, hot slow jets low).
    */
   levelReferenceDiameterMetres: .0712,
+  /** Class C: turbomachinery radiates forward and to the side; aft of 90° it falls by this much at 180°. A hump is this many octaves wide (standard deviation). */
+  turbomachineryAftDecibels: 10,
+  humpOctaves: .25,
   largePeakStrouhal: .19,
   finePeakStrouhal: .45,
   /** Class B: pressure skewness 0.15–0.4 made at the source, F-35AA at military power (Gee, Neilsen & Wall 2013, fig. 10). */
@@ -84,10 +87,17 @@ export const ENGINE = Object.freeze({
    * gives 434 m/s); a 4 kN target-drone turbojet (TRI 60 class, C); a cruise missile's F107 turbofan, 3.1 kN, bypass 1:1,
    * mixed, 6.2 kg/s assumed (C); a B-52's eight TF33-P-3, 75.6 kN each, bypass 1.42 (JT3D), 196–230 kg/s, taken as one
    * equivalent mixed jet of 210 kg/s at 545 K (decision 4, 3A, C). Idle settings are assumed (C).
+   * Turbomachinery: tones at the blade-passing frequency and its harmonics (dB re the strongest) and a broadband hump
+   * around it, each in dB re the class's static full-power mixing noise at 90°, idle and full, between them by power (C).
+   * Hobby: the owner's recording RC-2 at 2–3 m, 4.04 kHz with harmonics at idle, 11.36 kHz at full, tones −23 dB re all
+   * at full and idle −29 dB assumed (its level is held by automatic gain). Bomber: TF33 two-stage fan, about 34 blades
+   * at up to about 6 800 rpm, 3.85 kHz; the owner's B-52 recordings peak in the 2–4 kHz octave overhead, about 9 dB over
+   * the jet's band. Drone and cruise missile: blade speed scaled by size, levels assumed (C).
    */
   classes: Object.freeze({
     hobby: Object.freeze({
       label: 'Hobby turbine', engines: 1, defaultPower: 1, flight: Object.freeze({ mach: .2, heightMetres: 30 }),
+      turbomachinery: Object.freeze({ idleBladeHz: 4040, fullBladeHz: 11360, harmonics: Object.freeze([-6, 0, -9]), toneDecibels: Object.freeze([-29, -23]), humpDecibels: null }),
       settings: Object.freeze([
         Object.freeze({ power: 0, label: 'Idle', pressureRatio: 1.03, totalTemperatureKelvin: 850, diameterMetres: .041 }),
         Object.freeze({ power: 1, label: 'Full', pressureRatio: 1.429, totalTemperatureKelvin: 970, diameterMetres: .041 })
@@ -95,6 +105,7 @@ export const ENGINE = Object.freeze({
     }),
     drone: Object.freeze({
       label: 'Jet drone', engines: 1, defaultPower: 1, flight: Object.freeze({ mach: .6, heightMetres: 200 }),
+      turbomachinery: Object.freeze({ idleBladeHz: 2600, fullBladeHz: 7300, harmonics: Object.freeze([0, -6]), toneDecibels: Object.freeze([-29, -23]), humpDecibels: Object.freeze([-26, -20]) }),
       settings: Object.freeze([
         Object.freeze({ power: 0, label: 'Idle', pressureRatio: 1.1, totalTemperatureKelvin: 650, diameterMetres: .185 }),
         Object.freeze({ power: 1, label: 'Full', pressureRatio: 1.971, totalTemperatureKelvin: 1000, diameterMetres: .185 })
@@ -102,6 +113,7 @@ export const ENGINE = Object.freeze({
     }),
     cruise: Object.freeze({
       label: 'Cruise missile', engines: 1, defaultPower: 1, flight: Object.freeze({ mach: .7, heightMetres: 50 }),
+      turbomachinery: Object.freeze({ idleBladeHz: 3200, fullBladeHz: 9000, harmonics: Object.freeze([0, -6]), toneDecibels: Object.freeze([-26, -20]), humpDecibels: Object.freeze([-23, -17]) }),
       settings: Object.freeze([
         Object.freeze({ power: 0, label: 'Idle', pressureRatio: 1.15, totalTemperatureKelvin: 450, diameterMetres: .148 }),
         Object.freeze({ power: 1, label: 'Full', pressureRatio: 2.238, totalTemperatureKelvin: 600, diameterMetres: .148 })
@@ -112,7 +124,7 @@ export const ENGINE = Object.freeze({
      * 2013); afterburning gas reaches about 2 100 K (F404-GE-400 exhaust survey, NASA, NTRS 19880010923).
      */
     fighter: Object.freeze({
-      label: 'Fighter', engines: 1, defaultPower: .75, flight: Object.freeze({ mach: .44, heightMetres: 300 }),
+      label: 'Fighter', engines: 1, defaultPower: .75, flight: Object.freeze({ mach: .44, heightMetres: 300 }), turbomachinery: null,
       settings: Object.freeze([
         Object.freeze({ power: 0, label: 'Idle', pressureRatio: 1.3, totalTemperatureKelvin: 550, diameterMetres: .8 }),
         Object.freeze({ power: .75, label: 'Military', pressureRatio: 3.5, totalTemperatureKelvin: 750, diameterMetres: .9 }),
@@ -121,6 +133,7 @@ export const ENGINE = Object.freeze({
     }),
     bomber: Object.freeze({
       label: 'Heavy bomber', engines: 8, defaultPower: 1, flight: Object.freeze({ mach: .25, heightMetres: 300 }),
+      turbomachinery: Object.freeze({ idleBladeHz: 1550, fullBladeHz: 3850, harmonics: Object.freeze([0, -8]), toneDecibels: Object.freeze([0, -3]), humpDecibels: Object.freeze([2, 3]) }),
       settings: Object.freeze([
         Object.freeze({ power: 0, label: 'Idle', pressureRatio: 1.12, totalTemperatureKelvin: 450, diameterMetres: 1.014 }),
         Object.freeze({ power: 1, label: 'Full', pressureRatio: 1.552, totalTemperatureKelvin: 545, diameterMetres: 1.014 })
