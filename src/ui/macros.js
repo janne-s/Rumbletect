@@ -81,3 +81,40 @@ export function macrosFor(emitter, { onset: withOnset = false } = {}) {
   const list = [power, machNumber, flightHeight, flightHeading, flightClimb, flightAcceleration, flightTurn, flightTime];
   return withOnset ? [...list, onset] : list;
 }
+
+const rocketThrottle = {
+  label: 'Throttle',
+  read: item => (item.ascent.throttlePercent - range('throttlePercent')[0]) / (range('throttlePercent')[1] - range('throttlePercent')[0]),
+  write: (item, t) => { item.ascent = { ...item.ascent, throttlePercent: Math.round(range('throttlePercent')[0] + t * (range('throttlePercent')[1] - range('throttlePercent')[0])) }; },
+  show: item => `${item.ascent.throttlePercent} % at max-Q`,
+  entry: { unit: '%', get: item => item.ascent.throttlePercent, set: (item, value) => { item.ascent = { ...item.ascent, throttlePercent: value }; } }
+};
+
+const rocketBurn = {
+  label: 'Burn time',
+  read: item => clamp01(logPosition(item.ascent.burnSeconds, range('burnSeconds'))),
+  write: (item, t) => { item.ascent = { ...item.ascent, burnSeconds: Math.max(1, Math.round(logValue(t, range('burnSeconds')))) }; },
+  show: item => `${item.ascent.burnSeconds} s`,
+  entry: { unit: 's', get: item => item.ascent.burnSeconds, set: (item, value) => { item.ascent = { ...item.ascent, burnSeconds: value }; } }
+};
+
+const rocketKick = {
+  label: 'Pitch kick',
+  read: item => item.ascent.pitchKickDegrees / 10,
+  write: (item, t) => { item.ascent = { ...item.ascent, pitchKickDegrees: +(t * 10).toFixed(1) }; },
+  show: item => `${item.ascent.pitchKickDegrees}°`,
+  entry: { unit: '°', get: item => item.ascent.pitchKickDegrees, set: (item, value) => { item.ascent = { ...item.ascent, pitchKickDegrees: value }; } }
+};
+
+const rocketEfficiency = {
+  label: 'Efficiency',
+  read: item => clamp01(logPosition(item.engine.efficiencyPercent, range('efficiencyPercent'))),
+  write: (item, t) => { item.engine = { ...item.engine, efficiencyPercent: +logValue(t, range('efficiencyPercent')).toFixed(3) }; },
+  show: item => `${item.engine.efficiencyPercent} %`,
+  entry: { unit: '%', get: item => item.engine.efficiencyPercent, set: (item, value) => { item.engine = { ...item.engine, efficiencyPercent: value }; } }
+};
+
+export function rocketMacros(emitter, { onset: withOnset = false } = {}) {
+  const list = [flightHeading, rocketThrottle, rocketBurn, rocketKick, rocketEfficiency];
+  return withOnset ? [...list, onset] : list;
+}

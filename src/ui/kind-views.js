@@ -40,5 +40,17 @@ export function kindViews() {
       }
     }
   };
-  return { jet };
+  const rocket = {
+    ...jet,
+    handles(emitter, box) {
+      const pad = emitter.startMetres;
+      const reach = box ? Math.max(box.x1 - box.x0, box.y1 - box.y0) * VIEW.box.facingLengthShare : 1000;
+      const heading = emitter.headingDegrees * Math.PI / 180;
+      return [
+        { type: 'emitter', id: emitter.id, field: 'startMetres', point: pad, role: 'start' },
+        { type: 'emitter', id: emitter.id, field: 'flightHeading', point: { x: pad.x + reach * Math.sin(heading), y: pad.y + reach * Math.cos(heading), z: pad.z }, role: 'end', ownPlaneOnly: true }
+      ];
+    }
+  };
+  return { jet, rocket };
 }

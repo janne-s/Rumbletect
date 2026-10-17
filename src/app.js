@@ -20,7 +20,8 @@ startFrame({
   anchor: emitterAnchor,
   add: ADD_EMITTERS,
   modes: {
-    jet: { label: 'Jet', button: 'fa-jet-fighter', icon: 'fa-jet-fighter' }
+    jet: { label: 'Jet', button: 'fa-jet-fighter', icon: 'fa-jet-fighter' },
+    rocket: { label: 'Rocket', button: 'fa-rocket', icon: 'fa-rocket' }
   },
   preferences: { cone: true },
   toggles: {
