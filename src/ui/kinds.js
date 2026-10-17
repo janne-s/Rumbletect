@@ -3,7 +3,7 @@ import { jetOfEngine, powerLabel, powerOfEngine } from '../domain/engine.js';
 import { jetComponents, speedOfSound } from '../domain/jet.js';
 import { defaultJet, defaultRocket, PROPELLANTS } from '../domain/scene.js';
 import { RENDER, ROCKET } from '../domain/constants.js';
-import { heardSteps } from '../domain/rocket-grains.js';
+import { heardCounts } from '../domain/rocket-grains.js';
 import { peakFrequencyHz, sizedRocket, soundPowerWatts, totalThrustNewtons, vehicleOf } from '../domain/rocket.js';
 import { newSeed } from '../shared/domain/random.js';
 import { formatMetres } from '../shared/ui/canvas.js';
@@ -88,7 +88,9 @@ function warnings(emitter, scene) {
 function rocketSummary(emitter) {
   const vehicle = vehicleOf(emitter);
   const engines = emitter.engine.engines === 1 ? '1 engine' : `${emitter.engine.engines} engines`;
-  return `${ROCKET.propellants[emitter.propellant].label}, ${engines}, ${thrustLabel(totalThrustNewtons(emitter))} · ${(10 * Math.log10(soundPowerWatts(vehicle) / 1e-12)).toFixed(0)} dB power · burns ${emitter.ascent.burnSeconds} s`;
+  const { rounds, salvoSeconds } = emitter.salvo;
+  const salvo = rounds > 1 ? ` · ${rounds} rounds over ${salvoSeconds} s` : '';
+  return `${ROCKET.propellants[emitter.propellant].label}, ${engines}, ${thrustLabel(totalThrustNewtons(emitter))} · ${(10 * Math.log10(soundPowerWatts(vehicle) / 1e-12)).toFixed(0)} dB power · burns ${emitter.ascent.burnSeconds} s${salvo}`;
 }
 
 function rocketDetails(emitter, { updateEmitter }) {
@@ -122,24 +124,34 @@ function rocketDetails(emitter, { updateEmitter }) {
     section('Ascent', container => {
       ['liftoffMassTonnes', 'burnSeconds', 'pitchKickAtSeconds', 'pitchKickDegrees', 'throttleDownSeconds', 'throttleUpSeconds', 'throttlePercent'].forEach(key => numberField(container, { key, value: emitter.ascent[key], onCommit: setIn('ascent', key) }));
       checkboxField(container, { label: 'Water on the pad', value: emitter.ascent.water, reliability: 'B', onCommit: setIn('ascent', 'water') });
+    }),
+    section('Salvo', container => {
+      numberField(container, { key: 'rounds', value: emitter.salvo.rounds, onCommit: setIn('salvo', 'rounds') });
+      if (emitter.salvo.rounds > 1) SALVO_LAYOUT.forEach(key => numberField(container, { key, value: emitter.salvo[key], onCommit: setIn('salvo', key) }));
     })
   ];
 }
 
+const SALVO_LAYOUT = Object.freeze(['salvoSize', 'salvoSeconds', 'salvoSpreadSeconds', 'launcherRadiusMetres', 'headingSpreadDegrees', 'launchSpreadDegrees', 'thrustSpreadPercent']);
+
 function rocketAmplitudes(emitter, scene) {
   const vehicle = vehicleOf(emitter);
   const amplitude = Math.sqrt(soundPowerWatts(vehicle) * 1.2 * speedOfSound(scene.air.temperatureCelsius) / (4 * Math.PI));
-  return new Map([[`${emitter.id}:0`, { amplitude, frequencyHz: peakFrequencyHz(vehicle) }]]);
+  return new Map(Array.from({ length: emitter.salvo.rounds }, (_, member) => [`${emitter.id}:${member}`, { amplitude, frequencyHz: peakFrequencyHz(vehicle) }]));
 }
 
 function rocketWarnings(emitter, scene) {
-  const [path] = cachedTracks(emitter, scene);
+  const paths = cachedTracks(emitter, scene);
+  const [path] = paths;
   const sound = speedOfSound(scene.air.temperatureCelsius);
   const supersonic = path.speed.findIndex(speed => speed >= sound);
-  const kept = heardSteps(path, scene);
+  const counts = heardCounts(paths, scene);
+  const cut = counts.filter((count, index) => count < paths[index].seconds.length).length;
+  const beyond = `beyond the ${RENDER.maximumSeconds} s render`;
   return [
     ...(supersonic >= 0 ? [`Passes the speed of sound at T+${(supersonic * path.step - path.heldSeconds).toFixed(0)} s; its boom is not heard here`] : []),
-    ...(kept < path.seconds.length ? [`Heard until T+${((kept - 1) * path.step - path.heldSeconds).toFixed(0)} s; later sound arrives beyond the ${RENDER.maximumSeconds} s render`] : [])
+    ...(paths.length === 1 && cut ? [`Heard until T+${((counts[0] - 1) * path.step - path.heldSeconds).toFixed(0)} s; later sound arrives ${beyond}`] : []),
+    ...(paths.length > 1 && cut ? [`${cut} of ${paths.length} rounds are cut short; later sound arrives ${beyond}`] : [])
   ];
 }
 

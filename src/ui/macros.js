@@ -1,7 +1,7 @@
 import { engineAtPower, powerLabel, powerOfEngine } from '../domain/engine.js';
 import { PARAMETERS } from '../domain/scene.js';
 import { ROCKET } from '../domain/constants.js';
-import { categoryRocket, nearestCategory, sizedRocket } from '../domain/rocket.js';
+import { categoryRocket, liftoffThrustToWeight, nearestCategory, sizedRocket } from '../domain/rocket.js';
 import { clamp01, logPosition, logValue, METRES, metres } from '../shared/ui/macros.js';
 
 const range = key => [PARAMETERS[key].minimum, PARAMETERS[key].maximum];
@@ -100,16 +100,18 @@ const rocketCategory = {
 const SIZE_SPAN = ROCKET.sizing.totalNewtons;
 const totalOf = item => item.engine.engines * item.engine.thrustKilonewtons * 1000;
 
+const resize = (item, newtons) => {
+  const sized = sizedRocket(newtons, item.engine.engines, item.propellant, liftoffThrustToWeight(item));
+  item.engine = { ...item.engine, ...sized.engine };
+  item.ascent = { ...item.ascent, ...sized.ascent };
+};
+
 const rocketSize = {
   label: 'Size',
   read: item => clamp01(logPosition(totalOf(item), SIZE_SPAN)),
-  write: (item, t) => {
-    const sized = sizedRocket(+logValue(t, SIZE_SPAN).toPrecision(2), item.engine.engines, item.propellant);
-    item.engine = { ...item.engine, ...sized.engine };
-    item.ascent = { ...item.ascent, ...sized.ascent };
-  },
+  write: (item, t) => resize(item, +logValue(t, SIZE_SPAN).toPrecision(2)),
   show: item => thrustLabel(totalOf(item)),
-  entry: { unit: 'kN', get: item => totalOf(item) / 1000, set: (item, value) => { const sized = sizedRocket(value * 1000, item.engine.engines, item.propellant); item.engine = { ...item.engine, ...sized.engine }; item.ascent = { ...item.ascent, ...sized.ascent }; } }
+  entry: { unit: 'kN', get: item => totalOf(item) / 1000, set: (item, value) => resize(item, value * 1000) }
 };
 
 const PROPELLANT_KEYS = Object.keys(ROCKET.propellants);
@@ -154,7 +156,15 @@ const rocketLaunch = {
   entry: { unit: '°', get: item => item.launchDegrees, set: (item, value) => { item.launchDegrees = value; } }
 };
 
+const rocketRounds = {
+  label: 'Rounds',
+  read: item => clamp01(logPosition(item.salvo.rounds, range('rounds'))),
+  write: (item, t) => { item.salvo = { ...item.salvo, rounds: Math.round(logValue(t, range('rounds'))) }; },
+  show: item => `${item.salvo.rounds}`,
+  entry: { get: item => item.salvo.rounds, set: (item, value) => { item.salvo = { ...item.salvo, rounds: value }; } }
+};
+
 export function rocketMacros(emitter, { onset: withOnset = false } = {}) {
-  const list = [rocketCategory, rocketSize, rocketPropellant, flightHeading, rocketLaunch, rocketBurn, rocketKick];
+  const list = [rocketCategory, rocketSize, rocketPropellant, flightHeading, rocketLaunch, rocketBurn, rocketKick, rocketRounds];
   return withOnset ? [...list, onset] : list;
 }

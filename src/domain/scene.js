@@ -28,7 +28,15 @@ const RUMBLETECT_PARAMETERS = Object.freeze({
   throttleDownSeconds: { minimum: 0, maximum: 590, unit: 's', label: 'Throttle down at', reliability: 'C' },
   throttleUpSeconds: { minimum: 0, maximum: 590, unit: 's', label: 'Throttle up at', reliability: 'C' },
   throttlePercent: { minimum: 30, maximum: 100, unit: '%', label: 'Throttle', reliability: 'C' },
-  launchDegrees: { minimum: 5, maximum: 90, unit: '°', label: 'Launch angle', reliability: null }
+  launchDegrees: { minimum: 5, maximum: 90, unit: '°', label: 'Launch angle', reliability: null },
+  rounds: { minimum: 1, maximum: 48, unit: '', label: 'Rounds', reliability: null, integer: true },
+  salvoSize: { minimum: 1, maximum: 24, unit: '', label: 'Rounds per salvo', reliability: null, integer: true },
+  salvoSeconds: { minimum: 0, maximum: 300, unit: 's', label: 'Duration', reliability: null },
+  salvoSpreadSeconds: { minimum: 0, maximum: 10, unit: 's', label: 'Salvo spread', reliability: 'C' },
+  launcherRadiusMetres: { minimum: 0, maximum: 2000, unit: 'm', label: 'Launcher radius', reliability: null },
+  headingSpreadDegrees: { minimum: 0, maximum: 30, unit: '°', label: 'Heading spread', reliability: 'C' },
+  launchSpreadDegrees: { minimum: 0, maximum: 15, unit: '°', label: 'Launch angle spread', reliability: 'C' },
+  thrustSpreadPercent: { minimum: 0, maximum: 30, unit: '%', label: 'Thrust spread', reliability: 'C' }
 });
 
 export const PROPELLANTS = Object.freeze(Object.keys(ROCKET.propellants));
@@ -61,13 +69,15 @@ export function defaultRocket(id = 'rocket-1', seed = 20261017) {
     headingDegrees: 90,
     launchDegrees: 90,
     engine: { ...sized.engine, efficiencyPercent: .3 },
-    ascent: { ...ROCKET.defaultAscent, ...sized.ascent }
+    ascent: { ...ROCKET.defaultAscent, ...sized.ascent },
+    salvo: { ...ROCKET.defaultSalvo }
   };
 }
 
 export const emitterAnchor = emitter => emitter.startMetres;
 
 const ROCKET_ENGINE_NUMBERS = Object.freeze(['engines', 'thrustKilonewtons', 'exitVelocityMetresPerSecond', 'exitDiameterMetres', 'efficiencyPercent']);
+const SALVO_NUMBERS = Object.freeze(Object.keys(ROCKET.defaultSalvo));
 const ROCKET_ASCENT_NUMBERS = Object.freeze(['liftoffMassTonnes', 'burnSeconds', 'pitchKickAtSeconds', 'pitchKickDegrees', 'throttleDownSeconds', 'throttleUpSeconds', 'throttlePercent']);
 
 function readRocket(value, { check, point, numbers }, path) {
@@ -79,7 +89,8 @@ function readRocket(value, { check, point, numbers }, path) {
     startMetres: point(value.startMetres, `${path}.startMetres`),
     ...numbers(value, ['startSeconds', 'headingDegrees', 'launchDegrees'], path),
     engine: numbers(value.engine, ROCKET_ENGINE_NUMBERS, `${path}.engine`),
-    ascent: { ...numbers(value.ascent, ROCKET_ASCENT_NUMBERS, `${path}.ascent`), water: value.ascent.water }
+    ascent: { ...numbers(value.ascent, ROCKET_ASCENT_NUMBERS, `${path}.ascent`), water: value.ascent.water },
+    salvo: numbers(value.salvo, SALVO_NUMBERS, `${path}.salvo`)
   };
 }
 

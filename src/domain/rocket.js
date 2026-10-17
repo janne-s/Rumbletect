@@ -41,6 +41,8 @@ export function directivityDecibels(strouhal, degrees) {
 
 export const totalThrustNewtons = emitter => emitter.engine.engines * emitter.engine.thrustKilonewtons * 1000;
 
+export const liftoffThrustToWeight = emitter => totalThrustNewtons(emitter) / (emitter.ascent.liftoffMassTonnes * 1000 * ROCKET.gravity);
+
 function typicalBurnSeconds(newtons) {
   const table = ROCKET.sizing.burnSeconds;
   if (newtons <= table[0][0]) return table[0][1];
@@ -52,8 +54,8 @@ function typicalBurnSeconds(newtons) {
 }
 
 /** Class C: a rocket of this total thrust, engine count and propellant: per-engine thrust, nozzle, mass, burn and water. */
-export function sizedRocket(totalNewtons, engines, propellant) {
-  const { exitVelocityMetresPerSecond, thrustToWeight } = ROCKET.propellants[propellant];
+export function sizedRocket(totalNewtons, engines, propellant, thrustToWeight = ROCKET.propellants[propellant].thrustToWeight) {
+  const { exitVelocityMetresPerSecond } = ROCKET.propellants[propellant];
   const perEngine = totalNewtons / engines;
   const round = (value, digits) => +value.toPrecision(digits);
   return {
@@ -85,15 +87,16 @@ export function directivityRow(strouhal, out, offset) {
   }
 }
 
-/** A rocket set to a category's thrust, engines, propellant, burn, launch angle and efficiency; the ascent's schedule kept. */
+/** A rocket set to a category's thrust, engines, propellant, burn, launch angle, efficiency and rounds; the ascent's schedule and the salvo's layout kept. */
 export function categoryRocket(item, category) {
-  const sized = sizedRocket(category.newtons, category.engines, category.propellant);
+  const sized = sizedRocket(category.newtons, category.engines, category.propellant, category.thrustToWeight);
   return {
     ...item,
     propellant: category.propellant,
     launchDegrees: category.launchDegrees,
     engine: { ...item.engine, ...sized.engine, efficiencyPercent: category.efficiencyPercent },
-    ascent: { ...item.ascent, ...sized.ascent, burnSeconds: category.burnSeconds }
+    ascent: { ...item.ascent, ...sized.ascent, burnSeconds: category.burnSeconds },
+    salvo: { ...item.salvo, rounds: category.rounds }
   };
 }
 
@@ -130,7 +133,7 @@ export function throttleAt(ascent, secondsAfterRelease) {
 /**
  * Class C: the ascent in the vertical plane of the launch heading, liquid engines held on the pad for `ROCKET.holdSeconds`, then a
  * rise at the launch angle, guided until `ROCKET.guidedMetresPerSecond`, a pitch kick and a gravity turn under thrust, mass flow F/U_e and gravity, no drag and a flat Earth.
- * The path is sampled like `flightPath` and ends at engine cut-off.
+ * The engine stops early when its propellant runs out. The path is sampled like `flightPath` and ends at the burn's end.
  */
 export function ascentPath(emitter) {
   const vehicle = vehicleOf(emitter);
@@ -147,8 +150,9 @@ export function ascentPath(emitter) {
   const dt = ROCKET.integrationSeconds;
   const launch = emitter.launchDegrees * Math.PI / 180;
   let [height, range, speed, gamma, mass, clock] = [0, 0, 0, launch, ascent.liftoffMassTonnes * 1000, 0];
+  const dryMass = mass * ROCKET.dryMassShare;
   const derivative = (t, h, v, g, m) => {
-    const throttle = throttleAt(ascent, t);
+    const throttle = m > dryMass ? throttleAt(ascent, t) : 0;
     const thrust = vehicle.totalThrustNewtons * throttle;
     const kicking = t >= ascent.pitchKickAtSeconds && t < ascent.pitchKickAtSeconds + ROCKET.pitchKickSeconds;
     const turn = kicking ? -kickRate : (g < Math.PI / 2 - 1e-9 && v > ROCKET.guidedMetresPerSecond ? -ROCKET.gravity * Math.cos(g) / v : 0);
@@ -169,7 +173,7 @@ export function ascentPath(emitter) {
     path.seconds.push(emitter.startSeconds + t);
     path.x.push(pad.x + along.x * range); path.y.push(pad.y + along.y * range); path.z.push(pad.z + height);
     path.vx.push(along.x * horizontal); path.vy.push(along.y * horizontal); path.vz.push(speed * Math.sin(gamma)); path.speed.push(speed);
-    path.throttle.push(t < hold ? 1 : throttleAt(ascent, flying));
+    path.throttle.push(t < hold ? 1 : mass > dryMass ? throttleAt(ascent, flying) : 0);
   }
   return path;
 }
