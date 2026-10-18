@@ -8,7 +8,7 @@ import { peakFrequencyHz, sizedRocket, soundPowerWatts, totalThrustNewtons, vehi
 import { newSeed } from '../shared/domain/random.js';
 import { formatMetres } from '../shared/ui/canvas.js';
 import { checkboxField, numberField, pointFields, seedField, selectField, textField } from './fields.js';
-import { cachedTracks } from './geometry-cache.js';
+import { cachedSoundTracks, cachedTracks } from './geometry-cache.js';
 import { macrosFor, rocketMacros, thrustLabel, volcanoMacros } from './macros.js';
 import { volcanoCategory, volcanoSourcePosition } from '../domain/volcano.js';
 import { machCone } from '../shared/domain/trajectory.js';
@@ -62,9 +62,8 @@ function details(emitter, { updateEmitter, scene }) {
 
 const pathPoints = (emitter, scene, at) => { for (const path of cachedTracks(emitter, scene)) path.x.forEach((x, index) => at({ x, y: path.y[index], z: path.z[index] })); };
 
-/** One front per member, from where its sound starts: later fronts lie inside it while it is subsonic, and the Mach cone shows the rest. */
 function wavefrontSources(emitter, scene, placedPoint, candidates) {
-  cachedTracks(emitter, scene).forEach((path, member) => candidates.push({ point: { x: path.x[0], y: path.y[0], z: path.z[0] }, emitted: path.seconds[0], group: `${emitter.id}:${member}` }));
+  cachedSoundTracks(emitter, scene).forEach((path, member) => path.seconds.forEach((emitted, index) => candidates.push({ point: { x: path.x[index], y: path.y[index], z: path.z[index] }, emitted, group: `${emitter.id}:${member}` })));
 }
 
 function warnings(emitter, scene) {
@@ -224,7 +223,7 @@ const KIND_PANELS_EXTENDED = {
     alwaysTimed: () => false,
     eventSeconds: 0,
     tracks: (emitter, scene) => cachedTracks(emitter, scene),
-    cone: machCone,
+    cone: (path, now, profile, emitter, scene, member) => machCone(cachedSoundTracks(emitter, scene)[member], now, profile),
     wavefrontSources,
     mergesSources: false,
     warnings: rocketWarnings

@@ -24,8 +24,9 @@ the flight, then delays, spreads, and filters that sound on its way there.
   heading.
 - **Map** — A map of the place as the floor, with zoom.
 - **Wavefront and Mach cone** — Show propagation geometry at a readable level,
-  independent of source power. One leading front propagates from each onset;
-  the volcano's front starts at its modeled acoustic source above the vent.
+  independent of source power. Emissions along each path form one outer boundary,
+  joining the initial front to supersonic propagation; interior cone lines are hidden.
+  The volcano's front starts at its modeled acoustic source above the vent.
 
 ## Jet
 

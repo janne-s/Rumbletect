@@ -27,6 +27,7 @@ import { attachSplitters } from './splitters.js';
 import { attachTimelineSeek } from './timeline.js';
 import { createRenderMarker, unfinishedRenderText } from './render-marker.js';
 import { createFrontStyle } from './front-style.js';
+import { outerSpheres, sampleEnvelopeSources } from './wavefront-envelope.js';
 
 export function startFrame(tect) {
   const {
@@ -1567,7 +1568,13 @@ export function startFrame(tect) {
     for (const [id, envelopeData] of state.envelopes) {
       receivers.set(id, envelopeData.values[Math.floor((now - envelopeData.startSeconds) / envelopeData.window)] ?? 0);
     }
-    const wavefronts = wavefrontsShown() ? { profile, spheres: wavefrontSpheres(now, profile), total: wavefrontCandidates(state.scene).length, shadowShare: frontStyle.shadowShare } : null;
+    const spheres = wavefrontsShown() || !frontStyle.levelDependent && state.preferences.cone ? wavefrontSpheres(now, profile) : [];
+    const wavefronts = wavefrontsShown() ? { profile, spheres, total: frontStyle.levelDependent ? wavefrontCandidates(state.scene).length : spheres.length, shadowShare: frontStyle.shadowShare } : null;
+    const envelopes = new Map();
+    if (!frontStyle.levelDependent) for (const sphere of spheres) {
+      if (!envelopes.has(sphere.group)) envelopes.set(sphere.group, []);
+      envelopes.get(sphere.group).push(sphere);
+    }
     const flights = new Map();
     let cones = [];
     for (const emitter of state.scene.emitters) {
@@ -1581,12 +1588,12 @@ export function startFrame(tect) {
       if (!state.preferences.cone) continue;
       const amplitudes = coneAmplitudes(emitter);
       paths.forEach((path, member) => {
-        const cone = kinds[emitter.kind].cone(path, now, profile);
+        const cone = kinds[emitter.kind].cone(path, now, profile, emitter, state.scene, member);
         if (!cone) return;
         const { amplitude, frequencyHz } = amplitudes.get(`${emitter.id}:${member}`) ?? { amplitude: 0, frequencyHz: 1000 };
         const strengths = cone.radii.map(radius => frontStyle.strength(amplitude, radius, frequencyHz, state.scene.air));
         const strength = Math.max(...strengths);
-        if (strength > 0) cones.push({ ...cone, strengths, strength });
+        if (strength > 0) cones.push({ ...cone, strengths, strength, occluders: envelopes.get(`${emitter.id}:${member}`) });
       });
     }
     cones = cones.sort((a, b) => b.strength - a.strength).slice(0, VIEW.cone.bodies);
@@ -1620,7 +1627,7 @@ export function startFrame(tect) {
       if (frontStyle.levelDependent) for (const [group, amplitude] of kinds[emitter.kind].amplitudes(emitter, scene, currentSurface())) amplitudes.set(group, amplitude);
       kinds[emitter.kind].wavefrontSources(emitter, scene, placedPoint, candidates);
     }
-    const stride = Math.max(1, Math.ceil(candidates.length / VIEW.wavefront.spheres));
+    const stride = frontStyle.levelDependent ? Math.max(1, Math.ceil(candidates.length / VIEW.wavefront.spheres)) : 1;
     const sampled = candidates.filter((_, index) => index % stride === 0).map((candidate, order) => ({ ...candidate, order, ...(amplitudes.get(candidate.group) ?? { amplitude: 0, frequencyHz: 1000 }) }));
     wavefrontSources.set(scene, sampled);
     return sampled;
@@ -1629,7 +1636,9 @@ export function startFrame(tect) {
   const placedPoint = point => ({ ...point, z: currentSurface().heightAt(point.x, point.y) + point.z });
 
   function wavefrontSpheres(now, profile) {
-    return wavefrontCandidates(state.scene)
+    const candidates = wavefrontCandidates(state.scene);
+    const sources = frontStyle.levelDependent ? candidates : sampleEnvelopeSources(candidates, now);
+    const spheres = sources
       .filter(candidate => now > candidate.emitted)
       .map(({ point, emitted, group, order, amplitude, frequencyHz, spacingSeconds = 0 }) => {
         const front = { ...wavefront(localProfile(profile, point.z), point, now - emitted) };
@@ -1641,6 +1650,7 @@ export function startFrame(tect) {
         const drift = axis => (profile.wind[axis] + profile.shear[axis] * point.z) * seconds;
         return { source: point, group, order, spacingSeconds, ...front, centre: { ...front.centre, x: front.centre.x + drift('x'), y: front.centre.y + drift('y') } };
       });
+    return frontStyle.levelDependent ? spheres : outerSpheres(spheres).map((sphere, order) => ({ ...sphere, order }));
   }
 
   views.forEach(view => view.setAnimation(animationState));

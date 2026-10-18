@@ -3,6 +3,7 @@ import { grazingRange, inShadow, pathProfile, soundSpeedProfile } from '../domai
 import { meanPlaneFrame } from '../domain/terrain-propagation.js';
 import { fitCanvas, formatMetres, niceStep, palette } from './canvas.js';
 import { currentSurface, useTerrain } from './geometry-cache.js';
+import { outsideSphereIntervals } from './wavefront-envelope.js';
 
 const OUTLINE_STEPS = 48;
 const OUTLINE_DIRECTIONS = Object.freeze(Array.from({ length: OUTLINE_STEPS }, (_, step) => {
@@ -12,6 +13,8 @@ const OUTLINE_DIRECTIONS = Object.freeze(Array.from({ length: OUTLINE_STEPS }, (
 const TERRAIN_LIGHT = (() => { const { x, y, z } = VIEW.terrain.light; const length = Math.hypot(x, y, z); return { x: x / length, y: y / length, z: z / length }; })();
 const LABEL_PRIORITY = Object.freeze({ city: 0, town: 1, village: 2, peak: 3, water: 4, hamlet: 5, locality: 6 });
 const TERRAIN_RIPPLE_ITERATIONS = 14;
+/** Class C: allow the sagitta of a polygonal ring when hiding interior cone lines. */
+const CONE_SURFACE_SHARE = Math.cos(Math.PI / VIEW.cone.ringPoints);
 
 function outerCircles(circles) {
   const kept = [];
@@ -877,6 +880,7 @@ export function createCubeView(canvas, options) {
     let path = null;
     let from = 0;
     let to = 1;
+    let occluders = [];
     const within = (start, delta, minimum, maximum) => {
       if (delta === 0) return start >= minimum && start <= maximum;
       const t0 = (minimum - start) / delta;
@@ -894,16 +898,19 @@ export function createCubeView(canvas, options) {
       to = 1;
       if (!within(a.x, b.x - a.x, low.x, high.x) || !within(a.y, b.y - a.y, low.y, high.y) || !within(a.z, b.z - a.z, low.z, high.z)) return;
       if (!(to > from)) return;
-      if (Math.min(a.z + (b.z - a.z) * from, a.z + (b.z - a.z) * to) > highest) { draw(p, q, from, to); return; }
-      for (let piece = 0; piece < VIEW.cone.pieces; piece += 1) {
-        const start = from + (to - from) * piece / VIEW.cone.pieces;
-        const end = from + (to - from) * (piece + 1) / VIEW.cone.pieces;
-        const t = (start + end) / 2;
-        if (a.z + (b.z - a.z) * t < ground(a.x + (b.x - a.x) * t, a.y + (b.y - a.y) * t)) continue;
-        draw(p, q, start, end);
+      for (const [low, high] of outsideSphereIntervals(a, b, occluders, from, to, CONE_SURFACE_SHARE)) {
+        if (Math.min(a.z + (b.z - a.z) * low, a.z + (b.z - a.z) * high) > highest) { draw(p, q, low, high); continue; }
+        for (let piece = 0; piece < VIEW.cone.pieces; piece += 1) {
+          const start = low + (high - low) * piece / VIEW.cone.pieces;
+          const end = low + (high - low) * (piece + 1) / VIEW.cone.pieces;
+          const t = (start + end) / 2;
+          if (a.z + (b.z - a.z) * t < ground(a.x + (b.x - a.x) * t, a.y + (b.y - a.y) * t)) continue;
+          draw(p, q, start, end);
+        }
       }
     };
-    for (const { apex, rings, strengths } of cones) {
+    for (const { apex, rings, strengths, occluders: spheres = [] } of cones) {
+      occluders = spheres;
       const screen = rings.map(ring => ring.map(frame.project));
       const apexScreen = apex && frame.project(apex);
       rings.forEach((ring, index) => {
