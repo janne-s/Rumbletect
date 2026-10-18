@@ -89,6 +89,7 @@ the flight, then delays, spreads, and filters that sound on its way there.
 
 ## Output
 
+- **Space** — Runs the main Render / Play / Stop action outside controls and dialogs.
 - **Length** — Up to 400 s from the first arrival; later sound is left out
   and the render says so.
 - **Level** — Peak at −3 dBFS or a fixed full scale in pascals.
