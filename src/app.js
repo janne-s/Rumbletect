@@ -11,6 +11,7 @@ startFrame({
   appVersion: APP_VERSION,
   modelVersion: MODEL_VERSION,
   onsetName: 'the start',
+  propagationStyle: 'geometry',
   worker: new URL('./render-worker.js', import.meta.url),
   scene: { MODES, PARAMETERS, defaultScene, parseScene, readScene, sceneInMode, serializeScene },
   prepareScene,

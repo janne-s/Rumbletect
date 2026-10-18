@@ -1,5 +1,4 @@
-import { atmosphericAbsorptionNepersPerMetre } from '../domain/air.js';
-import { GROUND, REFERENCE_SOUND_PRESSURE_PA, RENDER, RENDER_COST, VIEW } from '../domain/constants.js';
+import { GROUND, RENDER, RENDER_COST, VIEW } from '../domain/constants.js';
 import { GROUND_LABELS, GROUND_TYPES } from '../domain/ground.js';
 import { newSeed } from '../domain/random.js';
 import { localProfile, PATH_DIRECT, PATH_SCATTER, PATH_SHADOW, pathProfile, soundSpeedProfile, travelSeconds, wavefront } from '../domain/refraction.js';
@@ -27,6 +26,7 @@ import { drawArrivals, drawWaveform, plotSeconds } from './plots.js';
 import { attachSplitters } from './splitters.js';
 import { attachTimelineSeek } from './timeline.js';
 import { createRenderMarker, unfinishedRenderText } from './render-marker.js';
+import { createFrontStyle } from './front-style.js';
 
 export function startFrame(tect) {
   const {
@@ -35,6 +35,7 @@ export function startFrame(tect) {
   } = tect;
   const { MODES, PARAMETERS, defaultScene, parseScene, readScene, sceneInMode, serializeScene } = tect.scene;
   const { actionField, checkboxField, numberField, pointFields, selectField, textField } = tect.fields;
+  const frontStyle = createFrontStyle(tect.propagationStyle);
 
   for (const [mode, { label, button: icon }] of Object.entries(MODE_SETTINGS)) {
     document.querySelector('.modes').insertAdjacentHTML('beforeend', `<button type="button" role="radio" data-mode="${mode}" aria-checked="${mode === MODES[0]}" aria-label="${label}" title="${label}"><i class="fa-solid ${icon}" aria-hidden="true"></i><span>${label}</span></button>`);
@@ -1566,7 +1567,7 @@ export function startFrame(tect) {
     for (const [id, envelopeData] of state.envelopes) {
       receivers.set(id, envelopeData.values[Math.floor((now - envelopeData.startSeconds) / envelopeData.window)] ?? 0);
     }
-    const wavefronts = wavefrontsShown() ? { profile, spheres: wavefrontSpheres(now, profile), total: wavefrontCandidates(state.scene).length } : null;
+    const wavefronts = wavefrontsShown() ? { profile, spheres: wavefrontSpheres(now, profile), total: wavefrontCandidates(state.scene).length, shadowShare: frontStyle.shadowShare } : null;
     const flights = new Map();
     let cones = [];
     for (const emitter of state.scene.emitters) {
@@ -1583,7 +1584,7 @@ export function startFrame(tect) {
         const cone = kinds[emitter.kind].cone(path, now, profile);
         if (!cone) return;
         const { amplitude, frequencyHz } = amplitudes.get(`${emitter.id}:${member}`) ?? { amplitude: 0, frequencyHz: 1000 };
-        const strengths = cone.radii.map(radius => frontStrength(amplitude, radius, frequencyHz));
+        const strengths = cone.radii.map(radius => frontStyle.strength(amplitude, radius, frequencyHz, state.scene.air));
         const strength = Math.max(...strengths);
         if (strength > 0) cones.push({ ...cone, strengths, strength });
       });
@@ -1595,6 +1596,7 @@ export function startFrame(tect) {
   const coneCache = new WeakMap();
 
   function coneAmplitudes(emitter) {
+    if (!frontStyle.levelDependent) return new Map();
     const key = JSON.stringify([emitter, state.scene.air]);
     const cached = coneCache.get(emitter);
     if (cached?.key === key) return cached.amplitudes;
@@ -1615,7 +1617,7 @@ export function startFrame(tect) {
     const amplitudes = new Map();
     for (const emitter of scene.emitters) {
       if (!emitter.enabled) continue;
-      for (const [group, amplitude] of kinds[emitter.kind].amplitudes(emitter, scene, currentSurface())) amplitudes.set(group, amplitude);
+      if (frontStyle.levelDependent) for (const [group, amplitude] of kinds[emitter.kind].amplitudes(emitter, scene, currentSurface())) amplitudes.set(group, amplitude);
       kinds[emitter.kind].wavefrontSources(emitter, scene, placedPoint, candidates);
     }
     const stride = Math.max(1, Math.ceil(candidates.length / VIEW.wavefront.spheres));
@@ -1626,29 +1628,13 @@ export function startFrame(tect) {
 
   const placedPoint = point => ({ ...point, z: currentSurface().heightAt(point.x, point.y) + point.z });
 
-  const absorptionCache = { air: null, decibels: new Map() };
-
-  function absorptionDecibels(frequencyHz) {
-    if (!state.scene.air.absorption) return 0;
-    if (absorptionCache.air !== state.scene.air) Object.assign(absorptionCache, { air: state.scene.air, decibels: new Map() });
-    const step = Math.round(12 * Math.log2(frequencyHz));
-    if (!absorptionCache.decibels.has(step)) absorptionCache.decibels.set(step, atmosphericAbsorptionNepersPerMetre(2 ** (step / 12), state.scene.air) * 20 / Math.LN10);
-    return absorptionCache.decibels.get(step);
-  }
-
-  function frontStrength(amplitude, radius, frequencyHz) {
-    const absorption = absorptionDecibels(frequencyHz);
-    const level = 20 * Math.log10(Math.max(amplitude, 1e-30) / Math.max(radius, 1) / REFERENCE_SOUND_PRESSURE_PA) - absorption * radius;
-    return Math.min(1, Math.max(0, (level - VIEW.wavefront.floorDb) / (VIEW.wavefront.topDb - VIEW.wavefront.floorDb)));
-  }
-
   function wavefrontSpheres(now, profile) {
     return wavefrontCandidates(state.scene)
       .filter(candidate => now > candidate.emitted)
       .map(({ point, emitted, group, order, amplitude, frequencyHz, spacingSeconds = 0 }) => {
         const front = { ...wavefront(localProfile(profile, point.z), point, now - emitted) };
         const reach = front.radiusMetres * Math.max(1, spacingSeconds / (now - emitted));
-        front.strength = frontStrength(amplitude, reach, frequencyHz);
+        front.strength = frontStyle.strength(amplitude, reach, frequencyHz, state.scene.air);
         if (!profile.wind) return { source: point, group, order, spacingSeconds, ...front };
         // Drawn only, class C.
         const seconds = now - emitted;

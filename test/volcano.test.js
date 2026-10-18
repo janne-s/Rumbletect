@@ -3,6 +3,7 @@ import test from 'node:test';
 import { VOLCANO } from '../src/domain/constants.js';
 import { defaultScene, defaultVolcano, parseScene, readScene, serializeScene } from '../src/domain/scene.js';
 import { eruptionShare, ventPath, volcanoGrains } from '../src/domain/volcano.js';
+import { KIND_PANELS } from '../src/ui/kinds.js';
 
 test('a volcano scene round-trips, and a volcano saved without its eruption takes the default one', () => {
   const scene = defaultScene('volcano');
@@ -31,4 +32,9 @@ test('the vent stays still for the eruption, and its grains rise above the vent'
   assert.ok(path.x.every(x => x === volcano.ventMetres.x) && path.speed.every(speed => speed === 0));
   const { rows } = volcanoGrains(scene.emitters[0], scene);
   assert.ok(rows.length > 0 && rows.every(row => row.positionMetres.z === volcano.ventMetres.z + VOLCANO.sourceDiameters * volcano.jet.ventDiameterMetres));
+  const fronts = [];
+  KIND_PANELS.volcano.wavefrontSources(scene.emitters[0], scene, point => point, fronts);
+  assert.equal(fronts.length, 1);
+  assert.ok(rows.every(row => row.positionMetres.x === fronts[0].point.x && row.positionMetres.y === fronts[0].point.y && row.positionMetres.z === fronts[0].point.z));
+  assert.equal(fronts[0].emitted, volcano.startSeconds);
 });

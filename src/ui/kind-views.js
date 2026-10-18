@@ -1,5 +1,6 @@
 import { VIEW } from '../domain/constants.js';
 import { cachedTracks } from './geometry-cache.js';
+import { volcanoSourcePosition } from '../domain/volcano.js';
 
 export function kindViews() {
   const jet = {
@@ -59,11 +60,11 @@ export function kindViews() {
     label: emitter => emitter.ventMetres,
     extent(emitter, { includeExtent, scene }) {
       const paths = cachedTracks(emitter, scene);
-      includeExtent(paths, () => [emitter.ventMetres, { ...emitter.ventMetres, z: emitter.ventMetres.z + 5 * emitter.jet.ventDiameterMetres }]);
+      includeExtent(paths, () => [emitter.ventMetres, volcanoSourcePosition(emitter)]);
     },
     draw(context, emitter, { frame }, { colors, selected }) {
       const vent = frame.project(emitter.ventMetres);
-      const top = frame.project({ ...emitter.ventMetres, z: emitter.ventMetres.z + 5 * emitter.jet.ventDiameterMetres });
+      const top = frame.project(volcanoSourcePosition(emitter));
       context.strokeStyle = selected ? colors.accent : colors.end;
       context.lineWidth = selected ? 2.4 : 2;
       context.beginPath(); context.moveTo(vent.x, vent.y); context.lineTo(top.x, top.y); context.stroke();

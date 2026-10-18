@@ -696,7 +696,7 @@ export function createCubeView(canvas, options) {
     unionOutline(context, path, colors.muted, { fillAlpha: 0, edgeAlpha: VIEW.shadowBoundary.edgeAlpha, bounds });
   }
 
-  function drawWavefronts(context, colors, { profile, spheres, total }) {
+  function drawWavefronts(context, colors, { profile, spheres, total, shadowShare = VIEW.wavefront.shadowShare }) {
     // A flash is dropped whole: dropping a single sphere would uncover the edges it hides. A continuous source's later
     // fronts are fronts of their own, so only its passed ones go.
     const { box } = frame;
@@ -719,12 +719,12 @@ export function createCubeView(canvas, options) {
     for (const group of passed) groups.delete(group);
     const strength = group => Math.max(0, ...group.map(sphere => sphere.strength ?? 1));
     const drawn = [...groups.values()].sort((a, b) => strength(b) - strength(a)).slice(0, VIEW.wavefront.groups);
-    for (const group of drawn) drawFronts(context, colors, profile, group, terrainStride);
+    for (const group of drawn) drawFronts(context, colors, profile, group, terrainStride, shadowShare);
   }
 
   const rippleSpacing = () => Math.max(frame.box.x1 - frame.box.x0, frame.box.y1 - frame.box.y0, frame.box.z1) * VIEW.wavefront.rippleSpacingShare;
 
-  function drawFronts(context, colors, profile, spheres, terrainStride) {
+  function drawFronts(context, colors, profile, spheres, terrainStride, shadowShare) {
     const strength = Math.max(0, ...spheres.map(sphere => sphere.strength ?? 1));
     if (!(strength > 0)) return;
     const { box, farX, farY } = frame;
@@ -750,7 +750,7 @@ export function createCubeView(canvas, options) {
       context.clip(outline);
       VIEW.wavefront.rippleAlphas.forEach((alpha, ring) => {
         if (alpha * strength < VIEW.wavefront.visibleAlpha) return;
-        const parts = [{ circles: [], alpha: alpha * strength }, { circles: [], alpha: alpha * strength * VIEW.wavefront.shadowShare }];
+        const parts = [{ circles: [], alpha: alpha * strength }, { circles: [], alpha: alpha * strength * shadowShare }];
         for (const { source, centre, radiusMetres, spacingSeconds = 0 } of spheres) {
           const sphere = radiusMetres - ring * spacing;
           const offset = face.value - centre[face.fixed];

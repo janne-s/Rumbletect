@@ -9,6 +9,8 @@ const UPWARD_INLET = Object.freeze({ x: 0, y: 0, z: -1 });
 
 export const volcanoCategory = key => VOLCANO.categories.find(category => category.key === key) ?? VOLCANO.categories.at(-1);
 
+export const volcanoSourcePosition = (volcano, position = volcano.ventMetres) => ({ x: position.x, y: position.y, z: position.z + VOLCANO.sourceDiameters * volcano.jet.ventDiameterMetres });
+
 const smoothStep = value => { const t = Math.min(1, Math.max(0, value)); return t * t * (3 - 2 * t); };
 
 /**
@@ -51,7 +53,6 @@ export function volcanoGrains(volcano, scene, band = 'full') {
   const { air } = scene;
   const temperatureRatio = volcano.jet.gasTemperatureKelvin / (air.temperatureCelsius + KELVIN_OFFSET);
   const diameter = volcano.jet.ventDiameterMetres;
-  const height = VOLCANO.sourceDiameters * diameter;
   return mergedGrains([pathGrains(volcano, scene, ventPath(volcano), {
     components: ({ seconds }) => {
       const share = eruptionShare(volcano, seconds - volcano.startSeconds);
@@ -59,7 +60,7 @@ export function volcanoGrains(volcano, scene, band = 'full') {
       return jetComponents({ diameterMetres: diameter, velocityMetresPerSecond: volcano.jet.ventVelocityMetresPerSecond * share, temperatureRatio }, { temperatureCelsius: air.temperatureCelsius });
     },
     axis: () => UPWARD_INLET,
-    place: (components, position) => ({ x: position.x, y: position.y, z: position.z + height }),
+    place: (components, position) => volcanoSourcePosition(volcano, position),
     spectra: (components, inletDegrees, frequencies) => { const { large, fine } = jetSpectra(components, inletDegrees, frequencies); return { shaped: large, plain: fine }; },
     packetHz: components => components.large.peakHz / JET.packetCycles,
     shape: SHAPE

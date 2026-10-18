@@ -4,6 +4,8 @@
 
 Rumbletect runs entirely in the browser, with no account and no server of its own. Every part of the model is marked A (first principles), B (literature), or C (heuristic or synthetic). It belongs to the tect family with Boomtect and Echotect and shares Boomtect's interface.
 
+Wavefronts and Mach cones show propagation geometry with indicative, source-independent brightness. Each source or member has one leading front from its onset, rather than a repeating ripple train. The volcano front originates at the same effective height as its audio grains. These visuals do not display sound level.
+
 Exports are 32-bit float WAV at one full scale in pascals, recorded in the scene JSON; per-microphone files start at the same moment. A scene is JSON with `"format": "rumbletect.scene"` and opens again as a scene. A scene reader fills in missing fields with defaults and never refuses an older or newer version.
 
 ## Docs

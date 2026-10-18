@@ -1,6 +1,6 @@
 import { ENGINE } from '../domain/constants.js';
 import { jetOfEngine, powerLabel, powerOfEngine } from '../domain/engine.js';
-import { jetComponents, speedOfSound } from '../domain/jet.js';
+import { speedOfSound } from '../domain/jet.js';
 import { defaultFormation, defaultJet, defaultRocket, defaultSalvo, defaultVolcano, PROPELLANTS } from '../domain/scene.js';
 import { RENDER, ROCKET } from '../domain/constants.js';
 import { heardCounts } from '../domain/rocket-grains.js';
@@ -10,7 +10,7 @@ import { formatMetres } from '../shared/ui/canvas.js';
 import { checkboxField, numberField, pointFields, seedField, selectField, textField } from './fields.js';
 import { cachedTracks } from './geometry-cache.js';
 import { macrosFor, rocketMacros, thrustLabel, volcanoMacros } from './macros.js';
-import { volcanoCategory } from '../domain/volcano.js';
+import { volcanoCategory, volcanoSourcePosition } from '../domain/volcano.js';
 import { machCone } from '../shared/domain/trajectory.js';
 
 const flownSeconds = (emitter, scene) => { const [path] = cachedTracks(emitter, scene); return Math.round((path.seconds.length - 1) * path.step); };
@@ -61,13 +61,6 @@ function details(emitter, { updateEmitter, scene }) {
 }
 
 const pathPoints = (emitter, scene, at) => { for (const path of cachedTracks(emitter, scene)) path.x.forEach((x, index) => at({ x, y: path.y[index], z: path.z[index] })); };
-
-function amplitudes(emitter, scene) {
-  const { air } = scene;
-  const components = jetComponents(jetOfEngine(emitter.engine, air.temperatureCelsius), { temperatureCelsius: air.temperatureCelsius, flightMetresPerSecond: emitter.mach * speedOfSound(air.temperatureCelsius) });
-  const amplitude = 10 ** (components.large.decibels / 20) * 20e-6 * components.diameterMetres * Math.sqrt(components.large.peakHz * emitter.engine.engines);
-  return new Map(Array.from({ length: emitter.kind === 'formation' ? emitter.memberCount : 1 }, (_, member) => [`${emitter.id}:${member}`, { amplitude, frequencyHz: components.large.peakHz }]));
-}
 
 /** One front per member, from where its sound starts: later fronts lie inside it while it is subsonic, and the Mach cone shows the rest. */
 function wavefrontSources(emitter, scene, placedPoint, candidates) {
@@ -132,12 +125,6 @@ function rocketDetails(emitter, { updateEmitter }) {
 
 const SALVO_LAYOUT = Object.freeze(['roundCount', 'salvoSize', 'salvoSeconds', 'salvoSpreadSeconds', 'launcherRadiusMetres', 'headingSpreadDegrees', 'launchSpreadDegrees', 'thrustSpreadPercent']);
 
-function rocketAmplitudes(emitter, scene) {
-  const vehicle = vehicleOf(emitter);
-  const amplitude = Math.sqrt(soundPowerWatts(vehicle) * 1.2 * speedOfSound(scene.air.temperatureCelsius) / (4 * Math.PI));
-  return new Map(Array.from({ length: emitter.kind === 'salvo' ? emitter.roundCount : 1 }, (_, member) => [`${emitter.id}:${member}`, { amplitude, frequencyHz: peakFrequencyHz(vehicle) }]));
-}
-
 function rocketWarnings(emitter, scene) {
   const paths = cachedTracks(emitter, scene);
   const [path] = paths;
@@ -175,13 +162,6 @@ function volcanoDetails(emitter, { updateEmitter }) {
   ];
 }
 
-function volcanoAmplitudes(emitter, scene) {
-  const { air } = scene;
-  const components = jetComponents({ diameterMetres: emitter.jet.ventDiameterMetres, velocityMetresPerSecond: emitter.jet.ventVelocityMetresPerSecond, temperatureRatio: emitter.jet.gasTemperatureKelvin / (air.temperatureCelsius + 273.15) }, { temperatureCelsius: air.temperatureCelsius });
-  const amplitude = 10 ** (components.large.decibels / 20) * 20e-6 * components.diameterMetres * Math.sqrt(components.large.peakHz);
-  return new Map([[`${emitter.id}:0`, { amplitude, frequencyHz: Math.max(20, components.large.peakHz) }]]);
-}
-
 export const isSupersonic = (emitter, scene) => cachedTracks(emitter, scene)[0].speed.some(speed => speed >= speedOfSound(scene.air.temperatureCelsius));
 
 const VOLCANO_PANEL = Object.freeze({
@@ -192,7 +172,7 @@ const VOLCANO_PANEL = Object.freeze({
   seeded: () => true,
   anchorName: () => 'vent',
   info: () => [],
-  bounds: (emitter, scene, include) => { include(emitter.ventMetres); include({ ...emitter.ventMetres, z: emitter.ventMetres.z + 5 * emitter.jet.ventDiameterMetres }); },
+  bounds: (emitter, scene, include) => { include(emitter.ventMetres); include(volcanoSourcePosition(emitter)); },
   measure: pathPoints,
   move: () => false,
   groundAnchored: () => false,
@@ -201,8 +181,7 @@ const VOLCANO_PANEL = Object.freeze({
   eventSeconds: 0,
   tracks: (emitter, scene) => cachedTracks(emitter, scene),
   cone: () => null,
-  amplitudes: volcanoAmplitudes,
-  wavefrontSources,
+  wavefrontSources: (emitter, scene, placedPoint, candidates) => candidates.push({ point: volcanoSourcePosition(emitter), emitted: emitter.startSeconds, group: `${emitter.id}:0` }),
   mergesSources: false,
   warnings: () => []
 });
@@ -225,7 +204,6 @@ const KIND_PANELS_EXTENDED = {
     eventSeconds: 0,
     tracks: (emitter, scene) => cachedTracks(emitter, scene),
     cone: machCone,
-    amplitudes,
     wavefrontSources,
     mergesSources: false,
     warnings
@@ -247,7 +225,6 @@ const KIND_PANELS_EXTENDED = {
     eventSeconds: 0,
     tracks: (emitter, scene) => cachedTracks(emitter, scene),
     cone: machCone,
-    amplitudes: rocketAmplitudes,
     wavefrontSources,
     mergesSources: false,
     warnings: rocketWarnings
