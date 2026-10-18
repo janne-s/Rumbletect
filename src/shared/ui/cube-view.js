@@ -760,7 +760,7 @@ export function createCubeView(canvas, options) {
           if (!(sphere > Math.abs(offset))) continue;
           const radius = Math.sqrt(sphere ** 2 - offset ** 2);
           if (!(radius > 0)) continue;
-          const edge = face.fixed === 'z' && profile.gradient < 0 ? grazingRange(profile, source.z) : Infinity;
+          const edge = shadowShare !== 1 && face.fixed === 'z' && profile.gradient < 0 ? grazingRange(profile, source.z) : Infinity;
           if (!(radius > edge)) { parts[0].circles.push({ u: centre[u], v: centre[v], radius }); continue; }
           parts[1].circles.push({ u: centre[u], v: centre[v], radius });
           if (radius - edge < spacingSeconds * profile.groundSpeed * VIEW.wavefront.shadowHoldSpacings) parts[0].circles.push({ u: centre[u], v: centre[v], radius: edge });
