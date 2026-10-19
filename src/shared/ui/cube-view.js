@@ -909,7 +909,7 @@ export function createCubeView(canvas, options) {
         }
       }
     };
-    for (const { apex, rings, strengths, occluders: spheres = [] } of cones) {
+    for (const { apex, rings, strengths, occluders: spheres = [], lineEvery = VIEW.cone.lineEvery } of cones) {
       occluders = spheres;
       const screen = rings.map(ring => ring.map(frame.project));
       const apexScreen = apex && frame.project(apex);
@@ -921,7 +921,7 @@ export function createCubeView(canvas, options) {
         ring.forEach((point, step) => {
           const next = (step + 1) % ring.length;
           line(point, ring[next], points[step], points[next]);
-          if (step % VIEW.cone.lineEvery) return;
+          if (step % lineEvery) return;
           if (index) line(rings[index - 1][step], point, screen[index - 1][step], points[step]);
           else if (apex) line(apex, point, apexScreen, points[step]);
         });

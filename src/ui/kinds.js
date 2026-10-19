@@ -12,6 +12,7 @@ import { cachedSoundTracks, cachedTracks } from './geometry-cache.js';
 import { macrosFor, rocketMacros, thrustLabel, volcanoMacros } from './macros.js';
 import { volcanoCategory, volcanoSourcePosition } from '../domain/volcano.js';
 import { machCone } from '../shared/domain/trajectory.js';
+import { frontProfile } from '../shared/domain/refraction.js';
 
 const flownSeconds = (emitter, scene) => { const [path] = cachedTracks(emitter, scene); return Math.round((path.seconds.length - 1) * path.step); };
 
@@ -202,7 +203,7 @@ const KIND_PANELS_EXTENDED = {
     alwaysTimed: () => false,
     eventSeconds: 0,
     tracks: (emitter, scene) => cachedTracks(emitter, scene),
-    cone: machCone,
+    cone: (path, now, profile) => machCone(path, now, profile, { profileAt: frontProfile, envelope: true }),
     wavefrontSources,
     mergesSources: false,
     warnings
@@ -223,7 +224,7 @@ const KIND_PANELS_EXTENDED = {
     alwaysTimed: () => false,
     eventSeconds: 0,
     tracks: (emitter, scene) => cachedTracks(emitter, scene),
-    cone: (path, now, profile, emitter, scene, member) => machCone(cachedSoundTracks(emitter, scene)[member], now, profile),
+    cone: (path, now, profile, emitter, scene, member) => machCone(cachedSoundTracks(emitter, scene)[member], now, profile, { profileAt: frontProfile, envelope: true }),
     wavefrontSources,
     mergesSources: false,
     warnings: rocketWarnings

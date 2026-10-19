@@ -4,10 +4,33 @@ import { defaultScene } from '../src/domain/scene.js';
 import { ADD_EMITTERS, KIND_PANELS } from '../src/ui/kinds.js';
 import { macrosFor } from '../src/ui/macros.js';
 import { createFrontStyle } from '../src/shared/ui/front-style.js';
-import { localProfile, soundSpeedProfile, wavefront } from '../src/shared/domain/refraction.js';
-import { outerSpheres, sampleEnvelopeSources } from '../src/shared/ui/wavefront-envelope.js';
+import { frontProfile, localProfile, soundSpeedProfile, wavefront } from '../src/shared/domain/refraction.js';
+import { outsideSphereIntervals, outerSpheres, sampleEnvelopeSources } from '../src/shared/ui/wavefront-envelope.js';
 import { cachedSoundTracks } from '../src/ui/geometry-cache.js';
 import { rocketGrains } from '../src/domain/rocket-grains.js';
+
+test('the reported high rocket profile joins across 89 km without the old cone step', () => {
+  const scene = defaultScene('rocket');
+  const rocket = scene.emitters[0];
+  Object.assign(rocket, { propellant: 'solid', headingDegrees: 92, launchDegrees: 17 });
+  rocket.engine = { engines: 1, thrustKilonewtons: .038, exitVelocityMetresPerSecond: 2500, exitDiameterMetres: .0037, efficiencyPercent: .3 };
+  rocket.ascent = { ...rocket.ascent, liftoffMassTonnes: .000117, burnSeconds: 106 };
+  const [path] = cachedSoundTracks(rocket, scene);
+  const sources = [];
+  KIND_PANELS.rocket.wavefrontSources(rocket, scene, point => point, sources);
+  const profile = soundSpeedProfile(scene.air);
+  const now = 147.456;
+  const spheres = outerSpheres(sampleEnvelopeSources(sources, now).map(({ point, emitted, group }) => ({ ...wavefront(frontProfile(profile, point.z), point, now - emitted), group })));
+  const cone = KIND_PANELS.rocket.cone(path, now, profile, rocket, scene, 0);
+  const centres = cone.rings.map(ring => ({ ring, x: ring.reduce((sum, point) => sum + point.x, 0) / ring.length, z: ring.reduce((sum, point) => sum + point.z, 0) / ring.length }));
+  const boundary = centres.filter(centre => centre.x > 80000 && centre.x < 110000);
+  assert.equal(boundary.length, 2);
+  assert.ok(Math.abs(boundary[0].z - boundary[1].z) < 5000);
+  for (const { ring } of boundary) ring.forEach((point, index) => assert.deepEqual(outsideSphereIntervals(point, ring[(index + 1) % ring.length], spheres, 0, 1, Math.cos(Math.PI / 32)), [[0, 1]]));
+  const flying = KIND_PANELS.rocket.cone(path, 40, profile, rocket, scene, 0);
+  const at = Math.round(40 / path.step);
+  assert.deepEqual(flying.apex, { x: path.x[at], y: path.y[at], z: path.z[at] });
+});
 
 test('emission histories retain one envelope group per aircraft, rocket, or eruption', () => {
   for (const [kind, { create, mode }] of Object.entries(ADD_EMITTERS)) {

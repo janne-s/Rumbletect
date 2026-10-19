@@ -1,7 +1,7 @@
 import { GROUND, RENDER, RENDER_COST, VIEW } from '../domain/constants.js';
 import { GROUND_LABELS, GROUND_TYPES } from '../domain/ground.js';
 import { newSeed } from '../domain/random.js';
-import { localProfile, PATH_DIRECT, PATH_SCATTER, PATH_SHADOW, pathProfile, soundSpeedProfile, travelSeconds, wavefront } from '../domain/refraction.js';
+import { frontProfile, localProfile, PATH_DIRECT, PATH_SCATTER, PATH_SHADOW, pathProfile, soundSpeedProfile, travelSeconds, wavefront } from '../domain/refraction.js';
 import { addTails, arrivalTable, assemblePaths, earliestArrival, echoesActive, finishSum, frameExtents, pathRange, hasTails, joinResponses, partitionSeconds, previewScene, echoFreeShare, receiverResult, resultDifference, sumSegments, tailSamples, tailStretches } from '../domain/render.js';
 import { defaultReceiver, headingToward, placeLabel, TERRAIN_DEFAULTS } from '../domain/scene.js';
 import { AMBISONIC_CONVENTION, availableItems, exportDownload, exportFiles, exportPlan, exportSizes, fileStem, itemFiles } from './export-package.js';
@@ -1641,7 +1641,7 @@ export function startFrame(tect) {
     const spheres = sources
       .filter(candidate => now > candidate.emitted)
       .map(({ point, emitted, group, order, amplitude, frequencyHz, spacingSeconds = 0 }) => {
-        const front = { ...wavefront(localProfile(profile, point.z), point, now - emitted) };
+        const front = { ...wavefront((frontStyle.levelDependent ? localProfile : frontProfile)(profile, point.z), point, now - emitted) };
         const reach = front.radiusMetres * Math.max(1, spacingSeconds / (now - emitted));
         front.strength = frontStyle.strength(amplitude, reach, frequencyHz, state.scene.air);
         if (!profile.wind) return { source: point, group, order, spacingSeconds, ...front };
