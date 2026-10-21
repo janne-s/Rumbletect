@@ -221,7 +221,9 @@ export const VIEW = Object.freeze({
     arrowheadPixels: 8,
     facingLengthShare: .1,
     outlinePixels: 1.2,
-    seamPixels: 1
+    seamPixels: 1,
+    gridLines: 6,
+    labelSpacingPixels: 56
   }),
   orientationBall: Object.freeze({
     marginPixels: 12,
