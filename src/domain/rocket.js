@@ -257,6 +257,6 @@ export function rocketSource(emitter, scene, path) {
       return { shaped, plain };
     },
     packetHz: () => peakFrequencyHz(vehicle) / ROCKET.packetCycles,
-    crackle: () => ({ index: ROCKET.crackleIndex, hz: peakFrequencyHz(vehicle) })
+    crackle: () => ({ index: ROCKET.crackleIndex, hz: peakFrequencyHz(vehicle), share: ROCKET.shockShare })
   };
 }

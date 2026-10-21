@@ -45,6 +45,8 @@ export const JET = Object.freeze({
    */
   crackleIndex: .8,
   crackleConvection: Object.freeze([.8, 1.6]),
+  /** Class C: the share of a fully crackling jet's power that travels in shocks, its high end set by their rise instead of absorption. */
+  shockShare: .3,
   /** Class C: turbomachinery radiates forward and to the side; aft of 90° it falls by this much at 180°. A hump is this many octaves wide (standard deviation). */
   turbomachineryAftDecibels: 10,
   humpOctaves: .25,
@@ -180,6 +182,8 @@ export const ROCKET = Object.freeze({
   skewness: .4,
   /** Class C: a rocket's plume always convects supersonically, so it crackles at this steepening index. */
   crackleIndex: .8,
+  /** Class C: the share of a rocket's power that travels in shocks, its high end set by their rise instead of absorption; fitted to the owner's unlimited Starship recording 7 at 7.7 km (within 4 dB to 4 kHz). */
+  shockShare: .3,
   /** Class B: no intermittency; the owner's unlimited Starship recording 7 has kurtosis 3.0 at 7.7 km, as Gaussian noise. */
   kurtosis: 3,
   packetCycles: 4,

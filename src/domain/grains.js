@@ -154,7 +154,8 @@ export function pathGrains(emitter, scene, path, unbanded, band = 'full') {
   }
   const rows = grains.flatMap((grain, index) => (!grain.heard ? [] : [{
     positionMetres: grain.position, direction: null, elementMetres: 0, emissionSeconds: grain.centre - grainSeconds, amplitudePaMetres: grain.amplitude,
-    pulse: 'grain', noiseSeed: index, durationSeconds: grainSeconds, decay: 0, spanSeconds: 2 * grainSeconds, linearRadiusMetres: 0
+    pulse: 'grain', noiseSeed: index, durationSeconds: grainSeconds, decay: 0, spanSeconds: 2 * grainSeconds, linearRadiusMetres: 0,
+    shockShare: source.crackle?.(grain.components)?.share ?? 0
   }]));
 
   function emission(index, departure, plan) {
@@ -329,7 +330,8 @@ export function jetGrains(emitter, scene, band = 'full') {
     packetHz: components => components.large.peakHz / JET.packetCycles,
     crackle: components => {
       const [from, to] = JET.crackleConvection;
-      return { index: JET.crackleIndex * Math.min(1, Math.max(0, (components.staticConvection - from) / (to - from))), hz: components.large.peakHz };
+      const share = Math.min(1, Math.max(0, (components.staticConvection - from) / (to - from)));
+      return { index: JET.crackleIndex * share, hz: components.large.peakHz, share: JET.shockShare * share };
     },
     shape: JET_SHAPE
   };
