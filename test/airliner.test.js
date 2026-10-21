@@ -43,3 +43,10 @@ test('the buzz-saw sounds at the shaft\'s orders at take-off and is gone at idle
   assert.equal(turbomachineryAt('narrowbody', .8, reference).buzzSaw, null);
   assert.equal(turbomachineryAt('narrowbody', 0, reference).buzzSaw, null);
 });
+
+test('a civil fan is far quieter at idle than at take-off, as approach levels require', () => {
+  for (const key of AIRLINER_CLASSES) {
+    const { toneDecibels, humpDecibels } = ENGINE.classes[key].turbomachinery;
+    assert.ok(toneDecibels[1] - toneDecibels[0] > 15 && humpDecibels[1] - humpDecibels[0] > 15, key);
+  }
+});
