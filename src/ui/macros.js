@@ -2,7 +2,7 @@ import { ENGINE_CLASSES, engineAtPower, engineOfClass, powerLabel, powerOfEngine
 import { PARAMETERS } from '../domain/scene.js';
 import { ENGINE, ROCKET, VOLCANO } from '../domain/constants.js';
 import { volcanoCategory } from '../domain/volcano.js';
-import { categoryRocket, liftoffThrustToWeight, nearestCategory, sizedRocket } from '../domain/rocket.js';
+import { categoryRocket, nearestCategory, sizedRocket, typicalThrustToWeight } from '../domain/rocket.js';
 import { clamp01, logPosition, logValue, METRES, metres } from '../shared/ui/macros.js';
 
 const range = key => [PARAMETERS[key].minimum, PARAMETERS[key].maximum];
@@ -145,9 +145,9 @@ const rocketCategory = {
 const SIZE_SPAN = ROCKET.sizing.totalNewtons;
 const totalOf = item => item.engine.engines * item.engine.thrustKilonewtons * 1000;
 
-/** A new size keeps the rocket's burn time and thrust-to-weight; Category sets a typical burn. */
+/** A new size keeps the rocket's burn time and takes the thrust-to-weight typical of its size; Category sets a typical burn. */
 const resize = (item, newtons) => {
-  const sized = sizedRocket(newtons, item.engine.engines, item.propellant, liftoffThrustToWeight(item));
+  const sized = sizedRocket(newtons, item.engine.engines, item.propellant, typicalThrustToWeight(newtons));
   item.engine = { ...item.engine, ...sized.engine };
   item.ascent = { ...item.ascent, ...sized.ascent, burnSeconds: item.ascent.burnSeconds };
 };

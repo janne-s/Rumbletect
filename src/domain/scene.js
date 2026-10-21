@@ -5,6 +5,9 @@ import { createScene } from '../shared/domain/scene.js';
 
 export { DEFAULT_PLACE, DEFAULT_QUALITY, defaultReceiver, headingToward, PLACE_NAME_KINDS, placeLabel, QUALITY_NUMBERS, QUALITY_SWITCHES, SceneError, TERRAIN_DEFAULTS } from '../shared/domain/scene.js';
 
+const MOST_ENGINES = 60;
+const [FEWEST_NEWTONS, MOST_NEWTONS] = ROCKET.sizing.totalNewtons;
+
 const RUMBLETECT_PARAMETERS = Object.freeze({
   startSeconds: { minimum: 0, maximum: 240, unit: 's', label: 'Onset', reliability: null },
   headingDegrees: { minimum: 0, maximum: 360, unit: '°', label: 'Heading', reliability: null },
@@ -16,10 +19,10 @@ const RUMBLETECT_PARAMETERS = Object.freeze({
   pressureRatio: { minimum: 1.01, maximum: 6, unit: '', label: 'Nozzle pressure ratio', reliability: 'C' },
   totalTemperatureKelvin: { minimum: 300, maximum: 2300, unit: 'K', label: 'Jet temperature', reliability: 'C' },
   nozzleDiameterMetres: { minimum: .02, maximum: 3, unit: 'm', label: 'Nozzle diameter', reliability: 'C' },
-  engines: { minimum: 1, maximum: 60, unit: '', label: 'Engines', reliability: null, integer: true },
-  thrustKilonewtons: { minimum: .01, maximum: 10000, unit: 'kN', label: 'Thrust per engine', reliability: 'B' },
+  engines: { minimum: 1, maximum: MOST_ENGINES, unit: '', label: 'Engines', reliability: null, integer: true },
+  thrustKilonewtons: { minimum: FEWEST_NEWTONS / MOST_ENGINES / 1000, maximum: MOST_NEWTONS / 1000, unit: 'kN', label: 'Thrust per engine', reliability: 'B' },
   exitVelocityMetresPerSecond: { minimum: 500, maximum: 5000, unit: 'm/s', label: 'Exhaust velocity', reliability: 'B' },
-  exitDiameterMetres: { minimum: .001, maximum: 6, unit: 'm', label: 'Nozzle exit diameter', reliability: 'B' },
+  exitDiameterMetres: { minimum: .0001, maximum: 10, unit: 'm', label: 'Nozzle exit diameter', reliability: 'B' },
   efficiencyPercent: { minimum: .05, maximum: 1, unit: '%', label: 'Acoustic efficiency', reliability: 'B' },
   liftoffMassTonnes: { minimum: .00001, maximum: 10000, unit: 't', label: 'Liftoff mass', reliability: 'C' },
   burnSeconds: { minimum: 1, maximum: 590, unit: 's', label: 'Burn time', reliability: 'C' },

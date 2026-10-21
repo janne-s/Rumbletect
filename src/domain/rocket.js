@@ -94,9 +94,22 @@ export function directivityRow(strouhal, out, offset) {
   }
 }
 
+const categoryThrustToWeight = category => category.thrustToWeight ?? ROCKET.propellants[category.propellant].thrustToWeight;
+
+/** Class C: the thrust-to-weight of a rocket this size, between the categories' in log thrust and log ratio. */
+export function typicalThrustToWeight(newtons) {
+  const categories = ROCKET.categories;
+  if (newtons <= categories[0].newtons) return categoryThrustToWeight(categories[0]);
+  const upper = categories.findIndex(category => category.newtons >= newtons);
+  if (upper < 0) return categoryThrustToWeight(categories.at(-1));
+  const [low, high] = [categories[upper - 1], categories[upper]];
+  const share = Math.log(newtons / low.newtons) / Math.log(high.newtons / low.newtons);
+  return categoryThrustToWeight(low) * (categoryThrustToWeight(high) / categoryThrustToWeight(low)) ** share;
+}
+
 /** A rocket set to a category's thrust, engines, propellant, burn, launch angle and efficiency; the ascent's schedule kept. */
 export function categoryRocket(item, category) {
-  const sized = sizedRocket(category.newtons, category.engines, category.propellant, category.thrustToWeight);
+  const sized = sizedRocket(category.newtons, category.engines, category.propellant, categoryThrustToWeight(category));
   return {
     ...item,
     propellant: category.propellant,

@@ -4,7 +4,7 @@ import { speedOfSound } from '../domain/jet.js';
 import { defaultFormation, defaultJet, defaultRocket, defaultSalvo, defaultVolcano, PROPELLANTS } from '../domain/scene.js';
 import { RENDER, ROCKET } from '../domain/constants.js';
 import { heardCounts } from '../domain/rocket-grains.js';
-import { peakFrequencyHz, sizedRocket, soundPowerWatts, totalThrustNewtons, vehicleOf } from '../domain/rocket.js';
+import { liftoffThrustToWeight, peakFrequencyHz, sizedRocket, soundPowerWatts, totalThrustNewtons, vehicleOf } from '../domain/rocket.js';
 import { newSeed } from '../shared/domain/random.js';
 import { formatMetres } from '../shared/ui/canvas.js';
 import { checkboxField, numberField, pointFields, seedField, selectField, textField } from './fields.js';
@@ -84,7 +84,7 @@ function rocketSummary(emitter) {
   const vehicle = vehicleOf(emitter);
   const engines = emitter.engine.engines === 1 ? '1 engine' : `${emitter.engine.engines} engines`;
   const salvo = emitter.kind === 'salvo' ? ` · ${emitter.roundCount} rounds over ${emitter.salvoSeconds} s` : '';
-  return `${ROCKET.propellants[emitter.propellant].label}, ${engines}, ${thrustLabel(totalThrustNewtons(emitter))} · ${(10 * Math.log10(soundPowerWatts(vehicle) / 1e-12)).toFixed(0)} dB power · burns ${emitter.ascent.burnSeconds} s${salvo}`;
+  return `${ROCKET.propellants[emitter.propellant].label}, ${engines}, ${thrustLabel(totalThrustNewtons(emitter))}, thrust-to-weight ${liftoffThrustToWeight(emitter).toFixed(1)} · ${(10 * Math.log10(soundPowerWatts(vehicle) / 1e-12)).toFixed(0)} dB power · burns ${emitter.ascent.burnSeconds} s${salvo}`;
 }
 
 function rocketDetails(emitter, { updateEmitter }) {

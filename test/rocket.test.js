@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { ascentPath, categoryRocket, directivityDecibels, nearestCategory, normalizedPowerDecibels, sizedRocket, sourceLocationMetres } from '../src/domain/rocket.js';
+import { ascentPath, categoryRocket, directivityDecibels, nearestCategory, normalizedPowerDecibels, sizedRocket, sourceLocationMetres, typicalThrustToWeight } from '../src/domain/rocket.js';
+import { speedOfSoundMetresPerSecond } from '../src/shared/domain/air.js';
 import { ROCKET } from '../src/domain/constants.js';
 import { defaultRocket, defaultScene, parseScene, readScene } from '../src/domain/scene.js';
 import { prepareScene, renderReceiver } from '../src/domain/render.js';
@@ -97,4 +98,31 @@ test('categories rise in thrust, each reads back as itself, and every one flies 
     const path = ascentPath(rocket);
     assert.ok(Math.min(...path.z) >= rocket.startMetres.z - 1e-6 && path.z.at(-1) > rocket.startMetres.z + 10, `${category.label}: ${path.z.at(-1)} m`);
   }
+});
+
+test('every size the Size slider reaches, with any engine count and propellant, is a valid rocket', () => {
+  const [fewest, most] = ROCKET.sizing.totalNewtons;
+  for (let step = 0; step <= 28; step += 1) {
+    const newtons = +(fewest * (most / fewest) ** (step / 28)).toPrecision(2);
+    for (const engines of [1, 9, 33, 60]) {
+      for (const propellant of Object.keys(ROCKET.propellants)) {
+        const rocket = defaultRocket();
+        const sized = sizedRocket(newtons, engines, propellant, typicalThrustToWeight(newtons));
+        Object.assign(rocket, { propellant, engine: { ...rocket.engine, ...sized.engine }, ascent: { ...rocket.ascent, ...sized.ascent } });
+        const scene = { ...defaultScene('rocket'), emitters: [rocket] };
+        assert.doesNotThrow(() => parseScene(scene), `${newtons} N, ${engines} engines, ${propellant}`);
+      }
+    }
+  }
+});
+
+test('a rocket sized down from artillery takes a hobby motor\'s thrust-to-weight and stays subsonic', () => {
+  for (const category of ROCKET.categories) {
+    const expected = category.thrustToWeight ?? ROCKET.propellants[category.propellant].thrustToWeight;
+    assert.ok(Math.abs(typicalThrustToWeight(category.newtons) - expected) < 1e-9, category.label);
+  }
+  const artillery = categoryRocket(defaultRocket(), ROCKET.categories.find(category => category.label === 'Artillery'));
+  const sized = sizedRocket(10, 1, 'solid', typicalThrustToWeight(10));
+  const hobby = { ...artillery, engine: { ...artillery.engine, ...sized.engine }, ascent: { ...artillery.ascent, ...sized.ascent } };
+  assert.ok(Math.max(...ascentPath(hobby).speed) < speedOfSoundMetresPerSecond(15));
 });
