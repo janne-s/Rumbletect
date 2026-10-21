@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { engineAtPower, jetOfEngine, powerLabel, powerOfEngine } from '../src/domain/engine.js';
+import { engineAtPower, jetOfEngine, powerLabel, powerOfEngine, streamsOf } from '../src/domain/engine.js';
+import { jetComponents, jetSpectra } from '../src/domain/jet.js';
 import { ENGINE } from '../src/domain/constants.js';
 
 test('the jet of an ideal nozzle follows from its pressure ratio and total temperature', () => {
@@ -28,12 +29,29 @@ test('the smaller classes\' full power gives their engines\' exhaust velocity an
     const exitKelvin = engine.totalTemperatureKelvin - velocity ** 2 / (2 * ENGINE.gasHeatCapacityJoulesPerKilogramKelvin);
     return 101325 / (287 * exitKelvin) * Math.PI * engine.diameterMetres ** 2 / 4 * velocity ** 2;
   };
-  for (const [key, newtons, metresPerSecond] of [['hobby', 100, 434], ['drone', 4000, 597], ['cruise', 3100, 500], ['bomber', 75600, 360]]) {
+  for (const [key, newtons, metresPerSecond] of [['hobby', 100, 434], ['drone', 4000, 597], ['cruise', 3100, 500]]) {
     const engine = engineAtPower(1, key);
     const velocity = jetOfEngine(engine, 15).velocityMetresPerSecond;
     assert.ok(Math.abs(velocity / metresPerSecond - 1) < .05, `${key}: ${velocity} m/s`);
     assert.ok(Math.abs(thrust(engine, velocity) / newtons - 1) < .1, `${key}: ${thrust(engine, velocity)} N`);
   }
+  const [core, fan] = streamsOf(engineAtPower(1, 'bomber'), 'bomber', 15);
+  assert.ok(Math.abs(core.velocityMetresPerSecond / 459 - 1) < .01 && Math.abs(fan.velocityMetresPerSecond / 290 - 1) < .01);
+  const streams = [[engineAtPower(1, 'bomber'), core], [{ ...ENGINE.classes.bomber.bypass[1] }, fan]];
+  const total = streams.reduce((sum, [engine, jet]) => sum + thrust(engine, jet.velocityMetresPerSecond), 0);
+  assert.ok(Math.abs(total / 75600 - 1) < .1, `bomber: ${total} N`);
+});
+
+test('a bomber\'s core keeps its jet noise near Mach 0.9, where one mixed jet of the same thrust fell silent', () => {
+  const frequencies = Array.from({ length: 400 }, (_, index) => 10 * 1.02 ** index);
+  const power = (jets, speed) => jets.reduce((sum, jet) => {
+    const { large, fine } = jetSpectra(jetComponents(jet, { temperatureCelsius: 15, flightMetresPerSecond: speed }), 90, frequencies);
+    return sum + frequencies.reduce((total, frequency, index) => total + (large[index] + fine[index]) * frequency, 0);
+  }, 0);
+  const streams = streamsOf(engineAtPower(1, 'bomber'), 'bomber', 15);
+  const mixed = [jetOfEngine({ pressureRatio: 1.552, totalTemperatureKelvin: 545, diameterMetres: 1.014 }, 15)];
+  const drop = jets => 10 * Math.log10(power(jets, 0) / power(jets, 320));
+  assert.ok(drop(streams) < 25 && drop(mixed) > 35, `${drop(streams)} dB and ${drop(mixed)} dB`);
 });
 
 test('more power is a faster and hotter jet', () => {

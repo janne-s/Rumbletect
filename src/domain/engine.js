@@ -37,6 +37,23 @@ export function powerLabel(power, engineClass = 'fighter') {
   return power < military ? `${Math.round(power / military * 100)} %` : `AB ${Math.round((power - military) / (1 - military) * 100)} %`;
 }
 
+/** Each stream's fully expanded jet: the engine's own, and for a class with a separate fan stream its bypass at the same power. */
+export function streamsOf(engine, engineClass, temperatureCelsius) {
+  const bypass = ENGINE.classes[engineClass]?.bypass;
+  const core = jetOfEngine(engine, temperatureCelsius);
+  if (!bypass) return [core];
+  const power = powerOfEngine(engine, engineClass);
+  const upper = Math.max(1, bypass.findIndex(setting => setting.power >= power));
+  const [low, high] = [bypass[upper - 1], bypass[upper]];
+  const share = Math.min(1, Math.max(0, (power - low.power) / (high.power - low.power)));
+  const fan = {
+    pressureRatio: between(low.pressureRatio, high.pressureRatio, share),
+    totalTemperatureKelvin: between(low.totalTemperatureKelvin, high.totalTemperatureKelvin, share),
+    diameterMetres: between(low.diameterMetres, high.diameterMetres, share)
+  };
+  return [core, jetOfEngine(fan, temperatureCelsius)];
+}
+
 /** A jet of an engine class at its usual power, with the class's engine count. */
 export function engineOfClass(engineClass) {
   const type = ENGINE.classes[engineClass];

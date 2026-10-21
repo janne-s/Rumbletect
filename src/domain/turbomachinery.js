@@ -1,16 +1,17 @@
 import { ENGINE, JET } from './constants.js';
-import { engineAtPower, jetOfEngine } from './engine.js';
+import { engineAtPower, streamsOf } from './engine.js';
 import { jetComponents, jetSpectra } from './jet.js';
 
 const between = (pair, share) => pair[0] + (pair[1] - pair[0]) * share;
 
 /** The static full-power mixing noise of a class at 90°, Pa² at 1 m, that turbomachinery levels refer to. */
 export function referencePower(engineClass, temperatureCelsius) {
-  const components = jetComponents(jetOfEngine(engineAtPower(1, engineClass), temperatureCelsius), { temperatureCelsius });
   const frequencies = [];
   for (let x = Math.log(1); x < Math.log(30000); x += .02) frequencies.push(Math.exp(x));
-  const { large, fine } = jetSpectra(components, 90, frequencies);
-  return frequencies.reduce((sum, frequency, index) => sum + (large[index] + fine[index]) * frequency * .02, 0);
+  return streamsOf(engineAtPower(1, engineClass), engineClass, temperatureCelsius).reduce((total, jet) => {
+    const { large, fine } = jetSpectra(jetComponents(jet, { temperatureCelsius }), 90, frequencies);
+    return total + frequencies.reduce((sum, frequency, index) => sum + (large[index] + fine[index]) * frequency * .02, 0);
+  }, 0);
 }
 
 /** Class C: the blade-passing frequency and the tones' and hump's powers at a power share, or null for a class without turbomachinery. */

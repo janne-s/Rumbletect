@@ -1,5 +1,5 @@
 import { JET, JET_FLIGHT, LOW_BAND, PROPAGATION, SYNTHESIS } from './constants.js';
-import { jetOfEngine, powerOfEngine } from './engine.js';
+import { powerOfEngine, streamsOf } from './engine.js';
 import { addTurbomachinery, referencePower, turbomachineryAt } from './turbomachinery.js';
 import { jetComponents, jetSpectra, speedOfSound } from './jet.js';
 import { shapeWaveform, waveformShape } from './waveform.js';
@@ -317,21 +317,25 @@ const JET_SHAPE = waveformShape({ skewness: JET.largeScaleSkewness, kurtosis: JE
 
 export function jetGrains(emitter, scene, band = 'full') {
   const { air } = scene;
-  const jet = jetOfEngine(emitter.engine, air.temperatureCelsius);
+  const streams = streamsOf(emitter.engine, emitter.engineClass, air.temperatureCelsius);
   const { engines } = emitter.engine;
   const turbo = turbomachineryAt(emitter.engineClass, powerOfEngine(emitter.engine, emitter.engineClass), referencePower(emitter.engineClass, air.temperatureCelsius));
   const source = {
-    components: ({ speed }) => jetComponents(jet, { temperatureCelsius: air.temperatureCelsius, flightMetresPerSecond: speed }),
+    components: ({ speed }) => streams.map(jet => jetComponents(jet, { temperatureCelsius: air.temperatureCelsius, flightMetresPerSecond: speed })),
     spectra: (components, inletDegrees, frequencies) => {
-      const { large, fine } = jetSpectra(components, inletDegrees, frequencies);
+      const { large, fine } = jetSpectra(components[0], inletDegrees, frequencies);
+      for (const stream of components.slice(1)) {
+        const other = jetSpectra(stream, inletDegrees, frequencies);
+        other.large.forEach((value, index) => { large[index] += value; fine[index] += other.fine[index]; });
+      }
       addTurbomachinery(fine, frequencies, turbo, inletDegrees);
       return engines === 1 ? { shaped: large, plain: fine } : { shaped: large.map(value => value * engines), plain: fine.map(value => value * engines) };
     },
-    packetHz: components => components.large.peakHz / JET.packetCycles,
-    crackle: components => {
+    packetHz: ([core]) => core.large.peakHz / JET.packetCycles,
+    crackle: ([core]) => {
       const [from, to] = JET.crackleConvection;
-      const share = Math.min(1, Math.max(0, (components.staticConvection - from) / (to - from)));
-      return { index: JET.crackleIndex * share, hz: components.large.peakHz, share: JET.shockShare * share };
+      const share = Math.min(1, Math.max(0, (core.staticConvection - from) / (to - from)));
+      return { index: JET.crackleIndex * share, hz: core.large.peakHz, share: JET.shockShare * share };
     },
     shape: JET_SHAPE
   };

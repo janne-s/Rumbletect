@@ -104,8 +104,11 @@ export const ENGINE = Object.freeze({
    * and a typical flight. Nozzle diameter and pressure ratio of the smaller ones follow from thrust, mass flow and exhaust
    * temperature through the ideal nozzle (C): a JetCat P100 hobby turbine, 100 N, 0.23 kg/s, about 970 K (JetCat; AFRL
    * gives 434 m/s); a 4 kN target-drone turbojet (TRI 60 class, C); a cruise missile's F107 turbofan, 3.1 kN, bypass 1:1,
-   * mixed, 6.2 kg/s assumed (C); a B-52's eight TF33-P-3, 75.6 kN each, bypass 1.42 (JT3D), 196–230 kg/s, taken as one
-   * equivalent mixed jet of 210 kg/s at 545 K (decision 4, 3A, C). Idle settings are assumed (C).
+   * mixed, 6.2 kg/s assumed (C); a B-52's eight TF33-P-3, 75.6 kN each, bypass 1.42 (JT3D), 196–230 kg/s. The TF33's fan
+   * stream leaves a short duct apart from the core, so the bomber has a core and a `bypass` stream as two of Tam's jets
+   * (decision 4, 3C, taken 2026-10-21 when one equivalent mixed jet of 360 m/s fell silent near Mach 0.9 and left its fan
+   * whistling): core 87 kg/s at 459 m/s and 750 K, fan 119 kg/s at 290 m/s and 330 K, thrust 74.5 kN, bypass 1.37 (C).
+   * Idle settings are assumed (C).
    * Turbomachinery: tones at the blade-passing frequency and its harmonics (dB re the strongest) and a broadband hump
    * around it, each in dB re the class's static full-power mixing noise at 90°, idle and full, between them by power (C).
    * Hobby: the owner's recording RC-2 at 2–3 m, 4.04 kHz with harmonics at idle, 11.36 kHz at full, tones −23 dB re all
@@ -154,8 +157,12 @@ export const ENGINE = Object.freeze({
       label: 'Heavy bomber', engines: 8, defaultPower: 1, flight: Object.freeze({ mach: .25, heightMetres: 300 }),
       turbomachinery: Object.freeze({ idleBladeHz: 1550, fullBladeHz: 3850, harmonics: Object.freeze([0, -8]), toneDecibels: Object.freeze([0, -3]), humpDecibels: Object.freeze([2, 3]) }),
       settings: Object.freeze([
-        Object.freeze({ power: 0, label: 'Idle', pressureRatio: 1.12, totalTemperatureKelvin: 450, diameterMetres: 1.014 }),
-        Object.freeze({ power: 1, label: 'Full', pressureRatio: 1.552, totalTemperatureKelvin: 545, diameterMetres: 1.014 })
+        Object.freeze({ power: 0, label: 'Idle', pressureRatio: 1.171, totalTemperatureKelvin: 600, diameterMetres: .67 }),
+        Object.freeze({ power: 1, label: 'Full', pressureRatio: 1.69, totalTemperatureKelvin: 750, diameterMetres: .67 })
+      ]),
+      bypass: Object.freeze([
+        Object.freeze({ power: 0, pressureRatio: 1.092, totalTemperatureKelvin: 290, diameterMetres: .66 }),
+        Object.freeze({ power: 1, pressureRatio: 1.605, totalTemperatureKelvin: 330, diameterMetres: .66 })
       ])
     })
   })
