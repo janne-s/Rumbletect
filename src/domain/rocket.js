@@ -1,6 +1,7 @@
 import { ROCKET, TRAJECTORY } from './constants.js';
 import { SATURN_DIRECTIVITY } from './saturn-directivity.js';
 import { airDensityKilogramsPerCubicMetre, speedOfSoundMetresPerSecond } from '../shared/domain/air.js';
+import { FLAT_SURFACE } from '../shared/domain/terrain.js';
 
 const { spectrum: SPECTRUM, forward: FORWARD } = ROCKET;
 const TABLE_LOG_STROUHAL = SATURN_DIRECTIVITY.strouhal.map(Math.log);
@@ -41,8 +42,6 @@ export function directivityDecibels(strouhal, degrees) {
 
 export const totalThrustNewtons = emitter => emitter.engine.engines * emitter.engine.thrustKilonewtons * 1000;
 
-export const liftoffThrustToWeight = emitter => totalThrustNewtons(emitter) / (emitter.ascent.liftoffMassTonnes * 1000 * ROCKET.gravity);
-
 function typicalBurnSeconds(newtons) {
   const table = ROCKET.sizing.burnSeconds;
   if (newtons <= table[0][0]) return table[0][1];
@@ -60,14 +59,14 @@ function diameterPerRootNewton(newtons, propellant) {
   return small + (common - small) * share;
 }
 
-/** Class C: a rocket of this total thrust, engine count and propellant: per-engine thrust, nozzle, mass, burn and water. */
-export function sizedRocket(totalNewtons, engines, propellant, thrustToWeight = ROCKET.propellants[propellant].thrustToWeight) {
+/** Class C: a rocket of this total thrust, engine count and propellant: per-engine thrust, nozzle, burn and water. */
+export function sizedRocket(totalNewtons, engines, propellant) {
   const { exitVelocityMetresPerSecond } = ROCKET.propellants[propellant];
   const perEngine = totalNewtons / engines;
   const round = (value, digits) => +value.toPrecision(digits);
   return {
     engine: { engines, thrustKilonewtons: round(perEngine / 1000, 4), exitVelocityMetresPerSecond, exitDiameterMetres: round(diameterPerRootNewton(perEngine, propellant) * Math.sqrt(perEngine), 3) },
-    ascent: { liftoffMassTonnes: round(totalNewtons / (thrustToWeight * ROCKET.gravity) / 1000, 4), burnSeconds: typicalBurnSeconds(totalNewtons), water: totalNewtons >= ROCKET.sizing.waterFromNewtons }
+    ascent: { burnSeconds: typicalBurnSeconds(totalNewtons), water: totalNewtons >= ROCKET.sizing.waterFromNewtons }
   };
 }
 
@@ -94,28 +93,16 @@ export function directivityRow(strouhal, out, offset) {
   }
 }
 
-const categoryThrustToWeight = category => category.thrustToWeight ?? ROCKET.propellants[category.propellant].thrustToWeight;
-
-/** Class C: the thrust-to-weight of a rocket this size, between the categories' in log thrust and log ratio. */
-export function typicalThrustToWeight(newtons) {
-  const categories = ROCKET.categories;
-  if (newtons <= categories[0].newtons) return categoryThrustToWeight(categories[0]);
-  const upper = categories.findIndex(category => category.newtons >= newtons);
-  if (upper < 0) return categoryThrustToWeight(categories.at(-1));
-  const [low, high] = [categories[upper - 1], categories[upper]];
-  const share = Math.log(newtons / low.newtons) / Math.log(high.newtons / low.newtons);
-  return categoryThrustToWeight(low) * (categoryThrustToWeight(high) / categoryThrustToWeight(low)) ** share;
-}
-
-/** A rocket set to a category's thrust, engines, propellant, burn, launch angle and efficiency; the ascent's schedule kept. */
+/** A rocket set to a category's thrust, engines, propellant, efficiency and ascent; the throttle schedule kept. */
 export function categoryRocket(item, category) {
-  const sized = sizedRocket(category.newtons, category.engines, category.propellant, categoryThrustToWeight(category));
+  const sized = sizedRocket(category.newtons, category.engines, category.propellant);
+  const { turnStartPercent, turnLengthPercent } = ROCKET.defaultAscent;
   return {
     ...item,
     propellant: category.propellant,
     launchDegrees: category.launchDegrees,
     engine: { ...item.engine, ...sized.engine, efficiencyPercent: category.efficiencyPercent },
-    ascent: { ...item.ascent, ...sized.ascent, burnSeconds: category.burnSeconds }
+    ascent: { ...item.ascent, ...sized.ascent, burnSeconds: category.burnSeconds, turnStartPercent, turnLengthPercent, ...category.flight }
   };
 }
 
@@ -151,13 +138,19 @@ export function throttleAt(ascent, secondsAfterRelease) {
   return 1 - (1 - ascent.throttlePercent / 100) * (down - up);
 }
 
+/** Class C, decision 9: the share of the burnout speed reached at a share of the burn, the rocket equation's shape. */
+export function speedShare(accelerationPercent, burnShare) {
+  const fraction = ROCKET.lateAccelerationFraction * accelerationPercent / 100;
+  return fraction < 1e-9 ? burnShare : Math.log(1 - fraction * burnShare) / Math.log(1 - fraction);
+}
+
 /**
- * Class C: the ascent in the vertical plane of the launch heading, liquid engines held on the pad for `ROCKET.holdSeconds`, then a
- * rise at the launch angle, guided until `ROCKET.guidedMetresPerSecond`, a pitch kick and a gravity turn under thrust, mass flow F/U_e and gravity, no drag and a flat Earth.
- * The engine stops early when its propellant runs out. The path is sampled like `flightPath` and ends at the burn's end.
+ * Class C, decision 9: the authored ascent in the vertical plane of the launch heading. Liquid engines are held on the pad
+ * for `ROCKET.holdSeconds`; then the speed rises to the burnout speed as `speedShare`, and the flight-path angle turns from
+ * the launch angle by `bendDegrees` between the turn's start and end, as shares of the distance flown. The path is sampled
+ * like `flightPath` and ends at the burn's end or where it comes down to the ground of `surface`.
  */
-export function ascentPath(emitter) {
-  const vehicle = vehicleOf(emitter);
+export function ascentPath(emitter, surface = FLAT_SURFACE) {
   const { ascent } = emitter;
   const hold = emitter.propellant === 'solid' ? 0 : ROCKET.holdSeconds;
   const total = hold + ascent.burnSeconds;
@@ -166,35 +159,48 @@ export function ascentPath(emitter) {
   const heading = emitter.headingDegrees * Math.PI / 180;
   const along = { x: Math.sin(heading), y: Math.cos(heading) };
   const pad = emitter.startMetres;
-  const path = { seconds: [], x: [], y: [], z: [], vx: [], vy: [], vz: [], speed: [], step, throttle: [], heldSeconds: hold, launchAxis: { x: along.x * Math.cos(emitter.launchDegrees * Math.PI / 180), y: along.y * Math.cos(emitter.launchDegrees * Math.PI / 180), z: Math.sin(emitter.launchDegrees * Math.PI / 180) } };
-  const kickRate = ascent.pitchKickDegrees * Math.PI / 180 / ROCKET.pitchKickSeconds;
-  const dt = ROCKET.integrationSeconds;
   const launch = emitter.launchDegrees * Math.PI / 180;
-  let [height, range, speed, gamma, mass, clock] = [0, 0, 0, launch, ascent.liftoffMassTonnes * 1000, 0];
-  const dryMass = mass * ROCKET.dryMassShare;
-  const derivative = (t, h, v, g, m) => {
-    const throttle = m > dryMass ? throttleAt(ascent, t) : 0;
-    const thrust = vehicle.totalThrustNewtons * throttle;
-    const kicking = t >= ascent.pitchKickAtSeconds && t < ascent.pitchKickAtSeconds + ROCKET.pitchKickSeconds;
-    const turn = kicking ? -kickRate : (g < Math.PI / 2 - 1e-9 && v > ROCKET.guidedMetresPerSecond ? -ROCKET.gravity * Math.cos(g) / v : 0);
-    return { dv: thrust / m - ROCKET.gravity * Math.sin(g), dg: turn, dm: -thrust / vehicle.exitVelocityMetresPerSecond, dh: v * Math.sin(g), dr: v * Math.cos(g) };
+  const bend = ascent.bendDegrees * Math.PI / 180;
+  const speedAt = flying => ascent.burnoutMetresPerSecond * speedShare(ascent.accelerationPercent, Math.min(1, flying / ascent.burnSeconds));
+  const fine = ROCKET.pathSeconds;
+  let length = 0;
+  for (let clock = 0; clock < ascent.burnSeconds; clock += fine) {
+    const h = Math.min(fine, ascent.burnSeconds - clock);
+    length += speedAt(clock + h / 2) * h;
+  }
+  const turnFrom = ascent.turnStartPercent / 100;
+  const turnTo = turnFrom + (1 - turnFrom) * ascent.turnLengthPercent / 100;
+  const angleAt = flown => launch - bend * smoothStep((flown / Math.max(length, 1e-9) - turnFrom) / Math.max(turnTo - turnFrom, 1e-9));
+  const path = {
+    seconds: [], x: [], y: [], z: [], vx: [], vy: [], vz: [], speed: [], step, throttle: [], heldSeconds: hold, groundSeconds: null,
+    turnMetres: [turnFrom * length, turnTo * length], flownMetres: [],
+    launchAxis: { x: along.x * Math.cos(launch), y: along.y * Math.cos(launch), z: Math.sin(launch) }
   };
+  let [range, height, flown, clock] = [0, 0, 0, 0];
   for (let index = 0; index <= steps; index += 1) {
     const t = index * step;
     const flying = Math.max(0, t - hold);
     while (clock < flying - 1e-12) {
-      const h = Math.min(dt, flying - clock);
-      const a = derivative(clock, height, speed, gamma, mass);
-      const b = derivative(clock + h, height + h * a.dh, Math.max(0, speed + h * a.dv), gamma + h * a.dg, mass + h * a.dm);
-      height += h * (a.dh + b.dh) / 2; range += h * (a.dr + b.dr) / 2;
-      speed = Math.max(0, speed + h * (a.dv + b.dv) / 2); gamma += h * (a.dg + b.dg) / 2; mass += h * (a.dm + b.dm) / 2;
+      const h = Math.min(fine, flying - clock);
+      const speed = speedAt(clock + h / 2);
+      const angle = angleAt(flown + speed * h / 2);
+      range += speed * Math.cos(angle) * h;
+      height += speed * Math.sin(angle) * h;
+      flown += speed * h;
       clock += h;
     }
-    const horizontal = speed * Math.cos(gamma);
+    const speed = speedAt(flying);
+    const angle = angleAt(flown);
+    const point = { x: pad.x + along.x * range, y: pad.y + along.y * range, z: pad.z + height };
+    if (index > 0 && Math.sin(angle) < 0 && point.z <= surface.heightAt(point.x, point.y)) {
+      path.groundSeconds = flying;
+      break;
+    }
     path.seconds.push(emitter.startSeconds + t);
-    path.x.push(pad.x + along.x * range); path.y.push(pad.y + along.y * range); path.z.push(pad.z + height);
-    path.vx.push(along.x * horizontal); path.vy.push(along.y * horizontal); path.vz.push(speed * Math.sin(gamma)); path.speed.push(speed);
-    path.throttle.push(t < hold ? 1 : mass > dryMass ? throttleAt(ascent, flying) : 0);
+    path.x.push(point.x); path.y.push(point.y); path.z.push(point.z);
+    path.vx.push(along.x * speed * Math.cos(angle)); path.vy.push(along.y * speed * Math.cos(angle)); path.vz.push(speed * Math.sin(angle)); path.speed.push(speed);
+    path.flownMetres.push(flown);
+    path.throttle.push(t < hold ? 1 : throttleAt(ascent, flying));
   }
   return path;
 }

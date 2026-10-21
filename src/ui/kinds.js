@@ -1,18 +1,21 @@
 import { ENGINE } from '../domain/constants.js';
 import { jetOfEngine, powerLabel, powerOfEngine } from '../domain/engine.js';
 import { speedOfSound } from '../domain/jet.js';
-import { defaultFormation, defaultJet, defaultRocket, defaultSalvo, defaultVolcano, PROPELLANTS } from '../domain/scene.js';
+import { defaultFormation, defaultJet, defaultRocket, defaultSalvo, defaultVolcano, PROPELLANTS, ROCKET_ASCENT_NUMBERS } from '../domain/scene.js';
 import { RENDER, ROCKET } from '../domain/constants.js';
 import { heardCounts } from '../domain/rocket-grains.js';
-import { liftoffThrustToWeight, peakFrequencyHz, sizedRocket, soundPowerWatts, totalThrustNewtons, vehicleOf } from '../domain/rocket.js';
+import { peakFrequencyHz, sizedRocket, soundPowerWatts, totalThrustNewtons, vehicleOf } from '../domain/rocket.js';
 import { newSeed } from '../shared/domain/random.js';
 import { formatMetres } from '../shared/ui/canvas.js';
 import { checkboxField, numberField, pointFields, seedField, selectField, textField } from './fields.js';
 import { cachedSoundTracks, cachedTracks } from './geometry-cache.js';
 import { macrosFor, rocketMacros, thrustLabel, volcanoMacros } from './macros.js';
 import { volcanoCategory, volcanoSourcePosition } from '../domain/volcano.js';
-import { machCone } from '../shared/domain/trajectory.js';
+import { machCone, soundSpeedAt } from '../shared/domain/trajectory.js';
 import { frontProfile } from '../shared/domain/refraction.js';
+
+/** The first sample at or above the speed of sound of the air at its height, or −1. */
+export const supersonicIndex = (path, air) => path.speed.findIndex((speed, index) => speed >= soundSpeedAt(air, path.z[index]));
 
 const flownSeconds = (emitter, scene) => { const [path] = cachedTracks(emitter, scene); return Math.round((path.seconds.length - 1) * path.step); };
 
@@ -81,7 +84,7 @@ function warnings(emitter, scene) {
   const sound = speedOfSound(scene.air.temperatureCelsius);
   const jet = jetOfEngine(emitter.engine, scene.air.temperatureCelsius).velocityMetresPerSecond;
   const at = index => `${(index * path.step).toFixed(1)} s`;
-  const supersonic = path.speed.findIndex(speed => speed >= sound);
+  const supersonic = supersonicIndex(path, scene.air);
   const outrun = path.speed.findIndex(speed => speed >= jet);
   return [
     ...(supersonic >= 0 ? [`Passes the speed of sound at ${at(supersonic)}; its boom is not heard here`] : []),
@@ -93,17 +96,15 @@ function rocketSummary(emitter) {
   const vehicle = vehicleOf(emitter);
   const engines = emitter.engine.engines === 1 ? '1 engine' : `${emitter.engine.engines} engines`;
   const salvo = emitter.kind === 'salvo' ? ` · ${emitter.roundCount} rounds over ${emitter.salvoSeconds} s` : '';
-  return `${ROCKET.propellants[emitter.propellant].label}, ${engines}, ${thrustLabel(totalThrustNewtons(emitter))}, thrust-to-weight ${liftoffThrustToWeight(emitter).toFixed(1)} · ${(10 * Math.log10(soundPowerWatts(vehicle) / 1e-12)).toFixed(0)} dB power · burns ${emitter.ascent.burnSeconds} s${salvo}`;
+  return `${ROCKET.propellants[emitter.propellant].label}, ${engines}, ${thrustLabel(totalThrustNewtons(emitter))} · ${(10 * Math.log10(soundPowerWatts(vehicle) / 1e-12)).toFixed(0)} dB power · burns ${emitter.ascent.burnSeconds} s to ${kilometresPerHour(emitter.ascent.burnoutMetresPerSecond)} km/h${salvo}`;
 }
 
 function rocketDetails(emitter, { updateEmitter }) {
   const set = key => value => updateEmitter(emitter.id, item => { item[key] = value; });
   const setIn = (group, key) => value => updateEmitter(emitter.id, item => { item[group] = { ...item[group], [key]: value }; });
   const choose = propellant => updateEmitter(emitter.id, item => {
-    const sized = sizedRocket(totalThrustNewtons(item), item.engine.engines, propellant);
     item.propellant = propellant;
-    item.engine = { ...item.engine, exitVelocityMetresPerSecond: sized.engine.exitVelocityMetresPerSecond };
-    item.ascent = { ...item.ascent, liftoffMassTonnes: sized.ascent.liftoffMassTonnes };
+    item.engine = { ...item.engine, ...sizedRocket(totalThrustNewtons(item), item.engine.engines, propellant).engine };
   });
   const section = (title, build) => ({ title, build });
   const vehicle = vehicleOf(emitter);
@@ -125,7 +126,7 @@ function rocketDetails(emitter, { updateEmitter }) {
       container.append(note);
     }),
     section('Ascent', container => {
-      ['liftoffMassTonnes', 'burnSeconds', 'pitchKickAtSeconds', 'pitchKickDegrees', 'throttleDownSeconds', 'throttleUpSeconds', 'throttlePercent'].forEach(key => numberField(container, { key, value: emitter.ascent[key], onCommit: setIn('ascent', key) }));
+      ROCKET_ASCENT_NUMBERS.forEach(key => numberField(container, { key, value: emitter.ascent[key], onCommit: setIn('ascent', key) }));
       checkboxField(container, { label: 'Water on the pad', value: emitter.ascent.water, reliability: 'B', onCommit: setIn('ascent', 'water') });
     }),
     ...(emitter.kind === 'salvo' ? [section('Salvo', container => SALVO_LAYOUT.forEach(key => numberField(container, { key, value: emitter[key], onCommit: set(key) })))] : [])
@@ -137,13 +138,15 @@ const SALVO_LAYOUT = Object.freeze(['roundCount', 'salvoSize', 'salvoSeconds', '
 function rocketWarnings(emitter, scene) {
   const paths = cachedTracks(emitter, scene);
   const [path] = paths;
-  const sound = speedOfSound(scene.air.temperatureCelsius);
-  const supersonic = path.speed.findIndex(speed => speed >= sound);
+  const supersonic = supersonicIndex(path, scene.air);
   const counts = heardCounts(paths, scene);
+  const grounded = paths.filter(round => round.groundSeconds !== null).length;
   const cut = counts.filter((count, index) => count < paths[index].seconds.length).length;
   const beyond = `beyond the ${RENDER.maximumSeconds} s render`;
   return [
     ...(supersonic >= 0 ? [`Passes the speed of sound at T+${(supersonic * path.step - path.heldSeconds).toFixed(0)} s; its boom is not heard here`] : []),
+    ...(paths.length === 1 && grounded ? [`Hits the ground at T+${path.groundSeconds.toFixed(0)} s`] : []),
+    ...(paths.length > 1 && grounded ? [`${grounded} of ${paths.length} rounds hit the ground`] : []),
     ...(paths.length === 1 && cut ? [`Heard until T+${((counts[0] - 1) * path.step - path.heldSeconds).toFixed(0)} s; later sound arrives ${beyond}`] : []),
     ...(paths.length > 1 && cut ? [`${cut} of ${paths.length} rounds are cut short; later sound arrives ${beyond}`] : [])
   ];
@@ -171,7 +174,7 @@ function volcanoDetails(emitter, { updateEmitter }) {
   ];
 }
 
-export const isSupersonic = (emitter, scene) => cachedTracks(emitter, scene)[0].speed.some(speed => speed >= speedOfSound(scene.air.temperatureCelsius));
+export const isSupersonic = (emitter, scene) => supersonicIndex(cachedTracks(emitter, scene)[0], scene.air) >= 0;
 
 const VOLCANO_PANEL = Object.freeze({
   label: () => 'Volcano',

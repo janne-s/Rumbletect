@@ -1,5 +1,5 @@
 import { MODEL_VERSION, ROCKET, VOLCANO } from './constants.js';
-import { categoryRocket, sizedRocket } from './rocket.js';
+import { categoryRocket } from './rocket.js';
 import { ENGINE_CLASSES, engineOfClass } from './engine.js';
 import { createScene } from '../shared/domain/scene.js';
 
@@ -24,10 +24,12 @@ const RUMBLETECT_PARAMETERS = Object.freeze({
   exitVelocityMetresPerSecond: { minimum: 500, maximum: 5000, unit: 'm/s', label: 'Exhaust velocity', reliability: 'B' },
   exitDiameterMetres: { minimum: .0001, maximum: 10, unit: 'm', label: 'Nozzle exit diameter', reliability: 'B' },
   efficiencyPercent: { minimum: .05, maximum: 1, unit: '%', label: 'Acoustic efficiency', reliability: 'B' },
-  liftoffMassTonnes: { minimum: .00001, maximum: 10000, unit: 't', label: 'Liftoff mass', reliability: 'C' },
   burnSeconds: { minimum: 1, maximum: 590, unit: 's', label: 'Burn time', reliability: 'C' },
-  pitchKickAtSeconds: { minimum: 0, maximum: 120, unit: 's', label: 'Pitch kick at', reliability: 'C' },
-  pitchKickDegrees: { minimum: 0, maximum: 45, unit: '°', label: 'Pitch kick', reliability: 'C' },
+  burnoutMetresPerSecond: { minimum: 1, maximum: 8000, unit: 'm/s', label: 'Burnout speed', reliability: 'C' },
+  accelerationPercent: { minimum: 0, maximum: 100, unit: '%', label: 'Acceleration', reliability: 'C' },
+  bendDegrees: { minimum: 0, maximum: 180, unit: '°', label: 'Bend', reliability: 'C' },
+  turnStartPercent: { minimum: 0, maximum: 100, unit: '%', label: 'Turn starts', reliability: 'C' },
+  turnLengthPercent: { minimum: 1, maximum: 100, unit: '%', label: 'Turn length', reliability: 'C' },
   throttleDownSeconds: { minimum: 0, maximum: 590, unit: 's', label: 'Throttle down at', reliability: 'C' },
   throttleUpSeconds: { minimum: 0, maximum: 590, unit: 's', label: 'Throttle up at', reliability: 'C' },
   throttlePercent: { minimum: 30, maximum: 100, unit: '%', label: 'Throttle', reliability: 'C' },
@@ -80,18 +82,17 @@ export function defaultJet(id = 'jet-1', name = 'Jet', seed = 20261015) {
 
 export const defaultFormation = (id = 'formation-1', name = 'Formation', seed = 20261014) => ({ ...defaultJet(id, name, seed), kind: 'formation', ...FORMATION_LAYOUT });
 
+/** Falcon 9's size, propellant and ascent: the Medium launcher. */
 export function defaultRocket(id = 'rocket-1', name = 'Rocket', seed = 20261017) {
-  const sized = sizedRocket(7.6e6, 9, 'kerosene');
-  return {
+  const medium = ROCKET.categories.find(category => category.label === 'Medium launcher');
+  return categoryRocket({
     id, name, kind: 'rocket', enabled: true, seed,
-    propellant: 'kerosene',
     startSeconds: 0,
     startMetres: { x: 0, y: 0, z: 10 },
     headingDegrees: 90,
-    launchDegrees: 90,
-    engine: { ...sized.engine, efficiencyPercent: .3 },
-    ascent: { ...ROCKET.defaultAscent, ...sized.ascent }
-  };
+    engine: {},
+    ascent: { ...ROCKET.defaultAscent }
+  }, medium);
 }
 
 export function defaultSalvo(id = 'salvo-1', name = 'Salvo', seed = 20261012) {
@@ -126,7 +127,7 @@ function readVolcano(value, { point, numbers }, path) {
 export const emitterAnchor = emitter => emitter.ventMetres ?? emitter.startMetres;
 
 const ROCKET_ENGINE_NUMBERS = Object.freeze(['engines', 'thrustKilonewtons', 'exitVelocityMetresPerSecond', 'exitDiameterMetres', 'efficiencyPercent']);
-const ROCKET_ASCENT_NUMBERS = Object.freeze(['liftoffMassTonnes', 'burnSeconds', 'pitchKickAtSeconds', 'pitchKickDegrees', 'throttleDownSeconds', 'throttleUpSeconds', 'throttlePercent']);
+export const ROCKET_ASCENT_NUMBERS = Object.freeze(['burnSeconds', 'burnoutMetresPerSecond', 'accelerationPercent', 'bendDegrees', 'turnStartPercent', 'turnLengthPercent', 'throttleDownSeconds', 'throttleUpSeconds', 'throttlePercent']);
 
 function readRocket(value, { check, point, numbers }, path) {
   check(PROPELLANTS.includes(value.propellant), `${path}.propellant is not supported.`);

@@ -2,7 +2,7 @@ import { ENGINE_CLASSES, engineAtPower, engineOfClass, powerLabel, powerOfEngine
 import { PARAMETERS } from '../domain/scene.js';
 import { ENGINE, ROCKET, VOLCANO } from '../domain/constants.js';
 import { volcanoCategory } from '../domain/volcano.js';
-import { categoryRocket, nearestCategory, sizedRocket, typicalThrustToWeight } from '../domain/rocket.js';
+import { categoryRocket, nearestCategory, sizedRocket } from '../domain/rocket.js';
 import { clamp01, logPosition, logValue, METRES, metres } from '../shared/ui/macros.js';
 
 const range = key => [PARAMETERS[key].minimum, PARAMETERS[key].maximum];
@@ -145,11 +145,11 @@ const rocketCategory = {
 const SIZE_SPAN = ROCKET.sizing.totalNewtons;
 const totalOf = item => item.engine.engines * item.engine.thrustKilonewtons * 1000;
 
-/** A new size keeps the rocket's burn time and takes the thrust-to-weight typical of its size; Category sets a typical burn. */
+/** A new size changes the engine and the pad's water, not the flight; Category sets a typical burn and flight. */
 const resize = (item, newtons) => {
-  const sized = sizedRocket(newtons, item.engine.engines, item.propellant, typicalThrustToWeight(newtons));
+  const sized = sizedRocket(newtons, item.engine.engines, item.propellant);
   item.engine = { ...item.engine, ...sized.engine };
-  item.ascent = { ...item.ascent, ...sized.ascent, burnSeconds: item.ascent.burnSeconds };
+  item.ascent = { ...item.ascent, water: sized.ascent.water };
 };
 
 const rocketSize = {
@@ -168,10 +168,8 @@ const rocketPropellant = {
   write: (item, t) => {
     const propellant = PROPELLANT_KEYS[Math.round(t * (PROPELLANT_KEYS.length - 1))];
     if (propellant === item.propellant) return;
-    const sized = sizedRocket(totalOf(item), item.engine.engines, propellant);
     item.propellant = propellant;
-    item.engine = { ...item.engine, exitVelocityMetresPerSecond: sized.engine.exitVelocityMetresPerSecond };
-    item.ascent = { ...item.ascent, liftoffMassTonnes: sized.ascent.liftoffMassTonnes };
+    item.engine = { ...item.engine, ...sizedRocket(totalOf(item), item.engine.engines, propellant).engine };
   },
   show: item => ROCKET.propellants[item.propellant].label
 };
@@ -186,12 +184,42 @@ const rocketBurn = {
   entry: { unit: 's', get: item => item.ascent.burnSeconds, set: (item, value) => { item.ascent = { ...item.ascent, burnSeconds: value }; } }
 };
 
-const rocketKick = {
-  label: 'Pitch kick',
-  read: item => item.ascent.pitchKickDegrees / 10,
-  write: (item, t) => { item.ascent = { ...item.ascent, pitchKickDegrees: +(t * 10).toFixed(1) }; },
-  show: item => `${item.ascent.pitchKickDegrees}°`,
-  entry: { unit: '°', get: item => item.ascent.pitchKickDegrees, set: (item, value) => { item.ascent = { ...item.ascent, pitchKickDegrees: value }; } }
+const setAscent = (item, key, value) => { item.ascent = { ...item.ascent, [key]: value }; };
+
+const rocketBend = {
+  label: 'Bend',
+  read: item => item.ascent.bendDegrees / range('bendDegrees')[1],
+  write: (item, t) => setAscent(item, 'bendDegrees', Math.round(t * range('bendDegrees')[1])),
+  show: item => `${item.ascent.bendDegrees}°`,
+  entry: { unit: '°', get: item => item.ascent.bendDegrees, set: (item, value) => setAscent(item, 'bendDegrees', value) }
+};
+
+const rocketTurnStart = {
+  label: 'Turn starts',
+  read: item => item.ascent.turnStartPercent / 100,
+  write: (item, t) => setAscent(item, 'turnStartPercent', Math.round(t * 100)),
+  show: item => `${item.ascent.turnStartPercent} %`,
+  entry: { unit: '%', get: item => item.ascent.turnStartPercent, set: (item, value) => setAscent(item, 'turnStartPercent', value) }
+};
+
+const kilometresPerHour = metresPerSecond => `${Math.round(metresPerSecond * 3.6)} km/h`;
+const SPEED = Object.freeze({ factors: Object.freeze({ 'km/h': 1 / 3.6, 'm/s': 1 }), show: kilometresPerHour });
+const BURNOUT_SPAN = Object.freeze([10, 8000]);
+
+const rocketBurnout = {
+  label: 'Burnout speed',
+  read: item => clamp01(logPosition(Math.max(BURNOUT_SPAN[0], item.ascent.burnoutMetresPerSecond), BURNOUT_SPAN)),
+  write: (item, t) => setAscent(item, 'burnoutMetresPerSecond', +logValue(t, BURNOUT_SPAN).toPrecision(2)),
+  show: item => kilometresPerHour(item.ascent.burnoutMetresPerSecond),
+  entry: { units: SPEED, get: item => item.ascent.burnoutMetresPerSecond, set: (item, value) => setAscent(item, 'burnoutMetresPerSecond', value) }
+};
+
+const rocketAcceleration = {
+  label: 'Acceleration',
+  read: item => item.ascent.accelerationPercent / 100,
+  write: (item, t) => setAscent(item, 'accelerationPercent', Math.round(t * 100)),
+  show: item => `${item.ascent.accelerationPercent} %`,
+  entry: { unit: '%', get: item => item.ascent.accelerationPercent, set: (item, value) => setAscent(item, 'accelerationPercent', value) }
 };
 
 const rocketLaunch = {
@@ -219,7 +247,7 @@ const salvoDuration = {
 };
 
 export function rocketMacros(emitter, { onset: withOnset = false } = {}) {
-  const list = [...(emitter.kind === 'salvo' ? [salvoRounds, salvoDuration] : []), rocketCategory, rocketSize, rocketPropellant, flightHeading, rocketLaunch, rocketBurn, rocketKick];
+  const list = [...(emitter.kind === 'salvo' ? [salvoRounds, salvoDuration] : []), rocketCategory, rocketSize, rocketPropellant, flightHeading, rocketLaunch, rocketBend, rocketTurnStart, rocketBurn, rocketBurnout, rocketAcceleration];
   return withOnset ? [...list, onset] : list;
 }
 

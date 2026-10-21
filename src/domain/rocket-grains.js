@@ -4,6 +4,7 @@ import { ascentPath, rocketSource } from './rocket.js';
 import { salvoRounds } from './salvo.js';
 import { waveformShape } from './waveform.js';
 import { speedOfSoundMetresPerSecond } from '../shared/domain/air.js';
+import { terrainSurface } from '../shared/domain/terrain.js';
 
 const ROCKET_SHAPE = waveformShape({ skewness: ROCKET.skewness, kurtosis: ROCKET.kurtosis });
 
@@ -31,7 +32,8 @@ export function heardCounts(paths, scene) {
 /** Each round's ascent, cut where its sound would arrive after the render's span; unheard rounds dropped. */
 export function heardAscents(emitter, scene) {
   const rounds = salvoRounds(emitter);
-  const paths = rounds.map(ascentPath);
+  const surface = terrainSurface(scene.terrain);
+  const paths = rounds.map(round => ascentPath(round, surface));
   const counts = heardCounts(paths, scene);
   return rounds.flatMap((round, index) => (counts[index] > 1 ? [{ round, path: kept(paths[index], counts[index]) }] : []));
 }

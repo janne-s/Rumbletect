@@ -1,6 +1,33 @@
-import { VIEW } from '../domain/constants.js';
+import { TRACK_MARKS, VIEW } from '../domain/constants.js';
 import { cachedTracks } from './geometry-cache.js';
 import { volcanoSourcePosition } from '../domain/volcano.js';
+import { supersonicIndex } from './kinds.js';
+
+const pointOf = (path, index) => ({ x: path.x[index], y: path.y[index], z: path.z[index] });
+
+/** A short tick across the drawn path at the sample where it reaches the speed of sound. */
+function drawSoundBarrier(context, path, frame, air) {
+  const index = supersonicIndex(path, air);
+  if (index <= 0) return;
+  const p = frame.project(pointOf(path, index));
+  const q = frame.project(pointOf(path, Math.min(path.x.length - 1, index + 1)));
+  const o = frame.project(pointOf(path, index - 1));
+  const [dx, dy] = [q.x - o.x, q.y - o.y];
+  const length = Math.hypot(dx, dy);
+  if (!(length > 0)) return;
+  const [nx, ny] = [-dy / length * TRACK_MARKS.barrierPixels, dx / length * TRACK_MARKS.barrierPixels];
+  context.beginPath(); context.moveTo(p.x - nx, p.y - ny); context.lineTo(p.x + nx, p.y + ny); context.stroke();
+}
+
+/** Small rings where a rocket's turn starts and ends along the distance flown. */
+function drawTurn(context, path, frame) {
+  for (const metres of path.turnMetres) {
+    const index = path.flownMetres.findIndex(flown => flown >= metres);
+    if (index < 0) continue;
+    const p = frame.project(pointOf(path, index));
+    context.beginPath(); context.arc(p.x, p.y, TRACK_MARKS.turnRadius, 0, 2 * Math.PI); context.stroke();
+  }
+}
 
 export function kindViews() {
   const jet = {
@@ -30,6 +57,8 @@ export function kindViews() {
           if (index === 0) context.moveTo(p.x, p.y); else context.lineTo(p.x, p.y);
         }
         context.stroke();
+        drawSoundBarrier(context, path, frame, scene.air);
+        if (emitter.ascent?.bendDegrees > 0) drawTurn(context, path, frame);
       }
       for (const body of state?.flights?.get(emitter.id) ?? []) {
         const p = frame.project(body);

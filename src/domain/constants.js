@@ -2,7 +2,10 @@ export * from '../shared/domain/constants.js';
 
 export const APP_VERSION = '0.1.0';
 
-export const MODEL_VERSION = '0.1.0';
+export const MODEL_VERSION = '0.2.0';
+
+/** Marks on a drawn path: a tick where it reaches the speed of sound, rings where a rocket's turn starts and ends. */
+export const TRACK_MARKS = Object.freeze({ barrierPixels: 4, turnRadius: 3 });
 
 export const JET = Object.freeze({
   /** Class B: Tam, Golebiowski & Seiner 1996, eqs. 2 and 7–10, dB per 1 Hz scaled to r = D_j (their figures plot 100 D_j, 40 dB lower); M_j 1.37–2.0, T_r/T∞ 0.98–4.89. */
@@ -202,27 +205,26 @@ export const ROCKET = Object.freeze({
   padLossDecibels: 6,
   /** Class B: water deluge reduces launch noise by 3–5 dB (Gee, Lubert & James 2024), applied to the pad phase. */
   waterDecibels: 4,
-  /** Class C: pitch kick and throttle ramps take this long. */
-  pitchKickSeconds: 4,
-  /** Class C: a launch rail or tube holds the angle until the rocket is this fast; then gravity turns it. */
-  guidedMetresPerSecond: 30,
   throttleRampSeconds: 3,
-  integrationSeconds: .02,
-  /** Class C: the engine stops when only this share of the liftoff mass is left. */
-  dryMassShare: .1,
+  /**
+   * Class C, decision 9: the authored ascent. Speed follows the rocket equation's shape, v = V ln(1 − k t/T) / ln(1 − k),
+   * k this many times the Acceleration share, as a propellant mass fraction; the path is sampled this often to place
+   * the turn by distance flown.
+   */
+  lateAccelerationFraction: .97,
+  pathSeconds: .05,
   /** Echoes and scattering arrive after the direct sound; the ascent ends this much before the render's span would. */
   renderMarginSeconds: 40,
-  gravity: 9.80665,
   /**
    * Exhaust velocity by propellant, class B: solid RSRM ≈ 2 500 m/s and GEM 63XL ≈ 2 470 m/s; kerosene Merlin 1D 2 984 m/s
    * (Kellison et al. 2026); methane Raptor 2 3 414 m/s (Gee et al. 2025) and BE-4 ≈ 3 180 m/s; hydrogen near the top of
-   * the typical 2 400–4 000 m/s (Lubert et al. 2022, table I). Liftoff thrust-to-weight, class C.
+   * the typical 2 400–4 000 m/s (Lubert et al. 2022, table I).
    */
   propellants: Object.freeze({
-    solid: Object.freeze({ label: 'Solid', exitVelocityMetresPerSecond: 2500, thrustToWeight: 3 }),
-    kerosene: Object.freeze({ label: 'Kerosene', exitVelocityMetresPerSecond: 2984, thrustToWeight: 1.36 }),
-    methane: Object.freeze({ label: 'Methane', exitVelocityMetresPerSecond: 3300, thrustToWeight: 1.45 }),
-    hydrogen: Object.freeze({ label: 'Hydrogen', exitVelocityMetresPerSecond: 4000, thrustToWeight: 1.3 })
+    solid: Object.freeze({ label: 'Solid', exitVelocityMetresPerSecond: 2500 }),
+    kerosene: Object.freeze({ label: 'Kerosene', exitVelocityMetresPerSecond: 2984 }),
+    methane: Object.freeze({ label: 'Methane', exitVelocityMetresPerSecond: 3300 }),
+    hydrogen: Object.freeze({ label: 'Hydrogen', exitVelocityMetresPerSecond: 4000 })
   }),
   /**
    * Class C: sizing from total thrust. The exit diameter grows as √F (the same chamber pressure and expansion), its
@@ -247,22 +249,27 @@ export const ROCKET = Object.freeze({
    * SATURN's 0.4 % for Flight 6 (B); heavy three medium cores; the smaller ones typical, class C: a 10 N hobby motor, an
    * artillery rocket off a tilted tube, a sounding rocket's booster (Terrier class), a small four-engine launcher like Firefly Alpha (0.73 MN).
    * The artillery rocket is a 122 mm Grad (BM-21, APR-40, M-92 Vulkan; the owner's recordings 10 and 11): about 66 kg with
-   * 20 kg of propellant burnt in 2 s to about 690 m/s, so about 21 kN and a thrust-to-weight of 33. The heavy artillery
-   * rocket is GMLRS-sized (about 300 kg); its thrust-to-weight lets a 4 s burn reach about Mach 2.5, as GMLRS and ATACMS do; the sounding
-   * rocket's a Terrier booster's 6 s burn to about Mach 3 (C).
+   * 20 kg of propellant burnt in 2 s to about 690 m/s. The heavy artillery rocket is GMLRS-sized, a 4 s burn to about
+   * Mach 2.5 as GMLRS and ATACMS; the sounding rocket a Terrier booster's 6 s burn to about Mach 3; model rockets reach
+   * about 100 m/s. Each flies its category's ascent (decision 9, C): the launchers' fitted to Falcon 9's webcast
+   * telemetry (T+30 s 2.1 km and 148 m/s against 1.93 km and 146 m/s, T+60 s 9.2 km and 336 m/s against 8.91 km and
+   * 337 m/s, T+100 s 25.4 km and 712 m/s against 25.49 km and 874 m/s), Starship's staging near 5 500 km/h.
    */
   categories: Object.freeze([
-    Object.freeze({ label: 'Hobby', newtons: 10, engines: 1, propellant: 'solid', burnSeconds: 2, launchDegrees: 85, efficiencyPercent: .3 }),
-    Object.freeze({ label: 'Artillery', newtons: 21e3, engines: 1, propellant: 'solid', burnSeconds: 2, launchDegrees: 50, efficiencyPercent: .3, thrustToWeight: 33 }),
-    Object.freeze({ label: 'Heavy artillery', newtons: 50e3, engines: 1, propellant: 'solid', burnSeconds: 4, launchDegrees: 50, efficiencyPercent: .3, thrustToWeight: 20 }),
-    Object.freeze({ label: 'Sounding', newtons: 250e3, engines: 1, propellant: 'solid', burnSeconds: 6, launchDegrees: 85, efficiencyPercent: .3, thrustToWeight: 15 }),
-    Object.freeze({ label: 'Small launcher', newtons: .73e6, engines: 4, propellant: 'kerosene', burnSeconds: 160, launchDegrees: 90, efficiencyPercent: .3 }),
-    Object.freeze({ label: 'Medium launcher', newtons: 7.6e6, engines: 9, propellant: 'kerosene', burnSeconds: 150, launchDegrees: 90, efficiencyPercent: .3 }),
-    Object.freeze({ label: 'Heavy launcher', newtons: 22.8e6, engines: 27, propellant: 'kerosene', burnSeconds: 150, launchDegrees: 90, efficiencyPercent: .3 }),
-    Object.freeze({ label: 'Super-heavy', newtons: 74.4e6, engines: 33, propellant: 'methane', burnSeconds: 160, launchDegrees: 90, efficiencyPercent: .4 })
+    Object.freeze({ label: 'Hobby', newtons: 10, engines: 1, propellant: 'solid', burnSeconds: 2, launchDegrees: 85, efficiencyPercent: .3, flight: Object.freeze({ burnoutMetresPerSecond: 80, accelerationPercent: 0, bendDegrees: 0 }) }),
+    Object.freeze({ label: 'Artillery', newtons: 21e3, engines: 1, propellant: 'solid', burnSeconds: 2, launchDegrees: 50, efficiencyPercent: .3, flight: Object.freeze({ burnoutMetresPerSecond: 690, accelerationPercent: 31, bendDegrees: 0 }) }),
+    Object.freeze({ label: 'Heavy artillery', newtons: 50e3, engines: 1, propellant: 'solid', burnSeconds: 4, launchDegrees: 50, efficiencyPercent: .3, flight: Object.freeze({ burnoutMetresPerSecond: 850, accelerationPercent: 35, bendDegrees: 0 }) }),
+    Object.freeze({ label: 'Sounding', newtons: 250e3, engines: 1, propellant: 'solid', burnSeconds: 6, launchDegrees: 85, efficiencyPercent: .3, flight: Object.freeze({ burnoutMetresPerSecond: 1000, accelerationPercent: 50, bendDegrees: 0 }) }),
+    Object.freeze({ label: 'Small launcher', newtons: .73e6, engines: 4, propellant: 'kerosene', burnSeconds: 160, launchDegrees: 90, efficiencyPercent: .3, flight: Object.freeze({ burnoutMetresPerSecond: 2300, accelerationPercent: 100, bendDegrees: 50 }) }),
+    Object.freeze({ label: 'Medium launcher', newtons: 7.6e6, engines: 9, propellant: 'kerosene', burnSeconds: 150, launchDegrees: 90, efficiencyPercent: .3, flight: Object.freeze({ burnoutMetresPerSecond: 2400, accelerationPercent: 100, bendDegrees: 50 }) }),
+    Object.freeze({ label: 'Heavy launcher', newtons: 22.8e6, engines: 27, propellant: 'kerosene', burnSeconds: 150, launchDegrees: 90, efficiencyPercent: .3, flight: Object.freeze({ burnoutMetresPerSecond: 2400, accelerationPercent: 100, bendDegrees: 50 }) }),
+    Object.freeze({ label: 'Super-heavy', newtons: 74.4e6, engines: 33, propellant: 'methane', burnSeconds: 160, launchDegrees: 90, efficiencyPercent: .4, flight: Object.freeze({ burnoutMetresPerSecond: 1600, accelerationPercent: 100, bendDegrees: 40 }) })
   ]),
-  /** Class C: an ascent's schedule for every size; the throttle-down follows Falcon 9's webcast telemetry (47–65 s at about 75 %). */
-  defaultAscent: Object.freeze({ pitchKickAtSeconds: 10, pitchKickDegrees: 1, throttleDownSeconds: 47, throttleUpSeconds: 65, throttlePercent: 75 }),
+  /**
+   * Class C: an ascent's schedule for every size. The throttle-down, which only changes the sound, follows Falcon 9's
+   * webcast telemetry (47–65 s at about 75 %); a turn starts 1 % along the path and takes 30 % of the rest.
+   */
+  defaultAscent: Object.freeze({ turnStartPercent: 1, turnLengthPercent: 30, throttleDownSeconds: 47, throttleUpSeconds: 65, throttlePercent: 75 }),
   /**
    * Class C: a salvo as Boomtect's barrage lays it out, salvos even over its span and each moved by up to this share of
    * their interval. A salvo defaults to a 122 mm launcher's full load, 40 Artillery rockets one at a time over 20 s (BM-21, APR-40, M-92 Vulkan).

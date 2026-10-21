@@ -2,23 +2,31 @@ import { formationJets, jetPath } from '../domain/grains.js';
 import { ascentPath, rocketSource } from '../domain/rocket.js';
 import { salvoRounds } from '../domain/salvo.js';
 import { ventPath } from '../domain/volcano.js';
-import { cached } from '../shared/ui/geometry-cache.js';
+import { cached, currentSurface } from '../shared/ui/geometry-cache.js';
 
 export { currentSurface, useTerrain } from '../shared/ui/geometry-cache.js';
 
 const tracks = new Map();
+const surfaceIds = new WeakMap();
+let surfaceCount = 0;
+const surfaceId = surface => {
+  if (!surfaceIds.has(surface)) surfaceIds.set(surface, surfaceCount += 1);
+  return surfaceIds.get(surface);
+};
 const soundTracks = new Map();
+
+const rocketTracks = (emitter, surface) => cached(tracks, emitter, [surfaceId(surface)], () => salvoRounds(emitter).map(round => ascentPath(round, surface)));
 
 export const cachedTracks = (emitter, scene) => (emitter.kind === 'volcano'
   ? cached(tracks, emitter, [], () => [ventPath(emitter)])
   : emitter.kind === 'rocket' || emitter.kind === 'salvo'
-  ? cached(tracks, emitter, [], () => salvoRounds(emitter).map(ascentPath))
+  ? rocketTracks(emitter, currentSurface())
   : cached(tracks, emitter, [scene.air, emitter.autoDuration ? scene.receivers.map(receiver => receiver.positionMetres) : null], () => formationJets(emitter).map(member => jetPath(member, scene))));
 
 export function cachedSoundTracks(emitter, scene) {
   const paths = cachedTracks(emitter, scene);
   if (emitter.kind !== 'rocket' && emitter.kind !== 'salvo') return paths;
-  return cached(soundTracks, emitter, [scene.air], () => salvoRounds(emitter).map((round, member) => {
+  return cached(soundTracks, emitter, [scene.air, surfaceId(currentSurface())], () => salvoRounds(emitter).map((round, member) => {
     const path = paths[member];
     const source = rocketSource(round, scene, path);
     const points = path.seconds.map((seconds, index) => {

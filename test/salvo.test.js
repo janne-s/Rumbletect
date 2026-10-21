@@ -64,11 +64,11 @@ test('a salvo\'s grains are every round\'s, and each grain is synthesised by its
   assert.deepEqual(salvo.emission(salvo.rows[lastRow].noiseSeed, departure, plan).re, last.emission(last.rows[3].noiseSeed, departure, plan).re);
 });
 
-test('an Artillery round burns out near a Grad\'s 690 m/s, and an engine left burning too long stops when its propellant runs out', () => {
+test('an Artillery round burns out at a Grad\'s 690 m/s and flies straight off its tube', () => {
   const [round] = salvoRounds(defaultSalvo());
   const path = ascentPath(round);
-  assert.ok(path.speed.at(-1) > 600 && path.speed.at(-1) < 800, `${path.speed.at(-1)} m/s`);
-  const burnt = ascentPath({ ...round, ascent: { ...round.ascent, burnSeconds: 10 } });
-  assert.equal(burnt.throttle.at(-1), 0);
-  assert.ok(burnt.throttle.some(value => value > 0) && burnt.speed.every(Number.isFinite));
+  assert.ok(Math.abs(path.speed.at(-1) - 690) < 1e-9, `${path.speed.at(-1)} m/s`);
+  const angle = index => Math.atan2(path.vz[index], Math.hypot(path.vx[index], path.vy[index])) * 180 / Math.PI;
+  assert.ok(Math.abs(angle(path.speed.length - 1) - round.launchDegrees) < 1e-9);
+  assert.ok(path.throttle.every(value => value > 0) && path.speed.every(Number.isFinite));
 });
