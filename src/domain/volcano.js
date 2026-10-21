@@ -6,6 +6,7 @@ import { createRandom } from '../shared/domain/random.js';
 
 const SHAPE = waveformShape({ skewness: JET.largeScaleSkewness, kurtosis: JET.largeScaleKurtosis });
 const UPWARD_INLET = Object.freeze({ x: 0, y: 0, z: -1 });
+const VENT_GAIN = 10 ** (VOLCANO.ventJets.decibels / 10);
 
 export const volcanoCategory = key => VOLCANO.categories.find(category => category.key === key) ?? VOLCANO.categories.at(-1);
 
@@ -57,12 +58,19 @@ export function volcanoGrains(volcano, scene, band = 'full') {
     components: ({ seconds }) => {
       const share = eruptionShare(volcano, seconds - volcano.startSeconds);
       if (share <= 0) return null;
-      return jetComponents({ diameterMetres: diameter, velocityMetresPerSecond: volcano.jet.ventVelocityMetresPerSecond * share, temperatureRatio }, { temperatureCelsius: air.temperatureCelsius });
+      const velocityMetresPerSecond = volcano.jet.ventVelocityMetresPerSecond * share;
+      const jet = diameterMetres => jetComponents({ diameterMetres, velocityMetresPerSecond, temperatureRatio }, { temperatureCelsius: air.temperatureCelsius });
+      return { main: jet(diameter), vents: jet(diameter * VOLCANO.ventJets.diameterShare) };
     },
     axis: () => UPWARD_INLET,
     place: (components, position) => volcanoSourcePosition(volcano, position),
-    spectra: (components, inletDegrees, frequencies) => { const { large, fine } = jetSpectra(components, inletDegrees, frequencies); return { shaped: large, plain: fine }; },
-    packetHz: components => components.large.peakHz / JET.packetCycles,
+    spectra: ({ main, vents }, inletDegrees, frequencies) => {
+      const { large, fine } = jetSpectra(main, inletDegrees, frequencies);
+      const small = jetSpectra(vents, inletDegrees, frequencies);
+      large.forEach((value, index) => { large[index] = value + VENT_GAIN * small.large[index]; fine[index] += VENT_GAIN * small.fine[index]; });
+      return { shaped: large, plain: fine };
+    },
+    packetHz: ({ main }) => main.large.peakHz / JET.packetCycles,
     shape: SHAPE
   }, band)]);
 }

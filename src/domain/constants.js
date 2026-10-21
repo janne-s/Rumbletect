@@ -305,6 +305,12 @@ export const VOLCANO = Object.freeze({
   ]),
   /** Class C: the mixing noise is placed this many vent diameters above the vent, near the end of the jet's potential core. */
   sourceDiameters: 5,
+  /**
+   * Decision 5, B: the vent's smaller jets and shear layers as a second Tam jet of this share of the vent's diameter at
+   * the same velocity, this many dB above its own level (C), fitted so a lava fountain at 1 km follows the owner's Mount
+   * Yasur recording's octaves from 31.5 Hz to 1 kHz within 2.4 dB rms (source spectra at 90° with air absorption).
+   */
+  ventJets: Object.freeze({ diameterShare: .1, decibels: 6 }),
   /** Class C: an eruption's slow pulsing modulates its exit velocity sinusoidally with a seeded phase wander. */
   pulseWander: .3,
   defaultEruption: Object.freeze({ eruptionSeconds: 120, riseSeconds: 10, fadeSeconds: 20, pulsePeriodSeconds: 8, pulseDepthPercent: 30 })
