@@ -299,9 +299,10 @@ export const VOLCANO = Object.freeze({
    * (Mount St. Helens and Tungurahua, Matoza et al. 2009). Ash loading is not in Tam's data.
    */
   categories: Object.freeze([
-    Object.freeze({ key: 'fountain', label: 'Lava fountain', ventDiameterMetres: 15, ventVelocityMetresPerSecond: 60, gasTemperatureKelvin: 1300 }),
-    Object.freeze({ key: 'subplinian', label: 'Sub-Plinian', ventDiameterMetres: 40, ventVelocityMetresPerSecond: 150, gasTemperatureKelvin: 1000 }),
-    Object.freeze({ key: 'plinian', label: 'Plinian', ventDiameterMetres: 100, ventVelocityMetresPerSecond: 250, gasTemperatureKelvin: 1000 })
+    Object.freeze({ key: 'strombolian', label: 'Strombolian', ventDiameterMetres: 12, ventVelocityMetresPerSecond: 60, gasTemperatureKelvin: 1100, eruption: Object.freeze({ burstsPercent: 100, pulsePeriodSeconds: 9, pulseDepthPercent: 33, burstSeconds: 1 }) }),
+    Object.freeze({ key: 'fountain', label: 'Lava fountain', ventDiameterMetres: 15, ventVelocityMetresPerSecond: 60, gasTemperatureKelvin: 1300, eruption: Object.freeze({ burstsPercent: 0, pulsePeriodSeconds: 8, pulseDepthPercent: 30 }) }),
+    Object.freeze({ key: 'subplinian', label: 'Sub-Plinian', ventDiameterMetres: 40, ventVelocityMetresPerSecond: 150, gasTemperatureKelvin: 1000, eruption: Object.freeze({ burstsPercent: 0, pulsePeriodSeconds: 8, pulseDepthPercent: 30 }) }),
+    Object.freeze({ key: 'plinian', label: 'Plinian', ventDiameterMetres: 100, ventVelocityMetresPerSecond: 250, gasTemperatureKelvin: 1000, eruption: Object.freeze({ burstsPercent: 0, pulsePeriodSeconds: 8, pulseDepthPercent: 30 }) })
   ]),
   /** Class C: the mixing noise is placed this many vent diameters above the vent, near the end of the jet's potential core. */
   sourceDiameters: 5,
@@ -313,5 +314,12 @@ export const VOLCANO = Object.freeze({
   ventJets: Object.freeze({ diameterShare: .1, decibels: 6 }),
   /** Class C: an eruption's slow pulsing modulates its exit velocity sinusoidally with a seeded phase wander. */
   pulseWander: .3,
-  defaultEruption: Object.freeze({ eruptionSeconds: 120, riseSeconds: 10, fadeSeconds: 20, pulsePeriodSeconds: 8, pulseDepthPercent: 30 })
+  /**
+   * Class C, from the owner's Mount Yasur recording: Strombolian bursts come at gaps of 0.5–1.5 pulse periods (Yasur 4.1–13.1 s
+   * about a 9.4 s median), last a lognormal length about the burst length (median 1.1 s, 90 % under 6.2 s), and rise in
+   * 0.3 s (0.1–0.45 s); a burst falls over half its length. The Strombolian category's 33 % depth puts its rendered 1 s
+   * levels at 1 km at +13 dB (90th percentile) and +20 dB (most) over their median, as Yasur's +14 and +20 dB.
+   */
+  bursts: Object.freeze({ gapSpread: .5, lengthSigma: .8, riseSeconds: .3 }),
+  defaultEruption: Object.freeze({ eruptionSeconds: 120, riseSeconds: 10, fadeSeconds: 20, pulsePeriodSeconds: 8, pulseDepthPercent: 30, burstsPercent: 0, burstSeconds: 1 })
 });

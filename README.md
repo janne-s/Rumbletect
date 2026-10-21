@@ -75,12 +75,16 @@ the flight, then delays, spreads, and filters that sound on its way there.
 
 ## Volcano
 
-- **Category** — Lava fountain, sub-Plinian, or Plinian eruption jet: sets
-  the vent, its exit velocity, and gas temperature.
+- **Category** — Strombolian, lava fountain, sub-Plinian, or Plinian
+  eruption: sets the vent, its exit velocity, gas temperature, and pulsing.
 - **Intensity, duration, pulsing, pulse period, rise, fade** — The
   eruption's strength and its course in time.
+- **Bursts** — From a steady swell to Strombolian bursts: a background roar
+  broken every pulse period or so by a burst that rises in tenths of a
+  second, as at Mount Yasur.
 - **Source** — The roar of a hot jet rising from the vent, as volcano
-  infrasound studies model it.
+  infrasound studies model it, and the vent's smaller jets, which carry the
+  audible roar.
 
 ## Infrasound
 

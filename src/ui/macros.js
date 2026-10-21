@@ -259,9 +259,10 @@ const volcanoKind = {
   write: (item, t) => {
     const category = VOLCANO_CATEGORIES[Math.round(t * (VOLCANO_CATEGORIES.length - 1))];
     if (category.key === item.category) return;
-    const { ventDiameterMetres, ventVelocityMetresPerSecond, gasTemperatureKelvin } = category;
+    const { ventDiameterMetres, ventVelocityMetresPerSecond, gasTemperatureKelvin, eruption } = category;
     item.category = category.key;
     item.jet = { ventDiameterMetres, ventVelocityMetresPerSecond, gasTemperatureKelvin };
+    item.eruption = { ...item.eruption, ...eruption };
   },
   show: item => volcanoCategory(item.category).label
 };
@@ -295,11 +296,19 @@ const volcanoPulsing = {
   entry: { unit: '%', get: item => item.eruption.pulseDepthPercent, set: (item, value) => { item.eruption = { ...item.eruption, pulseDepthPercent: value }; } }
 };
 
+const volcanoBursts = {
+  label: 'Bursts',
+  read: item => item.eruption.burstsPercent / 100,
+  write: (item, t) => { item.eruption = { ...item.eruption, burstsPercent: Math.round(t * 100) }; },
+  show: item => `${item.eruption.burstsPercent} %`,
+  entry: { unit: '%', get: item => item.eruption.burstsPercent, set: (item, value) => { item.eruption = { ...item.eruption, burstsPercent: value }; } }
+};
+
 export function volcanoMacros(emitter, { onset: withOnset = false } = {}) {
   const list = [
     volcanoKind, volcanoIntensity,
     eruptionSlider('eruptionSeconds', 'Duration', [range('eruptionSeconds')[0], range('eruptionSeconds')[1]]),
-    volcanoPulsing,
+    volcanoPulsing, volcanoBursts,
     eruptionSlider('pulsePeriodSeconds', 'Pulse period', [range('pulsePeriodSeconds')[0], range('pulsePeriodSeconds')[1]]),
     eruptionSlider('riseSeconds', 'Rise', [1, range('riseSeconds')[1]]),
     eruptionSlider('fadeSeconds', 'Fade', [1, range('fadeSeconds')[1]])

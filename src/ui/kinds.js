@@ -170,7 +170,7 @@ function volcanoDetails(emitter, { updateEmitter }) {
       pointFields(container, { label: 'Vent', point: emitter.ventMetres, onCommit: set('ventMetres') });
     }),
     section('Jet', container => ['ventDiameterMetres', 'ventVelocityMetresPerSecond', 'gasTemperatureKelvin'].forEach(key => numberField(container, { key, value: emitter.jet[key], onCommit: setIn('jet', key) }))),
-    section('Eruption', container => ['eruptionSeconds', 'riseSeconds', 'fadeSeconds', 'pulsePeriodSeconds', 'pulseDepthPercent'].forEach(key => numberField(container, { key, value: emitter.eruption[key], onCommit: setIn('eruption', key) })))
+    section('Eruption', container => ['eruptionSeconds', 'riseSeconds', 'fadeSeconds', 'pulsePeriodSeconds', 'pulseDepthPercent', 'burstsPercent', 'burstSeconds'].forEach(key => numberField(container, { key, value: emitter.eruption[key], onCommit: setIn('eruption', key) })))
   ];
 }
 

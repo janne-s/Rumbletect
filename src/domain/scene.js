@@ -46,6 +46,8 @@ const RUMBLETECT_PARAMETERS = Object.freeze({
   fadeSeconds: { minimum: 0, maximum: 300, unit: 's', label: 'Fade', reliability: null },
   pulsePeriodSeconds: { minimum: 1, maximum: 120, unit: 's', label: 'Pulse period', reliability: 'C' },
   pulseDepthPercent: { minimum: 0, maximum: 100, unit: '%', label: 'Pulse depth', reliability: 'C' },
+  burstsPercent: { minimum: 0, maximum: 100, unit: '%', label: 'Bursts', reliability: 'C' },
+  burstSeconds: { minimum: .2, maximum: 30, unit: 's', label: 'Burst length', reliability: 'C' },
   roundCount: { minimum: 2, maximum: 48, unit: '', label: 'Rounds', reliability: null, integer: true },
   salvoSize: { minimum: 1, maximum: 24, unit: '', label: 'Rounds per salvo', reliability: null, integer: true },
   salvoSeconds: { minimum: 0, maximum: 300, unit: 's', label: 'Duration', reliability: null },

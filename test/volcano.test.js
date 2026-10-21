@@ -51,3 +51,20 @@ test('a lava fountain\'s smaller vent jets keep its roar falling as Mount Yasur\
   const toQuarter = octave(63) - octave(250);
   assert.ok(toQuarter > 8 && toQuarter < 15, `${toQuarter} dB from 63 to 250 Hz; Yasur 14.7, without vent jets 19.4`);
 });
+
+test('Strombolian bursts come at gaps about the pulse period, lift the eruption to its full velocity, and drop it between', async () => {
+  const { burstLevel, burstSchedule } = await import('../src/domain/volcano.js');
+  const strombolian = VOLCANO.categories.find(category => category.key === 'strombolian');
+  const volcano = { ...defaultVolcano(), eruption: { ...VOLCANO.defaultEruption, eruptionSeconds: 600, riseSeconds: 1, fadeSeconds: 1, ...strombolian.eruption } };
+  const bursts = burstSchedule(volcano);
+  const gaps = bursts.slice(1).map((burst, index) => burst.start - bursts[index].start).sort((a, b) => a - b);
+  const median = gaps[Math.floor(gaps.length / 2)];
+  assert.ok(median > .7 * volcano.eruption.pulsePeriodSeconds && median < 1.3 * volcano.eruption.pulsePeriodSeconds, `${median} s`);
+  assert.deepEqual(burstSchedule({ ...volcano }), bursts);
+  const peak = bursts[10].start + VOLCANO.bursts.riseSeconds + bursts[10].length / 2;
+  assert.ok(Math.abs(burstLevel(volcano, peak) - 1) < 1e-9 && Math.abs(eruptionShare(volcano, peak) - 1) < 1e-9);
+  const between = bursts[10].start - .01;
+  assert.ok(Math.abs(eruptionShare(volcano, between) - (1 - volcano.eruption.pulseDepthPercent / 100)) < .02, `${eruptionShare(volcano, between)}`);
+  const steady = { ...volcano, eruption: { ...volcano.eruption, burstsPercent: 0 } };
+  assert.ok(Math.abs(eruptionShare(steady, between) - eruptionShare({ ...steady, eruption: { ...steady.eruption, burstSeconds: 9 } }, between)) < 1e-12);
+});
