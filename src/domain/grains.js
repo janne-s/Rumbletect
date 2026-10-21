@@ -152,9 +152,10 @@ export function pathGrains(emitter, scene, path, unbanded, band = 'full') {
     const power = sum * binHz;
     grains.push({ centre, position: source.place?.(components, position, axis) ?? position, velocity, speed, axis, components, amplitude: Math.sqrt(power), heard: power > 0 });
   }
+  for (const grain of grains) if (grain.heard) grain.lead = leadSamples(GRAIN, grain.speed / sound);
   const rows = grains.flatMap((grain, index) => (!grain.heard ? [] : [{
-    positionMetres: grain.position, direction: null, elementMetres: 0, emissionSeconds: grain.centre - grainSeconds, amplitudePaMetres: grain.amplitude,
-    pulse: 'grain', noiseSeed: index, durationSeconds: grainSeconds, decay: 0, spanSeconds: 2 * grainSeconds, linearRadiusMetres: 0,
+    positionMetres: grain.position, direction: null, elementMetres: 0, emissionSeconds: grain.centre - grain.lead / sampleRate, amplitudePaMetres: grain.amplitude,
+    pulse: 'grain', noiseSeed: index, durationSeconds: grainSeconds, decay: 0, spanSeconds: 2 * grain.lead / sampleRate, linearRadiusMetres: 0,
     shockShare: source.crackle?.(grain.components)?.share ?? 0
   }]));
 
@@ -194,10 +195,10 @@ export function pathGrains(emitter, scene, path, unbanded, band = 'full') {
     const outImaginary = new Float64Array(plan.size);
     const gain = 1 / (Math.sqrt(squeeze) * grain.amplitude * sampleRate);
     const half = GRAIN * squeeze / 2;
-    const [first, last] = [Math.max(0, Math.floor(GRAIN - half) - 2), Math.min(plan.size - 1, Math.ceil(GRAIN + half) + 2)];
+    const [first, last] = [Math.max(0, Math.floor(grain.lead - half) - 2), Math.min(plan.size - 1, Math.ceil(grain.lead + half) + 2)];
     let sum = 0;
     for (let sample = first; sample <= last; sample += 1) {
-      out[sample] = gain * catmullRom(real, GRAIN / 2 + (sample - GRAIN) / compression);
+      out[sample] = gain * catmullRom(real, GRAIN / 2 + (sample - grain.lead) / compression);
       sum += out[sample];
     }
     removeMean(out, first, last, sum);
@@ -207,6 +208,9 @@ export function pathGrains(emitter, scene, path, unbanded, band = 'full') {
 
   return { sources: sourceTable(rows), rows, emission };
 }
+
+/** Samples from a grain's start in its frame to its centre: room for half of it stretched by 1 + M as it recedes. */
+const leadSamples = (grainSamples, mach) => Math.max(grainSamples, Math.ceil(grainSamples * (1 + mach) / 2) + 2);
 
 const LOW_WINDOW = Float64Array.from({ length: LOW_BAND.internalSamples }, (_, index) => Math.sin(Math.PI * (index + .5) / LOW_BAND.internalSamples));
 
@@ -239,9 +243,10 @@ function lowBandGrains(emitter, scene, path, source) {
     const power = sum * binHz;
     grains.push({ centre, position: source.place?.(components, position, axis) ?? position, velocity, speed, axis, components, amplitude: Math.sqrt(power), heard: power > 0 });
   }
+  for (const grain of grains) if (grain.heard) grain.lead = leadSamples(grainSamples, grain.speed / sound) / sampleRate;
   const rows = grains.flatMap((grain, index) => (!grain.heard ? [] : [{
-    positionMetres: grain.position, direction: null, elementMetres: 0, emissionSeconds: grain.centre - grainSeconds, amplitudePaMetres: grain.amplitude,
-    pulse: 'grain', noiseSeed: index, durationSeconds: grainSeconds, decay: 0, spanSeconds: 2 * grainSeconds, linearRadiusMetres: 0
+    positionMetres: grain.position, direction: null, elementMetres: 0, emissionSeconds: grain.centre - grain.lead, amplitudePaMetres: grain.amplitude,
+    pulse: 'grain', noiseSeed: index, durationSeconds: grainSeconds, decay: 0, spanSeconds: 2 * grain.lead, linearRadiusMetres: 0
   }]));
 
   function emission(index, departure, plan) {
@@ -266,7 +271,7 @@ function lowBandGrains(emitter, scene, path, source) {
     for (let sample = 0; sample < size; sample += 1) {
       const value = frame[sample] * step;
       if (value === 0) continue;
-      const seconds = grainSeconds + (sample + .5 - size / 2) * compression / rate;
+      const seconds = grain.lead + (sample + .5 - size / 2) * compression / rate;
       const [stepRe, stepIm] = [Math.cos(omega * seconds), -Math.sin(omega * seconds)];
       let [phaseRe, phaseIm] = [stepRe, stepIm];
       for (let bin = 1; bin < bins; bin += 1) {

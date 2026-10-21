@@ -74,3 +74,34 @@ test('an automatic flight time flies on until every microphone is out of hearing
   assert.ok(path.seconds.length > jetPath(value.emitters[0], value).seconds.length);
   assert.ok(Math.abs(distance(path.x.length - 1) / closest - 10 ** (30 / 20)) < .1);
 });
+
+test('a fast receding grain, stretched by 1 + M, stays whole inside its frame in both bands', async () => {
+  const { defaultRocket } = await import('../src/domain/scene.js');
+  const { rocketGrains } = await import('../src/domain/rocket-grains.js');
+  const { fft, nextPowerOfTwo } = await import('../src/shared/domain/fft.js');
+  const base = defaultScene('rocket');
+  const rocket = { ...defaultRocket(), propellant: 'solid', launchDegrees: 15 };
+  rocket.ascent = { ...rocket.ascent, burnSeconds: 12, burnoutMetresPerSecond: 5760, accelerationPercent: 0, bendDegrees: 0 };
+  const scene = parseScene({ ...base, emitters: [rocket], receivers: [{ ...base.receivers[0], positionMetres: { x: -20000, y: 0, z: 1.7 } }] });
+  const sampleRate = scene.render.sampleRate;
+  const radians = 15 * Math.PI / 180;
+  const receding = { x: -Math.sin(Math.PI / 2) * Math.cos(radians), y: 0, z: -Math.sin(radians) };
+  for (const band of ['high', 'low']) {
+    const grains = rocketGrains(rocket, scene, band);
+    const row = grains.rows.at(-1);
+    const size = 2 * nextPowerOfTwo(Math.ceil(row.spanSeconds * sampleRate));
+    const { re, im } = grains.emission(row.noiseSeed, receding, { size });
+    const real = new Float64Array(size);
+    const imaginary = new Float64Array(size);
+    for (let bin = 1; bin < re.length && bin < size / 2; bin += 1) {
+      real[bin] = re[bin]; imaginary[bin] = im[bin];
+      real[size - bin] = re[bin]; imaginary[size - bin] = -im[bin];
+    }
+    fft(real, imaginary, true);
+    const energy = (from, to) => { let sum = 0; for (let sample = from; sample < to; sample += 1) sum += real[sample] ** 2; return sum; };
+    const span = Math.ceil(row.spanSeconds * sampleRate);
+    const outside = energy(span, size) / energy(0, size);
+    assert.ok(outside < 1e-6, `${band}: ${outside} of the grain beyond its span`);
+    assert.ok(row.spanSeconds >= (1 + 5000 / speedOfSound(15)) * row.durationSeconds, `${band}: span ${row.spanSeconds} s`);
+  }
+});
