@@ -1,4 +1,4 @@
-import { JET, JET_FLIGHT, LOW_BAND, PROPAGATION, SYNTHESIS } from './constants.js';
+import { JET, JET_FLIGHT, LOW_BAND, PROPAGATION, SHOCK_FORMATION, SYNTHESIS } from './constants.js';
 import { powerOfEngine, streamsOf } from './engine.js';
 import { addTurbomachinery, referencePower, turbomachineryAt } from './turbomachinery.js';
 import { jetComponents, jetSpectra, speedOfSound } from './jet.js';
@@ -156,7 +156,7 @@ export function pathGrains(emitter, scene, path, unbanded, band = 'full') {
   const rows = grains.flatMap((grain, index) => (!grain.heard ? [] : [{
     positionMetres: grain.position, direction: null, elementMetres: 0, emissionSeconds: grain.centre - grain.lead / sampleRate, amplitudePaMetres: grain.amplitude,
     pulse: 'grain', noiseSeed: index, durationSeconds: grainSeconds, decay: 0, spanSeconds: 2 * grain.lead / sampleRate, linearRadiusMetres: 0,
-    shockShare: source.crackle?.(grain.components)?.share ?? 0
+    ...shockOf(source.crackle?.(grain.components))
   }]));
 
   function emission(index, departure, plan) {
@@ -208,6 +208,8 @@ export function pathGrains(emitter, scene, path, unbanded, band = 'full') {
 
   return { sources: sourceTable(rows), rows, emission };
 }
+
+const shockOf = crackle => ({ shockShare: crackle?.share ?? 0, shockHz: crackle ? SHOCK_FORMATION.frequencyRatio * crackle.hz : 0 });
 
 /** Samples from a grain's start in its frame to its centre: room for half of it stretched by 1 + M as it recedes. */
 const leadSamples = (grainSamples, mach) => Math.max(grainSamples, Math.ceil(grainSamples * (1 + mach) / 2) + 2);

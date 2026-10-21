@@ -81,6 +81,13 @@ export const JET_FLIGHT = Object.freeze({
  * only up to `highestFrequencyHz`; the short grains take the rest. The bands split power by complementary fourth-order
  * shares, so their sum is the source's spectrum.
  */
+/**
+ * Class C: a source's shocks form at twice its peak frequency, so that Falcon 9's form within 0.75 km, where its launch
+ * noise already falls 10 dB per decade at high frequencies (Kellison et al. 2026); at its 13 Hz peak they would form
+ * only near 6 km.
+ */
+export const SHOCK_FORMATION = Object.freeze({ frequencyRatio: 2 });
+
 export const LOW_BAND = Object.freeze({ crossoverHz: 20, grainSeconds: .68, internalSamples: 256, highestFrequencyHz: 60 });
 
 export const SYNTHESIS = Object.freeze({
