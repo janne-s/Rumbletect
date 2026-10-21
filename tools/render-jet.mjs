@@ -17,7 +17,7 @@ mkdirSync(folder, { recursive: true });
 const base = defaultScene();
 const speed = mach * 340.3;
 const approach = Math.max(1000, 15 * speed);
-const jet = { ...defaultJet(undefined, undefined, Number(seedText)), engineClass, engine: engineOfClass(engineClass), mach, startMetres: { x: -approach, y: 0, z: height }, durationSeconds: Math.min(600, Math.round(2 * approach / speed)) };
+const jet = { ...defaultJet(undefined, undefined, Number(seedText)), kind: ENGINE.classes[engineClass].civil ? 'airliner' : 'jet', engineClass, engine: engineOfClass(engineClass), mach, startMetres: { x: -approach, y: 0, z: height }, durationSeconds: Math.min(600, Math.round(2 * approach / speed)) };
 const scene = parseScene({
   ...base,
   air: { ...base.air, refraction: false },

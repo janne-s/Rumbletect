@@ -1,7 +1,7 @@
 import { ENGINE } from '../domain/constants.js';
 import { jetOfEngine, powerLabel, powerOfEngine } from '../domain/engine.js';
 import { speedOfSound } from '../domain/jet.js';
-import { defaultFormation, defaultJet, defaultRocket, defaultSalvo, defaultVolcano, PROPELLANTS, ROCKET_ASCENT_NUMBERS } from '../domain/scene.js';
+import { defaultAirliner, defaultFormation, defaultJet, defaultRocket, defaultSalvo, defaultVolcano, PROPELLANTS, ROCKET_ASCENT_NUMBERS } from '../domain/scene.js';
 import { RENDER, ROCKET } from '../domain/constants.js';
 import { heardCounts } from '../domain/rocket-grains.js';
 import { peakFrequencyHz, sizedRocket, soundPowerWatts, totalThrustNewtons, vehicleOf } from '../domain/rocket.js';
@@ -245,6 +245,7 @@ const KIND_PANELS_EXTENDED = {
 };
 
 KIND_PANELS_EXTENDED.formation = Object.freeze({ ...KIND_PANELS_EXTENDED.jet, label: () => 'Formation', macros: macrosFor });
+KIND_PANELS_EXTENDED.airliner = Object.freeze({ ...KIND_PANELS_EXTENDED.jet, label: () => 'Airliner', macros: macrosFor });
 KIND_PANELS_EXTENDED.salvo = Object.freeze({ ...KIND_PANELS_EXTENDED.rocket, label: () => 'Salvo', macros: rocketMacros });
 
 export const KIND_PANELS = Object.freeze(KIND_PANELS_EXTENDED);
@@ -252,6 +253,7 @@ export const KIND_PANELS = Object.freeze(KIND_PANELS_EXTENDED);
 export const ADD_EMITTERS = Object.freeze({
   jet: Object.freeze({ create: defaultJet, label: 'Jet', mode: 'jet' }),
   formation: Object.freeze({ create: defaultFormation, label: 'Formation', mode: 'jet' }),
+  airliner: Object.freeze({ create: defaultAirliner, label: 'Airliner', mode: 'jet' }),
   rocket: Object.freeze({ create: defaultRocket, label: 'Rocket', mode: 'rocket' }),
   salvo: Object.freeze({ create: defaultSalvo, label: 'Salvo', mode: 'rocket' }),
   volcano: Object.freeze({ create: defaultVolcano, label: 'Volcano', mode: 'volcano' })

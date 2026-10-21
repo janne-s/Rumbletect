@@ -1,4 +1,4 @@
-import { ENGINE_CLASSES, engineAtPower, engineOfClass, powerLabel, powerOfEngine } from '../domain/engine.js';
+import { AIRLINER_CLASSES, ENGINE_CLASSES, engineAtPower, engineOfClass, powerLabel, powerOfEngine } from '../domain/engine.js';
 import { PARAMETERS } from '../domain/scene.js';
 import { ENGINE, ROCKET, VOLCANO } from '../domain/constants.js';
 import { volcanoCategory } from '../domain/volcano.js';
@@ -15,11 +15,11 @@ const power = {
 };
 
 /** A class's usual flight keeps the path flown: its duration follows the new speed. */
-const jetCategory = {
+const categoryOf = classes => ({
   label: 'Category',
-  read: item => ENGINE_CLASSES.indexOf(item.engineClass) / (ENGINE_CLASSES.length - 1),
+  read: item => classes.indexOf(item.engineClass) / (classes.length - 1),
   write: (item, t) => {
-    const engineClass = ENGINE_CLASSES[Math.round(t * (ENGINE_CLASSES.length - 1))];
+    const engineClass = classes[Math.round(t * (classes.length - 1))];
     if (engineClass === item.engineClass) return;
     const { flight } = ENGINE.classes[engineClass];
     const flown = item.mach * item.durationSeconds;
@@ -30,7 +30,10 @@ const jetCategory = {
     item.durationSeconds = Math.min(range('flightSeconds')[1], Math.max(range('flightSeconds')[0], Math.round(flown / flight.mach)));
   },
   show: item => ENGINE.classes[item.engineClass].label
-};
+});
+
+const jetCategory = categoryOf(ENGINE_CLASSES);
+const airlinerCategory = categoryOf(AIRLINER_CLASSES);
 
 const machNumber = {
   label: 'Mach',
@@ -125,7 +128,7 @@ function setSpacing(item, lateral) {
 }
 
 export function macrosFor(emitter, { onset: withOnset = false } = {}) {
-  const list = [...(emitter.kind === 'formation' ? [formationCount, formationSpacing] : []), jetCategory, power, machNumber, flightHeight, flightHeading, flightClimb, flightAcceleration, flightTurn, flightTime];
+  const list = [...(emitter.kind === 'formation' ? [formationCount, formationSpacing] : []), emitter.kind === 'airliner' ? airlinerCategory : jetCategory, power, machNumber, flightHeight, flightHeading, flightClimb, flightAcceleration, flightTurn, flightTime];
   return withOnset ? [...list, onset] : list;
 }
 

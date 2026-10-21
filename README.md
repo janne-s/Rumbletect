@@ -44,6 +44,15 @@ the flight, then delays, spreads, and filters that sound on its way there.
   ratio, jet temperature, and nozzle diameter, and the formation's lateral
   and trail spacing.
 
+## Airliner
+
+- **Category** — Business jet, regional jet, narrowbody, widebody, or
+  four-engine airliner: sets the engines and a climb-out after take-off.
+- **Source** — A turbofan as two jets, a fast core and a slower fan stream,
+  with the fan's blade-passing tones and broadband hump, and at take-off
+  power the buzz-saw: tones at every order of the shaft as the fan tips pass
+  the speed of sound.
+
 ## Rocket
 
 - **Category** — Hobby, 122 mm artillery, heavy artillery, sounding, small,

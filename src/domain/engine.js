@@ -2,7 +2,8 @@ import { ENGINE, KELVIN_OFFSET } from './constants.js';
 
 const between = (a, b, share) => a + (b - a) * share;
 
-export const ENGINE_CLASSES = Object.freeze(Object.keys(ENGINE.classes));
+export const ENGINE_CLASSES = Object.freeze(Object.keys(ENGINE.classes).filter(key => !ENGINE.classes[key].civil));
+export const AIRLINER_CLASSES = Object.freeze(Object.keys(ENGINE.classes).filter(key => ENGINE.classes[key].civil));
 
 const settingsOf = engineClass => (ENGINE.classes[engineClass] ?? ENGINE.classes.fighter).settings;
 

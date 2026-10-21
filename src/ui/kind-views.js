@@ -99,5 +99,5 @@ export function kindViews() {
       context.beginPath(); context.moveTo(vent.x, vent.y); context.lineTo(top.x, top.y); context.stroke();
     }
   };
-  return { jet, formation: jet, rocket, salvo: rocket, volcano };
+  return { jet, formation: jet, airliner: jet, rocket, salvo: rocket, volcano };
 }

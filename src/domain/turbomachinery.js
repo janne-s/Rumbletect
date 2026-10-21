@@ -21,11 +21,28 @@ export function turbomachineryAt(engineClass, power, referencePa2) {
   const weights = turbo.harmonics.map(decibels => 10 ** (decibels / 10));
   const total = weights.reduce((a, b) => a + b, 0);
   const tones = referencePa2 * 10 ** (between(turbo.toneDecibels, power) / 10);
+  const bladeHz = between([turbo.idleBladeHz, turbo.fullBladeHz], power);
   return {
-    bladeHz: between([turbo.idleBladeHz, turbo.fullBladeHz], power),
+    bladeHz,
     tones: weights.map(weight => tones * weight / total),
-    hump: turbo.humpDecibels ? referencePa2 * 10 ** (between(turbo.humpDecibels, power) / 10) : 0
+    hump: turbo.humpDecibels ? referencePa2 * 10 ** (between(turbo.humpDecibels, power) / 10) : 0,
+    buzzSaw: turbo.buzzSaw ? buzzSawTones(turbo, bladeHz, power, referencePa2) : null
   };
+}
+
+const smoothStep = value => { const t = Math.min(1, Math.max(0, value)); return t * t * (3 - 2 * t); };
+
+/** Class C: the buzz-saw's tones at the shaft's orders below the blade count, log-normal about a quarter of it, once the fan tips are supersonic. */
+function buzzSawTones(turbo, bladeHz, power, referencePa2) {
+  const { fromPower, decibels, orderSpread } = turbo.buzzSaw;
+  const share = smoothStep((power - fromPower) / (1 - fromPower));
+  if (share <= 0) return null;
+  const centre = Math.log(turbo.blades / 4);
+  const orders = Array.from({ length: turbo.blades - 1 }, (_, index) => index + 1);
+  const weights = orders.map(order => Math.exp(-((Math.log(order) - centre) ** 2) / (2 * orderSpread ** 2)));
+  const total = weights.reduce((a, b) => a + b, 0);
+  const buzzPower = share * referencePa2 * 10 ** (decibels / 10);
+  return { shaftHz: bladeHz / turbo.blades, tones: weights.map(weight => buzzPower * weight / total) };
 }
 
 const aftGain = inletDegrees => 10 ** (-JET.turbomachineryAftDecibels * Math.max(0, inletDegrees - 90) / 90 / 10);
@@ -35,14 +52,16 @@ export function addTurbomachinery(psd, frequencies, state, inletDegrees) {
   if (!state) return psd;
   const binHz = frequencies[1] - frequencies[0];
   const gain = aftGain(inletDegrees);
-  state.tones.forEach((power, index) => {
-    const position = state.bladeHz * (index + 1) / binHz;
+  const tone = (hz, power) => {
+    const position = hz / binHz;
     const low = Math.floor(position);
     if (low < 1 || low + 1 >= psd.length) return;
     const share = position - low;
     psd[low] += gain * power * (1 - share) / binHz;
     psd[low + 1] += gain * power * share / binHz;
-  });
+  };
+  state.tones.forEach((power, index) => tone(state.bladeHz * (index + 1), power));
+  state.buzzSaw?.tones.forEach((power, index) => tone(state.buzzSaw.shaftHz * (index + 1), power));
   if (state.hump > 0) {
     const sigma = JET.humpOctaves * Math.LN2;
     for (let bin = 1; bin < psd.length; bin += 1) {

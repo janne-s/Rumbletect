@@ -102,6 +102,19 @@ export const TURBULENCE = Object.freeze({
   scaleMetres: 1.1
 });
 
+/**
+ * Decision 12, A: airliners and business jets as a core and a fan stream (C), from take-off thrust, bypass ratio and
+ * airflow (Doc/reviews/2026-10-21-airliner-reference.md): FJ44-4 16.5 kN, bypass 3.3; CF34-8C5 64.5 kN, 5, 202 kg/s;
+ * CFM56-5B 120 kN, 5.7, about 400 kg/s; GE90-115B 514 kN, 9, about 1 600 kg/s; CF6-80C2 260 kN, 5.1, about 800 kg/s.
+ * The core leaves 1.4 times as fast as the fan stream, at 780 K, the fan stream at 335 K; idle as the bomber's.
+ * Blade-passing at take-off: GE90 22 × 2 355 rpm = 864 Hz (B); the others from blade counts and tip speeds about
+ * 450 m/s, unconfirmed (C), idle at 30 %. Tone, hump and buzz-saw levels are assumed until recordings are measured (C):
+ * buzz-saw tones at the shaft's orders, most near a quarter of the blade count, fading in as the fan tips pass the
+ * speed of sound above 85 % power.
+ */
+const CIVIL_FLIGHT = Object.freeze({ mach: .25, heightMetres: 300 });
+const CIVIL_FAN = Object.freeze({ harmonics: Object.freeze([0, -6]), toneDecibels: Object.freeze([3, 0]), humpDecibels: Object.freeze([6, 3]), buzzSaw: Object.freeze({ fromPower: .85, decibels: 3, orderSpread: .6 }) });
+
 export const ENGINE = Object.freeze({
   /** Class B: hot exhaust gas, γ and c_p of combustion products. */
   gasGamma: 1.33,
@@ -170,6 +183,66 @@ export const ENGINE = Object.freeze({
       bypass: Object.freeze([
         Object.freeze({ power: 0, pressureRatio: 1.092, totalTemperatureKelvin: 290, diameterMetres: .66 }),
         Object.freeze({ power: 1, pressureRatio: 1.605, totalTemperatureKelvin: 330, diameterMetres: .66 })
+      ])
+    }),
+    business: Object.freeze({
+      label: 'Business jet', civil: true, engines: 2, defaultPower: 1, flight: CIVIL_FLIGHT,
+      turbomachinery: Object.freeze({ ...CIVIL_FAN, blades: 22, idleBladeHz: 1770, fullBladeHz: 5900 }),
+      settings: Object.freeze([
+        Object.freeze({ power: 0, label: 'Idle', pressureRatio: 1.171, totalTemperatureKelvin: 600, diameterMetres: 0.266 }),
+        Object.freeze({ power: 1, label: 'Take-off', pressureRatio: 1.518, totalTemperatureKelvin: 780, diameterMetres: 0.266 })
+      ]),
+      bypass: Object.freeze([
+        Object.freeze({ power: 0, pressureRatio: 1.09, totalTemperatureKelvin: 295, diameterMetres: 0.371 }),
+        Object.freeze({ power: 1, pressureRatio: 1.65, totalTemperatureKelvin: 335, diameterMetres: 0.371 })
+      ])
+    }),
+    regional: Object.freeze({
+      label: 'Regional jet', civil: true, engines: 2, defaultPower: 1, flight: CIVIL_FLIGHT,
+      turbomachinery: Object.freeze({ ...CIVIL_FAN, blades: 24, idleBladeHz: 870, fullBladeHz: 2900 }),
+      settings: Object.freeze([
+        Object.freeze({ power: 0, label: 'Idle', pressureRatio: 1.171, totalTemperatureKelvin: 600, diameterMetres: 0.452 }),
+        Object.freeze({ power: 1, label: 'Take-off', pressureRatio: 1.515, totalTemperatureKelvin: 780, diameterMetres: 0.452 })
+      ]),
+      bypass: Object.freeze([
+        Object.freeze({ power: 0, pressureRatio: 1.09, totalTemperatureKelvin: 295, diameterMetres: 0.775 }),
+        Object.freeze({ power: 1, pressureRatio: 1.646, totalTemperatureKelvin: 335, diameterMetres: 0.775 })
+      ])
+    }),
+    narrowbody: Object.freeze({
+      label: 'Narrowbody', civil: true, engines: 2, defaultPower: 1, flight: CIVIL_FLIGHT,
+      turbomachinery: Object.freeze({ ...CIVIL_FAN, blades: 36, idleBladeHz: 900, fullBladeHz: 3000 }),
+      settings: Object.freeze([
+        Object.freeze({ power: 0, label: 'Idle', pressureRatio: 1.171, totalTemperatureKelvin: 600, diameterMetres: 0.622 }),
+        Object.freeze({ power: 1, label: 'Take-off', pressureRatio: 1.447, totalTemperatureKelvin: 780, diameterMetres: 0.622 })
+      ]),
+      bypass: Object.freeze([
+        Object.freeze({ power: 0, pressureRatio: 1.09, totalTemperatureKelvin: 295, diameterMetres: 1.141 }),
+        Object.freeze({ power: 1, pressureRatio: 1.557, totalTemperatureKelvin: 335, diameterMetres: 1.141 })
+      ])
+    }),
+    widebody: Object.freeze({
+      label: 'Widebody', civil: true, engines: 2, defaultPower: 1, flight: CIVIL_FLIGHT,
+      turbomachinery: Object.freeze({ ...CIVIL_FAN, blades: 22, idleBladeHz: 259, fullBladeHz: 864 }),
+      settings: Object.freeze([
+        Object.freeze({ power: 0, label: 'Idle', pressureRatio: 1.171, totalTemperatureKelvin: 600, diameterMetres: 0.966 }),
+        Object.freeze({ power: 1, label: 'Take-off', pressureRatio: 1.558, totalTemperatureKelvin: 780, diameterMetres: 0.966 })
+      ]),
+      bypass: Object.freeze([
+        Object.freeze({ power: 0, pressureRatio: 1.09, totalTemperatureKelvin: 295, diameterMetres: 2.221 }),
+        Object.freeze({ power: 1, pressureRatio: 1.704, totalTemperatureKelvin: 335, diameterMetres: 2.221 })
+      ])
+    }),
+    quad: Object.freeze({
+      label: 'Four-engine', civil: true, engines: 4, defaultPower: 1, flight: CIVIL_FLIGHT,
+      turbomachinery: Object.freeze({ ...CIVIL_FAN, blades: 38, idleBladeHz: 646, fullBladeHz: 2153 }),
+      settings: Object.freeze([
+        Object.freeze({ power: 0, label: 'Idle', pressureRatio: 1.171, totalTemperatureKelvin: 600, diameterMetres: 0.881 }),
+        Object.freeze({ power: 1, label: 'Take-off', pressureRatio: 1.54, totalTemperatureKelvin: 780, diameterMetres: 0.881 })
+      ]),
+      bypass: Object.freeze([
+        Object.freeze({ power: 0, pressureRatio: 1.09, totalTemperatureKelvin: 295, diameterMetres: 1.526 }),
+        Object.freeze({ power: 1, pressureRatio: 1.68, totalTemperatureKelvin: 335, diameterMetres: 1.526 })
       ])
     })
   })

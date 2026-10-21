@@ -1,6 +1,6 @@
-import { MODEL_VERSION, ROCKET, VOLCANO } from './constants.js';
+import { ENGINE, MODEL_VERSION, ROCKET, VOLCANO } from './constants.js';
 import { categoryRocket } from './rocket.js';
-import { ENGINE_CLASSES, engineOfClass } from './engine.js';
+import { AIRLINER_CLASSES, ENGINE_CLASSES, engineOfClass } from './engine.js';
 import { createScene } from '../shared/domain/scene.js';
 
 export { DEFAULT_PLACE, DEFAULT_QUALITY, defaultReceiver, headingToward, PLACE_NAME_KINDS, placeLabel, QUALITY_NUMBERS, QUALITY_SWITCHES, SceneError, TERRAIN_DEFAULTS } from '../shared/domain/scene.js';
@@ -82,6 +82,12 @@ export function defaultJet(id = 'jet-1', name = 'Jet', seed = 20261015) {
   };
 }
 
+/** A narrowbody climbing out after take-off. */
+export function defaultAirliner(id = 'airliner-1', name = 'Airliner', seed = 20261021) {
+  const { flight } = ENGINE.classes.narrowbody;
+  return { ...defaultJet(id, name, seed), kind: 'airliner', engineClass: 'narrowbody', engine: engineOfClass('narrowbody'), mach: flight.mach, startMetres: { x: -2500, y: 0, z: flight.heightMetres }, climbDegrees: 6 };
+}
+
 export const defaultFormation = (id = 'formation-1', name = 'Formation', seed = 20261014) => ({ ...defaultJet(id, name, seed), kind: 'formation', ...FORMATION_LAYOUT });
 
 /** Falcon 9's size, propellant and ascent: the Medium launcher. */
@@ -146,11 +152,12 @@ function readRocket(value, { check, point, numbers }, path) {
 
 const readSalvo = (value, fields, path) => ({ ...readRocket(value, fields, path), ...fields.numbers(value, Object.keys(ROCKET.salvoLayout), path) });
 
-function readJet(value, { check, number, point, numbers }, path) {
+function readJet(value, fields, path, classes = ENGINE_CLASSES, fallback = 'fighter') {
+  const { check, number, point, numbers } = fields;
   const engine = value.engine ?? {};
   check(typeof value.autoDuration === 'boolean', `${path}.autoDuration must be true or false.`);
   return {
-    engineClass: ENGINE_CLASSES.includes(value.engineClass) ? value.engineClass : 'fighter',
+    engineClass: classes.includes(value.engineClass) ? value.engineClass : fallback,
     startMetres: point(value.startMetres, `${path}.startMetres`),
     durationSeconds: number(value.durationSeconds, 'flightSeconds', `${path}.durationSeconds`),
     autoDuration: value.autoDuration,
@@ -164,6 +171,8 @@ function readJet(value, { check, number, point, numbers }, path) {
   };
 }
 
+const readAirliner = (value, fields, path) => readJet(value, fields, path, AIRLINER_CLASSES, 'narrowbody');
+
 const readFormation = (value, fields, path) => ({ ...readJet(value, fields, path), ...fields.numbers(value, Object.keys(FORMATION_LAYOUT), path) });
 
 export const { PARAMETERS, MODES, defaultScene, parseScene, readScene, serializeScene, sceneInMode } = createScene({
@@ -173,13 +182,14 @@ export const { PARAMETERS, MODES, defaultScene, parseScene, readScene, serialize
   modelVersion: MODEL_VERSION,
   anchor: emitterAnchor,
   modes: {
-    jet: { kinds: ['jet', 'formation'], emitter: () => defaultJet(), receiverMetres: { x: 0, y: 0, z: 1.7 } },
+    jet: { kinds: ['jet', 'formation', 'airliner'], emitter: () => defaultJet(), receiverMetres: { x: 0, y: 0, z: 1.7 } },
     rocket: { kinds: ['rocket', 'salvo'], emitter: () => defaultRocket(), receiverMetres: { x: -1500, y: -2600, z: 1.7 } },
     volcano: { kinds: ['volcano'], emitter: () => defaultVolcano(), receiverMetres: { x: -3000, y: -4000, z: 1.7 } }
   },
   kinds: {
     jet: { defaults: () => defaultJet(), read: readJet },
     formation: { defaults: () => defaultFormation(), read: readFormation },
+    airliner: { defaults: () => defaultAirliner(), read: readAirliner },
     rocket: { defaults: () => defaultRocket(), read: readRocket },
     salvo: { defaults: () => defaultSalvo(), read: readSalvo },
     volcano: { defaults: () => defaultVolcano(), read: readVolcano }
