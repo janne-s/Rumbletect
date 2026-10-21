@@ -16,11 +16,20 @@ import { frontProfile } from '../shared/domain/refraction.js';
 
 const flownSeconds = (emitter, scene) => { const [path] = cachedTracks(emitter, scene); return Math.round((path.seconds.length - 1) * path.step); };
 
+const kilometresPerHour = metresPerSecond => Math.round(metresPerSecond * 3.6).toLocaleString('en').replace(/,/g, ' ');
+
+function flightSpeedLabel(emitter, scene) {
+  const [path] = cachedTracks(emitter, scene);
+  const [slowest, fastest] = [Math.min(...path.speed), Math.max(...path.speed)];
+  const span = Math.round(fastest * 3.6) - Math.round(slowest * 3.6) >= 10 ? `${kilometresPerHour(slowest)}–${kilometresPerHour(fastest)}` : kilometresPerHour(path.speed[0]);
+  return `${span} km/h (Mach ${emitter.mach.toFixed(2)})`;
+}
+
 function summary(emitter, scene) {
   const jet = jetOfEngine(emitter.engine, scene.air.temperatureCelsius);
   const aircraft = emitter.kind === 'formation' ? emitter.memberCount : 1;
   const { engines } = emitter.engine;
-  return `${aircraft > 1 ? `${aircraft} × ` : ''}${ENGINE.classes[emitter.engineClass].label}${engines > 1 ? `, ${engines} engines` : ''}, ${powerLabel(powerOfEngine(emitter.engine, emitter.engineClass), emitter.engineClass)}, jet ${Math.round(jet.velocityMetresPerSecond)} m/s · Mach ${emitter.mach.toFixed(2)} at ${formatMetres(emitter.startMetres.z)} for ${flownSeconds(emitter, scene)} s`;
+  return `${aircraft > 1 ? `${aircraft} × ` : ''}${ENGINE.classes[emitter.engineClass].label}${engines > 1 ? `, ${engines} engines` : ''}, ${powerLabel(powerOfEngine(emitter.engine, emitter.engineClass), emitter.engineClass)}, exhaust ${Math.round(jet.velocityMetresPerSecond)} m/s · ${flightSpeedLabel(emitter, scene)} at ${formatMetres(emitter.startMetres.z)} for ${flownSeconds(emitter, scene)} s`;
 }
 
 function details(emitter, { updateEmitter, scene }) {
@@ -54,7 +63,7 @@ function details(emitter, { updateEmitter, scene }) {
       numberField(container, { key: 'nozzleDiameterMetres', value: emitter.engine.diameterMetres, onCommit: setEngine('diameterMetres') });
       const note = document.createElement('p');
       note.className = 'field-note';
-      note.textContent = `Jet ${Math.round(jet.velocityMetresPerSecond)} m/s · ${jet.temperatureRatio.toFixed(2)} × ambient temperature`;
+      note.textContent = `Exhaust ${Math.round(jet.velocityMetresPerSecond)} m/s · ${jet.temperatureRatio.toFixed(2)} × ambient temperature`;
       container.append(note);
     }),
     ...(emitter.kind === 'formation' ? [section('Formation', numbers(['memberCount', 'lateralSpacingMetres', 'trailSpacingMetres', 'verticalSpacingMetres']))] : [])
