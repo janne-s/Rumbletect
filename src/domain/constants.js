@@ -118,17 +118,19 @@ export const TURBULENCE = Object.freeze({
  * database 2.3 NPD at the same thrust per engine (EASA; C fit to B data), the level to the top departure row (CJ4 FJ44-4
  * 3 300 lb 87.5 dB, CRJ900 CF34-8C5 13 525 lb 85.1 dB interpolated, A320 CFM56-5A 22 500 lb 88.9 dB, 777-300ER GE90-115B
  * 97 000 lb 98.1 dB, 747-400 PW4056 50 000 lb 96.9 dB), the exponent to the lower departure rows by least squares:
- * regional N1³·³, narrowbody N1⁵·⁴, widebody N1⁸·⁶, four-engine N1⁶·¹, where Heidmann's correlation gives about N1⁵; the
+ * regional N1³·³, narrowbody N1⁵·⁴, widebody N1⁴·⁸ with a knee from 84 % of its speed, 7 dB at full (decision 15), four-engine N1⁶·¹, where Heidmann's correlation gives about N1⁵; the
  * business jet's N1⁵·² to its approach rows as well, as no one power follows both. Approach rows, flown with gear and
  * flaps out, are otherwise not fitted: on them jets and airframe come within about a decibel of ANP alone. Unfitted
- * departure rows fall within −3.3 to +4.6 dB (business jet −5.8), approach rows within −1.4 to +2.4 dB except the
+ * departure rows fall within −2.2 to +0.8 dB (business jet −5.8), approach rows within −1.4 to +2.4 dB except the
  * regional jet's 7 250 lb, +4.4 dB, where ANP's own departure and approach rows differ by 3.3 dB at the same thrust.
  */
 const CIVIL_FLIGHT = Object.freeze({ mach: .25, heightMetres: 300 });
 /** Class C: below the departure rows the speed law is not extrapolated past this drop from full speed, about where ANP's approach rows leave the fan. */
 const CIVIL_FAN_QUIETEST_DECIBELS = 30;
 const HEIDMANN_BROADBAND = Object.freeze({ humpCentre: 2.5, humpOctaves: Math.log2(2.2) });
-const civilFan = (offset, speedExponent) => Object.freeze({ harmonics: Object.freeze([0, -6]), fullToneDecibels: offset, fullHumpDecibels: 3 + offset, speedExponent, quietestDecibels: CIVIL_FAN_QUIETEST_DECIBELS, ...HEIDMANN_BROADBAND, buzzSaw: Object.freeze({ fromSpeed: .85, decibels: 3 + offset, orderSpread: .6 }) });
+const civilFan = (offset, speedExponent, knee = null) => Object.freeze({ harmonics: Object.freeze([0, -6]), fullToneDecibels: offset, fullHumpDecibels: 3 + offset, speedExponent, knee, quietestDecibels: CIVIL_FAN_QUIETEST_DECIBELS, ...HEIDMANN_BROADBAND, buzzSaw: Object.freeze({ fromSpeed: .85, decibels: 3 + offset, orderSpread: .6 }) });
+/** Class C fit to B data (ANP 2.3 GE90-115B departure rows, decision 15): above this fan speed the tones and hump rise steeply as the tips turn supersonic, this many decibels over the speed law at full speed. */
+const WIDEBODY_KNEE = Object.freeze({ fromSpeed: .84, decibels: 7 });
 
 /**
  * Fink's airframe noise (FAA-RD-77-29, 1977) as ANOPP gives it (Zorumski 1982, NASA TM-83199 part 2, section 8.8, tables
@@ -275,7 +277,7 @@ export const ENGINE = Object.freeze({
     }),
     widebody: Object.freeze({
       label: 'Widebody', civil: true, engines: 2, defaultPower: 1, flight: CIVIL_FLIGHT,
-      turbomachinery: Object.freeze({ ...civilFan(-1.9, 8.6), blades: 22, fullBladeHz: 864 }),
+      turbomachinery: Object.freeze({ ...civilFan(-1.9, 4.8, WIDEBODY_KNEE), blades: 22, fullBladeHz: 864 }),
       airframe: AIRFRAMES.widebody,
       settings: Object.freeze([
         Object.freeze({ power: 0, label: 'Idle', pressureRatio: 1.055, totalTemperatureKelvin: 600, diameterMetres: 0.966 }),

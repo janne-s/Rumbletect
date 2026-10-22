@@ -55,11 +55,23 @@ test('a civil fan grows with a power of its speed, from at most 30 dB under full
     const level = power => 10 * Math.log10(turbomachineryAt(key, power, reference).hump / reference);
     const drop = level(1) - level(0);
     assert.ok(drop > 12 && drop <= 30 + 1e-9, `${key}: ${drop} dB`);
-    const { speedExponent } = ENGINE.classes[key].turbomachinery;
-    const [a, b] = [.5, .8];
-    const expected = 10 * speedExponent * Math.log10(turbomachineryAt(key, b, reference).bladeHz / turbomachineryAt(key, a, reference).bladeHz);
-    assert.ok(Math.abs(level(b) - level(a) - expected) < 1e-9, key);
+    const { speedExponent, knee } = ENGINE.classes[key].turbomachinery;
+    const [a, b] = [.3, .5];
+    const speedRatio = turbomachineryAt(key, b, reference).bladeHz / turbomachineryAt(key, a, reference).bladeHz;
+    if (knee) assert.ok(turbomachineryAt(key, b, reference).bladeHz / ENGINE.classes[key].turbomachinery.fullBladeHz < knee.fromSpeed, key);
+    assert.ok(Math.abs(level(b) - level(a) - 10 * speedExponent * Math.log10(speedRatio)) < 1e-9, key);
   }
+});
+
+test('above its knee the widebody fan rises faster than its speed law, as ANP\'s GE90 rows do near take-off', () => {
+  const reference = referencePower('widebody', 15);
+  const { speedExponent, fullBladeHz } = ENGINE.classes.widebody.turbomachinery;
+  const at = power => turbomachineryAt('widebody', power, reference);
+  const [low, high] = [at(.7), at(.9)];
+  const rise = 10 * Math.log10(high.hump / low.hump);
+  assert.ok(rise > 2 * 10 * speedExponent * Math.log10(high.bladeHz / low.bladeHz), `${rise} dB`);
+  assert.ok(Math.abs(10 * Math.log10(at(1).hump / reference) - ENGINE.classes.widebody.turbomachinery.fullHumpDecibels) < 1e-9);
+  assert.ok(at(1).bladeHz === fullBladeHz);
 });
 
 test('a civil engine idles at 6 % of its take-off thrust, low enough for ANP\'s approach rows', () => {

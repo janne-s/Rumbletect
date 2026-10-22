@@ -16,6 +16,13 @@ export function referencePower(engineClass, temperatureCelsius) {
 
 const SLOWEST_FAN = .01;
 
+/** A civil fan's level re full speed: its speed to `speedExponent`, and with a knee a steep rise once the tips turn supersonic. */
+function speedLawDecibels({ speedExponent, knee }, speed) {
+  if (!knee) return 10 * speedExponent * Math.log10(speed);
+  const rise = 10 ** (knee.decibels / 10);
+  return 10 * Math.log10((speed ** speedExponent + rise * smoothStep((speed - knee.fromSpeed) / (1 - knee.fromSpeed))) / (1 + rise));
+}
+
 /** Class C: the blade-passing frequency and the tones' and hump's powers at a power share, or null for a class without turbomachinery; a civil fan's levels go as its speed to `speedExponent`, the others' run between idle and full by power. */
 export function turbomachineryAt(engineClass, power, referencePa2) {
   const turbo = ENGINE.classes[engineClass]?.turbomachinery;
@@ -23,7 +30,7 @@ export function turbomachineryAt(engineClass, power, referencePa2) {
   const weights = turbo.harmonics.map(decibels => 10 ** (decibels / 10));
   const total = weights.reduce((a, b) => a + b, 0);
   const speed = turbo.blades ? fanSpeedShare(power, engineClass) : null;
-  const levelOf = (pair, full) => (turbo.speedExponent ? full + Math.max(-turbo.quietestDecibels, 10 * turbo.speedExponent * Math.log10(Math.max(speed, SLOWEST_FAN))) : between(pair, power));
+  const levelOf = (pair, full) => (turbo.speedExponent ? full + Math.max(-turbo.quietestDecibels, speedLawDecibels(turbo, Math.max(speed, SLOWEST_FAN))) : between(pair, power));
   const tones = referencePa2 * 10 ** (levelOf(turbo.toneDecibels, turbo.fullToneDecibels) / 10);
   const bladeHz = speed === null ? between([turbo.idleBladeHz, turbo.fullBladeHz], power) : turbo.fullBladeHz * speed;
   return {
