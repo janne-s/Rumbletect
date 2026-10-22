@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { ENGINE } from '../src/domain/constants.js';
-import { AIRLINER_CLASSES, ENGINE_CLASSES, engineAtPower, streamsOf } from '../src/domain/engine.js';
+import { AIRLINER_CLASSES, ENGINE_CLASSES, engineAtPower, streamsOf, thrustNewtons } from '../src/domain/engine.js';
 import { defaultAirliner, defaultScene, parseScene, readScene, serializeScene } from '../src/domain/scene.js';
 import { referencePower, turbomachineryAt } from '../src/domain/turbomachinery.js';
 import { macrosFor } from '../src/ui/macros.js';
@@ -32,7 +32,7 @@ test('each civil class makes its take-off thrust within a tenth from its core an
   }
 });
 
-test('the fan turns with the square root of thrust, so the buzz-saw sounds at take-off and approach turns the fan at half speed', () => {
+test('the fan turns with the square root of thrust, so the buzz-saw sounds at take-off and an approach turns the fan at about half speed', () => {
   const reference = referencePower('narrowbody', 15);
   const takeOff = turbomachineryAt('narrowbody', 1, reference);
   const { blades, fullBladeHz } = ENGINE.classes.narrowbody.turbomachinery;
@@ -43,13 +43,22 @@ test('the fan turns with the square root of thrust, so the buzz-saw sounds at ta
   assert.ok(turbomachineryAt('narrowbody', .8, reference).buzzSaw !== null);
   assert.equal(turbomachineryAt('narrowbody', .3, reference).buzzSaw, null);
   assert.equal(turbomachineryAt('narrowbody', 0, reference).buzzSaw, null);
-  const approach = turbomachineryAt('narrowbody', .1, reference).bladeHz / fullBladeHz;
-  assert.ok(approach > .5 && approach < .6, `${approach} of full speed at approach`);
+  let [low, high] = [0, 1];
+  for (let step = 0; step < 40; step += 1) { const middle = (low + high) / 2; if (thrustNewtons(middle, 'narrowbody') < 6000 * 4.448222) low = middle; else high = middle; }
+  const approach = turbomachineryAt('narrowbody', low, reference).bladeHz / fullBladeHz;
+  assert.ok(approach > .45 && approach < .5, `${approach} of full speed at ANP's 6 000 lb approach`);
 });
 
 test('a civil fan is far quieter at idle than at take-off, as approach levels require', () => {
   for (const key of AIRLINER_CLASSES) {
     const { toneDecibels, humpDecibels } = ENGINE.classes[key].turbomachinery;
     assert.ok(toneDecibels[1] - toneDecibels[0] > 12 && humpDecibels[1] - humpDecibels[0] > 12, key);
+  }
+});
+
+test('a civil engine idles at 6 % of its take-off thrust, low enough for ANP\'s approach rows', () => {
+  for (const key of AIRLINER_CLASSES) {
+    const share = thrustNewtons(0, key) / thrustNewtons(1, key);
+    assert.ok(Math.abs(share - .06) < .005, `${key}: ${share}`);
   }
 });
