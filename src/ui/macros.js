@@ -205,6 +205,14 @@ const rocketBurnout = {
   entry: { units: SPEED, get: item => item.ascent.burnoutMetresPerSecond, set: (item, value) => setAscent(item, 'burnoutMetresPerSecond', value) }
 };
 
+const rocketBurnTime = {
+  label: 'Burn time',
+  read: item => clamp01(logPosition(item.ascent.burnSeconds, range('burnSeconds'))),
+  write: (item, t) => setAscent(item, 'burnSeconds', +logValue(t, range('burnSeconds')).toPrecision(2)),
+  show: item => `${item.ascent.burnSeconds} s`,
+  entry: { unit: 's', get: item => item.ascent.burnSeconds, set: (item, value) => setAscent(item, 'burnSeconds', value) }
+};
+
 const rocketLaunch = {
   label: 'Launch angle',
   read: item => (item.launchDegrees - range('launchDegrees')[0]) / (range('launchDegrees')[1] - range('launchDegrees')[0]),
@@ -230,7 +238,7 @@ const salvoDuration = {
 };
 
 export function rocketMacros(emitter, { onset: withOnset = false } = {}) {
-  const list = [...(emitter.kind === 'salvo' ? [salvoRounds, salvoDuration] : []), rocketCategory, rocketSize, flightHeading, rocketLaunch, rocketBend, rocketTurnStart, rocketBurnout];
+  const list = [...(emitter.kind === 'salvo' ? [salvoRounds, salvoDuration] : []), rocketCategory, rocketSize, flightHeading, rocketLaunch, rocketBend, rocketTurnStart, rocketBurnout, rocketBurnTime];
   return withOnset ? [...list, onset] : list;
 }
 

@@ -187,3 +187,14 @@ test('a negative bend lofts a rocket above its launch angle after the turn, as A
   bend.write(item, 1 / 3);
   assert.equal(item.ascent.bendDegrees, 0);
 });
+
+test('a rocket\'s burn time is a quick control, from a second to the longest burn', () => {
+  const item = defaultRocket();
+  const burn = rocketMacros(item).find(macro => macro.label === 'Burn time');
+  burn.write(item, 0);
+  assert.equal(item.ascent.burnSeconds, 1);
+  burn.write(item, 1);
+  assert.equal(item.ascent.burnSeconds, 590);
+  burn.entry.set(item, 12.5);
+  assert.equal(item.ascent.burnSeconds, 12.5);
+});

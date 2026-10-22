@@ -75,8 +75,9 @@ the flight, then delays, spreads, and filters that sound on its way there.
   does after leaving its rail; marks on the path show the turn and where the rocket passes
   the speed of sound of the air at its height.
 - **Top speed** — The speed at burnout. The flight ends at burnout or where
-  it comes down to the ground; sound already sent travels on. Burn time, how
-  late the speed builds, and the turn's length in the details.
+  it comes down to the ground; sound already sent travels on. How late the
+  speed builds and the turn's length in the details.
+- **Burn time** — How long the engine burns.
 - **Salvo** — Its own kind, by default a 122 mm launcher's 40 rounds in 20 s:
   a multiple launcher's rounds, each the same
   rocket with its own seed, launch time, launcher, heading, angle, and thrust;
