@@ -14,7 +14,6 @@ const RUMBLETECT_PARAMETERS = Object.freeze({
   climbDegrees: { minimum: -90, maximum: 90, unit: '°', label: 'Climb', reliability: null },
   mach: { minimum: .1, maximum: 3, unit: '', label: 'Mach', reliability: null },
   accelerationMetresPerSecondSquared: { minimum: -50, maximum: 100, unit: 'm/s²', label: 'Acceleration', reliability: null },
-  turnDegreesPerSecond: { minimum: -10, maximum: 10, unit: '°/s', label: 'Turn', reliability: null },
   flightSeconds: { minimum: 1, maximum: 600, unit: 's', label: 'Flight time', reliability: null },
   pressureRatio: { minimum: 1.01, maximum: 6, unit: '', label: 'Nozzle pressure ratio', reliability: 'C' },
   totalTemperatureKelvin: { minimum: 300, maximum: 2300, unit: 'K', label: 'Jet temperature', reliability: 'C' },
@@ -25,9 +24,9 @@ const RUMBLETECT_PARAMETERS = Object.freeze({
   exitDiameterMetres: { minimum: .0001, maximum: 10, unit: 'm', label: 'Nozzle exit diameter', reliability: 'B' },
   efficiencyPercent: { minimum: .05, maximum: 1, unit: '%', label: 'Acoustic efficiency', reliability: 'B' },
   burnSeconds: { minimum: 1, maximum: 590, unit: 's', label: 'Burn time', reliability: 'C' },
-  burnoutMetresPerSecond: { minimum: 1, maximum: 8000, unit: 'm/s', label: 'Burnout speed', reliability: 'C' },
-  accelerationPercent: { minimum: 0, maximum: 100, unit: '%', label: 'Acceleration', reliability: 'C' },
-  bendDegrees: { minimum: 0, maximum: 180, unit: '°', label: 'Bend', reliability: 'C' },
+  burnoutMetresPerSecond: { minimum: 1, maximum: 8000, unit: 'm/s', label: 'Top speed', reliability: 'C' },
+  accelerationPercent: { minimum: 0, maximum: 100, unit: '%', label: 'Late acceleration', reliability: 'C' },
+  bendDegrees: { minimum: -180, maximum: 180, unit: '°', label: 'Bend', reliability: null },
   turnStartPercent: { minimum: 0, maximum: 100, unit: '%', label: 'Turn starts', reliability: 'C' },
   turnLengthPercent: { minimum: 1, maximum: 100, unit: '%', label: 'Turn length', reliability: 'C' },
   throttleDownSeconds: { minimum: 0, maximum: 590, unit: 's', label: 'Throttle down at', reliability: 'C' },
@@ -63,7 +62,7 @@ export const PROPELLANTS = Object.freeze(Object.keys(ROCKET.propellants));
 /** Class C: a close formation, wingtips some 10 m apart. */
 const FORMATION_LAYOUT = Object.freeze({ memberCount: 4, lateralSpacingMetres: 20, trailSpacingMetres: 30, verticalSpacingMetres: 0 });
 
-const JET_NUMBERS = Object.freeze(['startSeconds', 'headingDegrees', 'climbDegrees', 'mach', 'accelerationMetresPerSecondSquared', 'turnDegreesPerSecond']);
+const JET_NUMBERS = Object.freeze(['startSeconds', 'headingDegrees', 'climbDegrees', 'mach', 'accelerationMetresPerSecondSquared', 'bendDegrees', 'turnStartPercent', 'turnLengthPercent']);
 
 export function defaultJet(id = 'jet-1', name = 'Jet', seed = 20261015) {
   return {
@@ -74,7 +73,9 @@ export function defaultJet(id = 'jet-1', name = 'Jet', seed = 20261015) {
     climbDegrees: 0,
     mach: .44,
     accelerationMetresPerSecondSquared: 0,
-    turnDegreesPerSecond: 0,
+    bendDegrees: 0,
+    turnStartPercent: 50,
+    turnLengthPercent: 30,
     durationSeconds: 33,
     autoDuration: false,
     engineClass: 'fighter',

@@ -17,10 +17,28 @@ const STREAMS = Object.freeze({ fine: 0, large: 0x9e3779b9, envelope: 0x85ebca6b
  * The jet's flight in still air of the ground's temperature, as the near listen flew it. With `autoDuration` it
  * flies on until every microphone is `JET_FLIGHT.hearingDecibels` below its closest approach by spreading.
  */
+/** The flight's bend, eased from the turn's start to its end as shares of `seconds` of flight, or none. */
+function turnOf(emitter, seconds) {
+  if (!emitter.bendDegrees) return null;
+  const from = emitter.turnStartPercent / 100;
+  return { degrees: emitter.bendDegrees, fromSeconds: seconds * from, toSeconds: seconds * (from + (1 - from) * emitter.turnLengthPercent / 100) };
+}
+
+const withTurn = (path, turn) => ({ ...path, turnSeconds: turn ? [turn.fromSeconds, turn.toSeconds] : null });
+
 export function jetPath(emitter, scene) {
   const air = { ...scene.air, refraction: false };
-  if (!emitter.autoDuration) return flightPath(emitter, air);
-  const path = flightPath({ ...emitter, durationSeconds: PARAMETERS.flightSeconds.maximum }, air);
+  const flown = seconds => ({ ...emitter, turnDegreesPerSecond: 0, turn: turnOf(emitter, seconds) });
+  if (!emitter.autoDuration) return withTurn(flightPath(flown(emitter.durationSeconds), air), turnOf(emitter, emitter.durationSeconds));
+  const heard = heardFlight(flightPath({ ...emitter, turnDegreesPerSecond: 0, durationSeconds: PARAMETERS.flightSeconds.maximum }, air), scene);
+  const seconds = (heard.seconds.length - 1) * heard.step;
+  const path = flightPath({ ...flown(seconds), durationSeconds: PARAMETERS.flightSeconds.maximum }, air);
+  const kept = heard.seconds.length;
+  return withTurn(Object.fromEntries(Object.entries(path).map(([key, values]) => [key, Array.isArray(values) ? values.slice(0, kept) : values])), turnOf(emitter, seconds));
+}
+
+/** A straight flight cut where every microphone has fallen out of hearing after its closest pass. */
+function heardFlight(path, scene) {
   const ratio = 10 ** (JET_FLIGHT.hearingDecibels / 20);
   let end = 0;
   for (const { positionMetres: at } of scene.receivers) {

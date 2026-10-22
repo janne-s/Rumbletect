@@ -19,11 +19,12 @@ function drawSoundBarrier(context, path, frame, air) {
   context.beginPath(); context.moveTo(p.x - nx, p.y - ny); context.lineTo(p.x + nx, p.y + ny); context.stroke();
 }
 
-/** Small rings where a rocket's turn starts and ends along the distance flown. */
+/** Small rings where a turn starts and ends: a rocket's along the distance flown, a jet's along its flight time. */
 function drawTurn(context, path, frame) {
-  for (const metres of path.turnMetres) {
-    const index = path.flownMetres.findIndex(flown => flown >= metres);
-    if (index < 0) continue;
+  const indices = path.turnMetres ? path.turnMetres.map(metres => path.flownMetres.findIndex(flown => flown >= metres))
+    : (path.turnSeconds ?? []).map(seconds => Math.round(seconds / path.step));
+  for (const index of indices) {
+    if (index < 0 || index >= path.x.length) continue;
     const p = frame.project(pointOf(path, index));
     context.beginPath(); context.arc(p.x, p.y, TRACK_MARKS.turnRadius, 0, 2 * Math.PI); context.stroke();
   }
@@ -58,7 +59,7 @@ export function kindViews() {
         }
         context.stroke();
         drawSoundBarrier(context, path, frame, scene.air);
-        if (emitter.ascent?.bendDegrees > 0) drawTurn(context, path, frame);
+        if (emitter.ascent?.bendDegrees ?? emitter.bendDegrees) drawTurn(context, path, frame);
       }
       for (const body of state?.flights?.get(emitter.id) ?? []) {
         const p = frame.project(body);

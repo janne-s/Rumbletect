@@ -114,16 +114,18 @@ test('a rocket stops where it comes down to the ground, and its pad is not the g
   assert.ok(ascentPath(defaultRocket(), hill).seconds.length > 2);
 });
 
-test('Size and Propellant change the engine and leave the flight as it was', () => {
+test('Size and Category change the engine and leave the flight as it was', () => {
   const rocket = defaultRocket();
   const before = ascentPath(rocket);
   const macros = rocketMacros(rocket);
-  for (const [label, t] of [['Size', .2], ['Propellant', 1]]) {
+  for (const [label, t] of [['Size', .2], ['Category', 0], ['Category', 1]]) {
     const item = structuredClone(rocket);
     macros.find(macro => macro.label === label).write(item, t);
     assert.notDeepEqual(item.engine, rocket.engine, label);
     const after = ascentPath(item);
-    assert.deepEqual([after.x, after.z, after.speed], [before.x, before.z, before.speed], label);
+    const flown = path => ['x', 'z', 'speed'].map(key => path[key].slice(Math.round(path.heldSeconds / path.step)).filter((_, index) => index % 50 === 0).map(value => +value.toFixed(6)));
+    assert.deepEqual(flown(after), flown(before), label);
+    assert.equal(item.launchDegrees, rocket.launchDegrees);
   }
 });
 

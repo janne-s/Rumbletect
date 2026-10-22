@@ -49,7 +49,7 @@ function details(emitter, { updateEmitter, scene }) {
       pointFields(container, { label: 'Start', point: emitter.startMetres, onCommit: set('startMetres') });
     }),
     section('Flight', container => {
-      numbers(['headingDegrees', 'climbDegrees', 'mach', 'accelerationMetresPerSecondSquared', 'turnDegreesPerSecond'])(container);
+      numbers(['headingDegrees', 'climbDegrees', 'mach', 'accelerationMetresPerSecondSquared', 'bendDegrees', 'turnStartPercent', 'turnLengthPercent'])(container);
       checkboxField(container, { label: 'Auto flight time', value: emitter.autoDuration, reliability: 'C', onCommit: set('autoDuration') });
       if (!emitter.autoDuration) numberField(container, { key: 'flightSeconds', value: emitter.durationSeconds, onCommit: set('durationSeconds') });
       else {
@@ -59,7 +59,7 @@ function details(emitter, { updateEmitter, scene }) {
         container.append(note);
       }
     }),
-    section('Engine', container => {
+    section('Set by category', container => {
       numberField(container, { key: 'engines', value: emitter.engine.engines, onCommit: setEngine('engines') });
       numberField(container, { key: 'pressureRatio', value: emitter.engine.pressureRatio, onCommit: setEngine('pressureRatio') });
       numberField(container, { key: 'totalTemperatureKelvin', value: emitter.engine.totalTemperatureKelvin, onCommit: setEngine('totalTemperatureKelvin') });
@@ -117,16 +117,16 @@ function rocketDetails(emitter, { updateEmitter }) {
       numberField(container, { key: 'headingDegrees', value: emitter.headingDegrees, onCommit: set('headingDegrees') });
       numberField(container, { key: 'launchDegrees', value: emitter.launchDegrees, onCommit: set('launchDegrees') });
     }),
-    section('Engines', container => {
+    section('Flight', container => {
+      ROCKET_ASCENT_NUMBERS.forEach(key => numberField(container, { key, value: emitter.ascent[key], onCommit: setIn('ascent', key) }));
+    }),
+    section('Set by category', container => {
       selectField(container, { label: 'Propellant', value: emitter.propellant, options: PROPELLANTS.map(key => [key, ROCKET.propellants[key].label]), reliability: 'B', onCommit: choose });
       ['engines', 'thrustKilonewtons', 'exitVelocityMetresPerSecond', 'exitDiameterMetres', 'efficiencyPercent'].forEach(key => numberField(container, { key, value: emitter.engine[key], onCommit: setIn('engine', key) }));
       const note = document.createElement('p');
       note.className = 'field-note';
       note.textContent = `${thrustLabel(totalThrustNewtons(emitter))} in all · plume ${vehicle.effectiveDiameterMetres < 1 ? `${Math.round(vehicle.effectiveDiameterMetres * 100)} cm` : `${vehicle.effectiveDiameterMetres.toFixed(2)} m`} across · peak ${peakFrequencyHz(vehicle) < 100 ? peakFrequencyHz(vehicle).toFixed(1) : Math.round(peakFrequencyHz(vehicle))} Hz`;
       container.append(note);
-    }),
-    section('Ascent', container => {
-      ROCKET_ASCENT_NUMBERS.forEach(key => numberField(container, { key, value: emitter.ascent[key], onCommit: setIn('ascent', key) }));
       checkboxField(container, { label: 'Water on the pad', value: emitter.ascent.water, reliability: 'B', onCommit: setIn('ascent', 'water') });
     }),
     ...(emitter.kind === 'salvo' ? [section('Salvo', container => SALVO_LAYOUT.forEach(key => numberField(container, { key, value: emitter[key], onCommit: set(key) })))] : [])

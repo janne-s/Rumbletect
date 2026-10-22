@@ -31,11 +31,13 @@ the flight, then delays, spreads, and filters that sound on its way there.
 ## Jet
 
 - **Category** — Hobby turbine, jet drone, cruise missile, fighter, or heavy
-  bomber: sets the engine, its count, speed, and height in one step.
+  bomber: changes the engine and its count; the flight stays as set.
 - **Power** — Idle to full power, for a fighter through military power to
   full afterburner.
-- **Mach, height, heading, climb, acceleration, turn, flight time** — The
-  flight, subsonic.
+- **Mach, height, heading** — Where and how fast it flies.
+- **Bend, turn starts** — Straight, then turning by the bend from a point
+  along the flight; rings on the path mark the turn. Climb, acceleration,
+  turn length, and flight time in the details.
 - **Formation** — Its own kind: aircraft flying a V behind the leader, each
   with its own seed; Spacing sets how far apart, the trail in its details.
 - **Turbomachinery** — A small turbine's blade-passing whine rising with
@@ -47,7 +49,8 @@ the flight, then delays, spreads, and filters that sound on its way there.
 ## Airliner
 
 - **Category** — Business jet, regional jet, narrowbody, widebody, or
-  four-engine airliner: sets the engines and a climb-out after take-off.
+  four-engine airliner: changes the engines; the flight stays as set.
+- **Power, Mach, height, heading, bend, turn starts** — As for a jet.
 - **Source** — A turbofan as two jets, a fast core and a slower fan stream,
   with the fan's blade-passing tones and broadband hump, and at take-off
   power the buzz-saw: tones at every order of the shaft as the fan tips pass
@@ -56,27 +59,25 @@ the flight, then delays, spreads, and filters that sound on its way there.
 ## Rocket
 
 - **Category** — Hobby, 122 mm artillery, heavy artillery, sounding, small,
-  medium, and heavy launchers, and super-heavy: sets the engine and a typical
-  flight in one step.
+  medium, and heavy launchers, and super-heavy: changes the engine, its
+  propellant, and nozzle; the flight stays as set.
 - **Size** — Total thrust from a 10 N hobby motor to a 100 MN super-heavy
-  launcher; the nozzle and water on the pad follow. The flight stays.
-- **Propellant** — Solid, kerosene, methane, or hydrogen: a faster exhaust
-  sounds higher. Liquid engines are held on the pad for three seconds, solid
-  motors lift off at ignition. The flight stays.
+  launcher; the nozzle and water on the pad follow.
 - **Heading, launch angle, bend, turn starts** — The path, set rather than
   simulated: straight along the launch angle, or turning by the bend from a
   point along it; marks on the path show the turn and where the rocket passes
   the speed of sound of the air at its height.
-- **Burn time, burnout speed, acceleration** — How fast it flies: from the pad
-  to the burnout speed, evenly or late as a rocket does. The flight ends at
-  burnout or where it comes down to the ground; sound already sent travels on.
+- **Top speed** — The speed at burnout. The flight ends at burnout or where
+  it comes down to the ground; sound already sent travels on. Burn time, how
+  late the speed builds, and the turn's length in the details.
 - **Salvo** — Its own kind, by default a 122 mm launcher's 40 rounds in 20 s:
   a multiple launcher's rounds, each the same
   rocket with its own seed, launch time, launcher, heading, angle, and thrust;
   rounds per salvo, spread, launcher radius, and spreads in its details.
-- **Details** — Engine count, thrust, exhaust velocity, nozzle diameter,
-  acoustic efficiency, turn length, throttle-down around max-Q, and water on
-  the pad.
+- **Details** — The flight, and what the category sets: propellant (a faster
+  exhaust sounds higher; liquid engines are held on the pad for three
+  seconds), engine count, thrust, exhaust velocity, nozzle diameter, acoustic
+  efficiency, and water on the pad.
 - **Source** — Sound power from thrust and exhaust velocity, with the
   spectrum and directivity of BYU's SATURN model; low frequencies radiate
   toward the plume and start once the plume has left the pad; the plume

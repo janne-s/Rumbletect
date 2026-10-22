@@ -84,6 +84,7 @@ test('the hobby front remains readable at the shortened-playback start and advan
   const scene = defaultScene();
   const emitter = scene.emitters[0];
   macrosFor(emitter).find(macro => macro.label === 'Category').write(emitter, 0);
+  emitter.startMetres = { ...emitter.startMetres, z: 30 };
   const fronts = [];
   KIND_PANELS.jet.wavefrontSources(emitter, scene, point => point, fronts);
   const [front] = fronts;

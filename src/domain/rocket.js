@@ -93,6 +93,12 @@ export function directivityRow(strouhal, out, offset) {
   }
 }
 
+/** A rocket's engine set to a category's: thrust, engines, propellant, nozzle, efficiency and the pad's water; its flight kept. */
+export function categoryEngine(item, category) {
+  const sized = sizedRocket(category.newtons, category.engines, category.propellant);
+  return { ...item, propellant: category.propellant, engine: { ...item.engine, ...sized.engine, efficiencyPercent: category.efficiencyPercent }, ascent: { ...item.ascent, water: sized.ascent.water } };
+}
+
 /** A rocket set to a category's thrust, engines, propellant, efficiency and ascent; the throttle schedule kept. */
 export function categoryRocket(item, category) {
   const sized = sizedRocket(category.newtons, category.engines, category.propellant);
