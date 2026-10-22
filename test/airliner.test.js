@@ -68,3 +68,18 @@ test('a civil engine idles at 6 % of its take-off thrust, low enough for ANP\'s 
     assert.ok(Math.abs(share - .06) < .005, `${key}: ${share}`);
   }
 });
+
+test('a jet\'s and an airliner\'s quick controls set the climb and the flight time, which ends an automatic flight time', () => {
+  for (const emitter of [defaultAirliner(), { ...defaultAirliner(), kind: 'jet', engineClass: 'fighter' }]) {
+    const macros = macrosFor(emitter);
+    const climb = macros.find(macro => macro.label === 'Climb');
+    const time = macros.find(macro => macro.label === 'Flight time');
+    climb.entry.set(emitter, 3);
+    assert.equal(emitter.climbDegrees, 3);
+    emitter.autoDuration = true;
+    time.write(emitter, 1);
+    assert.equal(emitter.durationSeconds, 600);
+    assert.equal(emitter.autoDuration, false);
+  }
+  assert.equal(defaultAirliner().climbDegrees, 0);
+});

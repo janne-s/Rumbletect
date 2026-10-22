@@ -2,6 +2,7 @@ import { ENGINE, MODEL_VERSION, ROCKET, VOLCANO } from './constants.js';
 import { categoryRocket } from './rocket.js';
 import { AIRLINER_CLASSES, ENGINE_CLASSES, engineOfClass } from './engine.js';
 import { createScene } from '../shared/domain/scene.js';
+import { speedOfSoundMetresPerSecond } from '../shared/domain/air.js';
 
 export { DEFAULT_PLACE, DEFAULT_QUALITY, defaultReceiver, headingToward, PLACE_NAME_KINDS, placeLabel, QUALITY_NUMBERS, QUALITY_SWITCHES, SceneError, TERRAIN_DEFAULTS } from '../shared/domain/scene.js';
 
@@ -83,10 +84,13 @@ export function defaultJet(id = 'jet-1', name = 'Jet', seed = 20261015) {
   };
 }
 
-/** A narrowbody climbing out after take-off. */
+const DEFAULT_AIR_CELSIUS = 15;
+
+/** A narrowbody in level flight, crossing from as far before the origin as after it. */
 export function defaultAirliner(id = 'airliner-1', name = 'Airliner', seed = 20261021) {
   const { flight } = ENGINE.classes.narrowbody;
-  return { ...defaultJet(id, name, seed), kind: 'airliner', engineClass: 'narrowbody', engine: engineOfClass('narrowbody'), mach: flight.mach, startMetres: { x: -2500, y: 0, z: flight.heightMetres }, climbDegrees: 6, gearAndFlaps: false };
+  const approachMetres = 2500;
+  return { ...defaultJet(id, name, seed), kind: 'airliner', engineClass: 'narrowbody', engine: engineOfClass('narrowbody'), mach: flight.mach, startMetres: { x: -approachMetres, y: 0, z: flight.heightMetres }, climbDegrees: 0, durationSeconds: Math.round(2 * approachMetres / (flight.mach * speedOfSoundMetresPerSecond(DEFAULT_AIR_CELSIUS))), gearAndFlaps: false };
 }
 
 export const defaultFormation = (id = 'formation-1', name = 'Formation', seed = 20261014) => ({ ...defaultJet(id, name, seed), kind: 'formation', ...FORMATION_LAYOUT });

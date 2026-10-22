@@ -34,10 +34,12 @@ the flight, then delays, spreads, and filters that sound on its way there.
   bomber: changes the engine and its count; the flight stays as set.
 - **Power** — Idle to full power, for a fighter through military power to
   full afterburner.
-- **Mach, height, heading** — Where and how fast it flies.
+- **Mach, height, climb, heading** — Where and how fast it flies.
 - **Bend, turn starts** — Straight, then turning by the bend from a point
-  along the flight; rings on the path mark the turn. Climb, acceleration,
-  turn length, and flight time in the details.
+  along the flight; rings on the path mark the turn. Acceleration and turn
+  length in the details.
+- **Flight time** — How long it flies; setting it ends an automatic flight
+  time.
 - **Formation** — Its own kind: aircraft flying a V behind the leader, each
   with its own seed; Spacing sets how far apart, the trail in its details.
 - **Turbomachinery** — A small turbine's blade-passing whine rising with
@@ -50,7 +52,7 @@ the flight, then delays, spreads, and filters that sound on its way there.
 
 - **Category** — Business jet, regional jet, narrowbody, widebody, or
   four-engine airliner: changes the engines; the flight stays as set.
-- **Power, Mach, height, heading, bend, turn starts** — As for a jet.
+- **Power, Mach, height, climb, heading, bend, turn starts, flight time** — As for a jet.
 - **Source** — A turbofan as two jets, a fast core and a slower fan stream,
   with the fan's blade-passing tones and broadband noise, and at take-off
   power the buzz-saw: tones at every order of the shaft as the fan tips pass
