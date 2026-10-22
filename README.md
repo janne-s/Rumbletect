@@ -36,8 +36,9 @@ the flight, then delays, spreads, and filters that sound on its way there.
   full afterburner.
 - **Mach, height, climb, heading** — Where and how fast it flies.
 - **Bend, turn starts** — Straight, then turning by the bend from a point
-  along the flight; rings on the path mark the turn. Acceleration and turn
-  length in the details.
+  along the flight; rings on the path mark the turn. Turn length in the
+  details.
+- **Acceleration** — Speeding up or slowing down along the flight.
 - **Flight time** — How long it flies; setting it ends an automatic flight
   time.
 - **Formation** — Its own kind: aircraft flying a V behind the leader, each
@@ -52,7 +53,8 @@ the flight, then delays, spreads, and filters that sound on its way there.
 
 - **Category** — Business jet, regional jet, narrowbody, widebody, or
   four-engine airliner: changes the engines; the flight stays as set.
-- **Power, Mach, height, climb, heading, bend, turn starts, flight time** — As for a jet.
+- **Power, Mach, acceleration, height, climb, heading, bend, turn starts,
+  flight time** — As for a jet.
 - **Source** — A turbofan as two jets, a fast core and a slower fan stream,
   with the fan's blade-passing tones and broadband noise, and at take-off
   power the buzz-saw: tones at every order of the shaft as the fan tips pass

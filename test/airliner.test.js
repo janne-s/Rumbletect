@@ -69,12 +69,15 @@ test('a civil engine idles at 6 % of its take-off thrust, low enough for ANP\'s 
   }
 });
 
-test('a jet\'s and an airliner\'s quick controls set the climb and the flight time, which ends an automatic flight time', () => {
+test('a jet\'s and an airliner\'s quick controls set the acceleration, the climb and the flight time, which ends an automatic flight time', () => {
   for (const emitter of [defaultAirliner(), { ...defaultAirliner(), kind: 'jet', engineClass: 'fighter' }]) {
     const macros = macrosFor(emitter);
     const climb = macros.find(macro => macro.label === 'Climb');
     const time = macros.find(macro => macro.label === 'Flight time');
     climb.entry.set(emitter, 3);
+    const acceleration = macros.find(macro => macro.label === 'Acceleration');
+    acceleration.write(emitter, .75);
+    assert.equal(emitter.accelerationMetresPerSecondSquared, 10);
     assert.equal(emitter.climbDegrees, 3);
     emitter.autoDuration = true;
     time.write(emitter, 1);

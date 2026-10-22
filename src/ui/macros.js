@@ -72,6 +72,16 @@ const jetTurnStart = {
   entry: { unit: '%', get: item => item.turnStartPercent, set: (item, value) => { item.turnStartPercent = value; } }
 };
 
+const ACCELERATION_SPAN = Object.freeze([-20, 20]);
+
+const flightAcceleration = {
+  label: 'Acceleration',
+  read: item => clamp01((item.accelerationMetresPerSecondSquared - ACCELERATION_SPAN[0]) / (ACCELERATION_SPAN[1] - ACCELERATION_SPAN[0])),
+  write: (item, t) => { item.accelerationMetresPerSecondSquared = Math.round(2 * (ACCELERATION_SPAN[0] + t * (ACCELERATION_SPAN[1] - ACCELERATION_SPAN[0]))) / 2; },
+  show: item => `${item.accelerationMetresPerSecondSquared} m/s²`,
+  entry: { unit: 'm/s²', get: item => item.accelerationMetresPerSecondSquared, set: (item, value) => { item.accelerationMetresPerSecondSquared = value; } }
+};
+
 const CLIMB_SPAN = Object.freeze([-30, 30]);
 
 const flightClimb = {
@@ -125,7 +135,7 @@ function setSpacing(item, lateral) {
 }
 
 export function macrosFor(emitter, { onset: withOnset = false } = {}) {
-  const list = [...(emitter.kind === 'formation' ? [formationCount, formationSpacing] : []), emitter.kind === 'airliner' ? airlinerCategory : jetCategory, power, machNumber, flightHeight, flightClimb, flightHeading, jetBend, jetTurnStart, flightTime];
+  const list = [...(emitter.kind === 'formation' ? [formationCount, formationSpacing] : []), emitter.kind === 'airliner' ? airlinerCategory : jetCategory, power, machNumber, flightAcceleration, flightHeight, flightClimb, flightHeading, jetBend, jetTurnStart, flightTime];
   return withOnset ? [...list, onset] : list;
 }
 
