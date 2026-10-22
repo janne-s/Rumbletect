@@ -146,10 +146,13 @@ export const thrustLabel = newtons => (newtons >= 1e6 ? `${+(newtons / 1e6).toPr
 
 const setAscent = (item, key, value) => { item.ascent = { ...item.ascent, [key]: value }; };
 
+/** Positive bends the path down toward level flight, negative lofts it up after launch. */
+const ROCKET_BEND_SPAN = Object.freeze([-90, 180]);
+
 const rocketBend = {
   label: 'Bend',
-  read: item => item.ascent.bendDegrees / range('bendDegrees')[1],
-  write: (item, t) => setAscent(item, 'bendDegrees', Math.round(t * range('bendDegrees')[1])),
+  read: item => clamp01((item.ascent.bendDegrees - ROCKET_BEND_SPAN[0]) / (ROCKET_BEND_SPAN[1] - ROCKET_BEND_SPAN[0])),
+  write: (item, t) => setAscent(item, 'bendDegrees', Math.round(ROCKET_BEND_SPAN[0] + t * (ROCKET_BEND_SPAN[1] - ROCKET_BEND_SPAN[0]))),
   show: item => `${item.ascent.bendDegrees}°`,
   entry: { unit: '°', get: item => item.ascent.bendDegrees, set: (item, value) => setAscent(item, 'bendDegrees', value) }
 };

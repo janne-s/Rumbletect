@@ -173,3 +173,17 @@ test('a single nozzle peaks at Sr 0.024, a cluster at SATURN\'s 0.0108', async (
   for (let index = 1; index < shaped.length; index += 1) if (shaped[index] > shaped[peak]) peak = index;
   assert.ok(peak > 1.5 * ROCKET.spectrum.peakStrouhal * vehicle.exitVelocityMetresPerSecond / vehicle.effectiveDiameterMetres, `${peak} Hz`);
 });
+
+test('a negative bend lofts a rocket above its launch angle after the turn, as ATACMS climbs off its rail', () => {
+  const rocket = { ...defaultRocket(), propellant: 'solid', launchDegrees: 55 };
+  rocket.ascent = { ...rocket.ascent, burnSeconds: 10, burnoutMetresPerSecond: 1000, accelerationPercent: 30, bendDegrees: -20, turnStartPercent: 10, turnLengthPercent: 50 };
+  const path = ascentPath(rocket);
+  const angle = index => Math.atan2(path.vz[index], Math.hypot(path.vx[index], path.vy[index])) * 180 / Math.PI;
+  assert.ok(Math.abs(angle(path.speed.length - 1) - 75) < 1e-6);
+  const item = structuredClone(rocket);
+  const bend = rocketMacros(item).find(macro => macro.label === 'Bend');
+  bend.write(item, 0);
+  assert.equal(item.ascent.bendDegrees, -90);
+  bend.write(item, 1 / 3);
+  assert.equal(item.ascent.bendDegrees, 0);
+});

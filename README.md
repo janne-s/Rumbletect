@@ -65,7 +65,8 @@ the flight, then delays, spreads, and filters that sound on its way there.
   launcher; the nozzle and water on the pad follow.
 - **Heading, launch angle, bend, turn starts** — The path, set rather than
   simulated: straight along the launch angle, or turning by the bend from a
-  point along it; marks on the path show the turn and where the rocket passes
+  point along it, down toward level flight or, negative, lofting up as ATACMS
+  does after leaving its rail; marks on the path show the turn and where the rocket passes
   the speed of sound of the air at its height.
 - **Top speed** — The speed at burnout. The flight ends at burnout or where
   it comes down to the ground; sound already sent travels on. Burn time, how
