@@ -87,11 +87,11 @@ export function ventPath(volcano) {
 }
 
 /** The eruption jet as Tam's two components (B structure, C values), the jet upward from the vent, its exit velocity following the eruption. */
-export function volcanoGrains(volcano, scene, band = 'full') {
+export function volcanoSource(volcano, scene) {
   const { air } = scene;
   const temperatureRatio = volcano.jet.gasTemperatureKelvin / (air.temperatureCelsius + KELVIN_OFFSET);
   const diameter = volcano.jet.ventDiameterMetres;
-  return mergedGrains([pathGrains(volcano, scene, ventPath(volcano), {
+  return {
     components: ({ seconds }) => {
       const share = eruptionShare(volcano, seconds - volcano.startSeconds);
       if (share <= 0) return null;
@@ -109,5 +109,7 @@ export function volcanoGrains(volcano, scene, band = 'full') {
     },
     packetHz: ({ main }) => main.large.peakHz / JET.packetCycles,
     shape: SHAPE
-  }, band)]);
+  };
 }
+
+export const volcanoGrains = (volcano, scene, band = 'full') => mergedGrains([pathGrains(volcano, scene, ventPath(volcano), volcanoSource(volcano, scene), band)]);

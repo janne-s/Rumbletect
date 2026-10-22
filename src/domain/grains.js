@@ -52,7 +52,7 @@ function heardFlight(path, scene) {
   return Object.fromEntries(Object.entries(path).map(([key, values]) => [key, Array.isArray(values) ? values.slice(0, kept) : values]));
 }
 
-function sampled(path, seconds) {
+export function sampled(path, seconds) {
   const last = path.seconds.length - 1;
   const position = Math.min(last, Math.max(0, (seconds - path.seconds[0]) / path.step));
   const index = Math.min(last - 1, Math.floor(position));
@@ -354,13 +354,14 @@ export function formationJets(emitter) {
 
 const JET_SHAPE = waveformShape({ skewness: JET.largeScaleSkewness, kurtosis: JET.largeScaleKurtosis });
 
-export function jetGrains(emitter, scene, band = 'full') {
+/** The sound of a jet's engines and airframe at a moment of its flight, as grains and the emitter's levels see it. */
+export function jetSource(emitter, scene) {
   const { air } = scene;
   const streams = streamsOf(emitter.engine, emitter.engineClass, air.temperatureCelsius);
   const { engines } = emitter.engine;
   const turbo = turbomachineryAt(emitter.engineClass, powerOfEngine(emitter.engine, emitter.engineClass), referencePower(emitter.engineClass, air.temperatureCelsius));
   const airframe = ENGINE.classes[emitter.engineClass]?.airframe;
-  const source = {
+  return {
     components: ({ speed }) => ({
       streams: streams.map(jet => jetComponents(jet, { temperatureCelsius: air.temperatureCelsius, flightMetresPerSecond: speed })),
       airframe: airframeAt(airframe, { speedMetresPerSecond: speed, temperatureCelsius: air.temperatureCelsius, deployed: Boolean(emitter.gearAndFlaps) })
@@ -383,5 +384,9 @@ export function jetGrains(emitter, scene, band = 'full') {
     },
     shape: JET_SHAPE
   };
+}
+
+export function jetGrains(emitter, scene, band = 'full') {
+  const source = jetSource(emitter, scene);
   return mergedGrains(formationJets(emitter).map(member => pathGrains(member, scene, jetPath(member, scene), source, band)));
 }
