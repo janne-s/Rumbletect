@@ -32,7 +32,7 @@ test('each civil class makes its take-off thrust within a tenth from its core an
   }
 });
 
-test('the buzz-saw sounds at the shaft\'s orders at take-off and is gone at idle and part power', () => {
+test('the fan turns with the square root of thrust, so the buzz-saw sounds at take-off and approach turns the fan at half speed', () => {
   const reference = referencePower('narrowbody', 15);
   const takeOff = turbomachineryAt('narrowbody', 1, reference);
   const { blades, fullBladeHz } = ENGINE.classes.narrowbody.turbomachinery;
@@ -40,13 +40,16 @@ test('the buzz-saw sounds at the shaft\'s orders at take-off and is gone at idle
   assert.ok(Math.abs(takeOff.buzzSaw.shaftHz * blades - fullBladeHz) < 1e-9);
   const loudest = takeOff.buzzSaw.tones.indexOf(Math.max(...takeOff.buzzSaw.tones)) + 1;
   assert.ok(Math.abs(loudest - blades / 4) <= 1, `order ${loudest}`);
-  assert.equal(turbomachineryAt('narrowbody', .8, reference).buzzSaw, null);
+  assert.ok(turbomachineryAt('narrowbody', .8, reference).buzzSaw !== null);
+  assert.equal(turbomachineryAt('narrowbody', .3, reference).buzzSaw, null);
   assert.equal(turbomachineryAt('narrowbody', 0, reference).buzzSaw, null);
+  const approach = turbomachineryAt('narrowbody', .1, reference).bladeHz / fullBladeHz;
+  assert.ok(approach > .5 && approach < .6, `${approach} of full speed at approach`);
 });
 
 test('a civil fan is far quieter at idle than at take-off, as approach levels require', () => {
   for (const key of AIRLINER_CLASSES) {
     const { toneDecibels, humpDecibels } = ENGINE.classes[key].turbomachinery;
-    assert.ok(toneDecibels[1] - toneDecibels[0] > 15 && humpDecibels[1] - humpDecibels[0] > 15, key);
+    assert.ok(toneDecibels[1] - toneDecibels[0] > 12 && humpDecibels[1] - humpDecibels[0] > 12, key);
   }
 });

@@ -1,5 +1,5 @@
 import { ENGINE, JET } from './constants.js';
-import { engineAtPower, streamsOf } from './engine.js';
+import { engineAtPower, fanSpeedShare, streamsOf } from './engine.js';
 import { jetComponents, jetSpectra } from './jet.js';
 
 const between = (pair, share) => pair[0] + (pair[1] - pair[0]) * share;
@@ -21,21 +21,23 @@ export function turbomachineryAt(engineClass, power, referencePa2) {
   const weights = turbo.harmonics.map(decibels => 10 ** (decibels / 10));
   const total = weights.reduce((a, b) => a + b, 0);
   const tones = referencePa2 * 10 ** (between(turbo.toneDecibels, power) / 10);
-  const bladeHz = between([turbo.idleBladeHz, turbo.fullBladeHz], power);
+  const speed = turbo.blades ? fanSpeedShare(power, engineClass) : null;
+  const bladeHz = speed === null ? between([turbo.idleBladeHz, turbo.fullBladeHz], power) : turbo.fullBladeHz * speed;
   return {
     bladeHz,
     tones: weights.map(weight => tones * weight / total),
     hump: turbo.humpDecibels ? referencePa2 * 10 ** (between(turbo.humpDecibels, power) / 10) : 0,
-    buzzSaw: turbo.buzzSaw ? buzzSawTones(turbo, bladeHz, power, referencePa2) : null
+    humpOctaves: turbo.humpOctaves ?? JET.humpOctaves,
+    buzzSaw: turbo.buzzSaw ? buzzSawTones(turbo, bladeHz, speed, referencePa2) : null
   };
 }
 
 const smoothStep = value => { const t = Math.min(1, Math.max(0, value)); return t * t * (3 - 2 * t); };
 
 /** Class C: the buzz-saw's tones at the shaft's orders below the blade count, log-normal about a quarter of it, once the fan tips are supersonic. */
-function buzzSawTones(turbo, bladeHz, power, referencePa2) {
-  const { fromPower, decibels, orderSpread } = turbo.buzzSaw;
-  const share = smoothStep((power - fromPower) / (1 - fromPower));
+function buzzSawTones(turbo, bladeHz, speed, referencePa2) {
+  const { fromSpeed, decibels, orderSpread } = turbo.buzzSaw;
+  const share = smoothStep((speed - fromSpeed) / (1 - fromSpeed));
   if (share <= 0) return null;
   const centre = Math.log(turbo.blades / 4);
   const orders = Array.from({ length: turbo.blades - 1 }, (_, index) => index + 1);
@@ -63,7 +65,7 @@ export function addTurbomachinery(psd, frequencies, state, inletDegrees) {
   state.tones.forEach((power, index) => tone(state.bladeHz * (index + 1), power));
   state.buzzSaw?.tones.forEach((power, index) => tone(state.buzzSaw.shaftHz * (index + 1), power));
   if (state.hump > 0) {
-    const sigma = JET.humpOctaves * Math.LN2;
+    const sigma = state.humpOctaves * Math.LN2;
     for (let bin = 1; bin < psd.length; bin += 1) {
       const z = Math.log(frequencies[bin] / state.bladeHz) / sigma;
       if (Math.abs(z) > 5) continue;

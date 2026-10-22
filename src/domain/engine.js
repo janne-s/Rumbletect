@@ -1,4 +1,4 @@
-import { ENGINE, KELVIN_OFFSET } from './constants.js';
+import { ENGINE, GAS_CONSTANT_AIR_J_PER_KG_KELVIN as GAS_CONSTANT_AIR, KELVIN_OFFSET } from './constants.js';
 
 const between = (a, b, share) => a + (b - a) * share;
 
@@ -39,21 +39,40 @@ export function powerLabel(power, engineClass = 'fighter') {
 }
 
 /** Each stream's fully expanded jet: the engine's own, and for a class with a separate fan stream its bypass at the same power. */
-export function streamsOf(engine, engineClass, temperatureCelsius) {
+/** A class's separate fan stream at a power, or null. */
+function bypassAt(power, engineClass) {
   const bypass = ENGINE.classes[engineClass]?.bypass;
-  const core = jetOfEngine(engine, temperatureCelsius);
-  if (!bypass) return [core];
-  const power = powerOfEngine(engine, engineClass);
+  if (!bypass) return null;
   const upper = Math.max(1, bypass.findIndex(setting => setting.power >= power));
   const [low, high] = [bypass[upper - 1], bypass[upper]];
   const share = Math.min(1, Math.max(0, (power - low.power) / (high.power - low.power)));
-  const fan = {
+  return {
     pressureRatio: between(low.pressureRatio, high.pressureRatio, share),
     totalTemperatureKelvin: between(low.totalTemperatureKelvin, high.totalTemperatureKelvin, share),
     diameterMetres: between(low.diameterMetres, high.diameterMetres, share)
   };
-  return [core, jetOfEngine(fan, temperatureCelsius)];
 }
+
+export function streamsOf(engine, engineClass, temperatureCelsius) {
+  const fan = bypassAt(powerOfEngine(engine, engineClass), engineClass);
+  const core = jetOfEngine(engine, temperatureCelsius);
+  return fan ? [core, jetOfEngine(fan, temperatureCelsius)] : [core];
+}
+
+/** Class A for ideal nozzles at sea level: an engine's thrust at a power, its streams' exit momentum ρ A U². */
+export function thrustNewtons(power, engineClass) {
+  const core = engineAtPower(power, engineClass);
+  const fan = bypassAt(power, engineClass);
+  const momentum = settings => {
+    const { velocityMetresPerSecond: velocity } = jetOfEngine(settings, 15);
+    const exitKelvin = settings.totalTemperatureKelvin - velocity ** 2 / (2 * ENGINE.gasHeatCapacityJoulesPerKilogramKelvin);
+    return 101325 / (GAS_CONSTANT_AIR * exitKelvin) * Math.PI * settings.diameterMetres ** 2 / 4 * velocity ** 2;
+  };
+  return momentum(core) + (fan ? momentum(fan) : 0);
+}
+
+/** Class C: the fan's speed as a share of its full speed, about the square root of the thrust share (fan pressure rise goes as speed squared). */
+export const fanSpeedShare = (power, engineClass) => Math.sqrt(Math.max(0, thrustNewtons(power, engineClass) / thrustNewtons(1, engineClass)));
 
 /** A jet of an engine class at its usual power, with the class's engine count. */
 export function engineOfClass(engineClass) {
