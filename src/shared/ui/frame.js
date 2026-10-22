@@ -1394,6 +1394,7 @@ export function startFrame(tect) {
     }
     checkboxField(output, { label: 'Ear reflex', value: scene.render.earReflex, reliability: 'B', onCommit: value => commitListening(next => { next.render.earReflex = value; }) });
     checkboxField(output, { label: 'Loudness', value: scene.render.earLoudness, reliability: 'C', onCommit: value => commitListening(next => { next.render.earLoudness = value; }) });
+    numberField(output, { key: 'distanceLossPercent', value: scene.render.distanceLossPercent, onCommit: value => commit(next => { next.render.distanceLossPercent = value; }) });
     if (scene.render.earLoudness) checkboxField(output, { label: 'Cap onsets', value: scene.render.earCapOnsets, reliability: 'C', onCommit: value => commitListening(next => { next.render.earCapOnsets = value; }) });
     selectField(output, {
       label: 'Spatial', value: String(scene.render.ambisonicOrder),
