@@ -33,3 +33,17 @@ test('the bomber\'s fan hump holds its power', () => {
   const psd = addTurbomachinery(new Float64Array(frequencies.length), frequencies, state, 90);
   assert.ok(Math.abs(psd.reduce((sum, value) => sum + value * binHz, 0) / state.hump - 1) < .02);
 });
+
+test('a civil fan\'s broadband noise peaks per third octave at 2.5 times the blade-passing frequency, 2.2 wide, and holds its power', () => {
+  const binHz = 48000 / 65536;
+  const frequencies = Array.from({ length: 32769 }, (_, bin) => bin * binHz);
+  const state = { ...turbomachineryAt('widebody', .1, referencePower('widebody', 15)), tones: [], buzzSaw: null };
+  const psd = addTurbomachinery(new Float64Array(frequencies.length), frequencies, state, 90);
+  assert.ok(Math.abs(psd.reduce((sum, value) => sum + value * binHz, 0) / state.hump - 1) < .02);
+  const perLogFrequency = psd.map((value, bin) => value * frequencies[bin]);
+  const peakHz = frequencies[perLogFrequency.indexOf(Math.max(...perLogFrequency))];
+  assert.ok(Math.abs(Math.log(peakHz / (2.5 * state.bladeHz))) < .01, `${peakHz} Hz against ${2.5 * state.bladeHz} Hz`);
+  const at = hz => perLogFrequency[Math.round(hz / binHz)];
+  const oneDeviation = 10 * Math.log10(at(2.5 * 2.2 * state.bladeHz) / at(2.5 * state.bladeHz));
+  assert.ok(Math.abs(oneDeviation + 10 * Math.log10(Math.E) / 2) < .05, `${oneDeviation} dB one deviation up`);
+});

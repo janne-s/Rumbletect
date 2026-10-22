@@ -28,6 +28,7 @@ export function turbomachineryAt(engineClass, power, referencePa2) {
     tones: weights.map(weight => tones * weight / total),
     hump: turbo.humpDecibels ? referencePa2 * 10 ** (between(turbo.humpDecibels, power) / 10) : 0,
     humpOctaves: turbo.humpOctaves ?? JET.humpOctaves,
+    humpCentre: turbo.humpCentre ?? 1,
     buzzSaw: turbo.buzzSaw ? buzzSawTones(turbo, bladeHz, speed, referencePa2) : null
   };
 }
@@ -49,7 +50,7 @@ function buzzSawTones(turbo, bladeHz, speed, referencePa2) {
 
 const aftGain = inletDegrees => 10 ** (-JET.turbomachineryAftDecibels * Math.max(0, inletDegrees - 90) / 90 / 10);
 
-/** Adds the turbomachinery toward `inletDegrees` to a PSD on evenly spaced bins: each tone split between its two nearest bins, the hump log-normal. */
+/** Adds the turbomachinery toward `inletDegrees` to a PSD on evenly spaced bins: each tone split between its two nearest bins, the hump log-normal about `humpCentre` times the blade-passing frequency. */
 export function addTurbomachinery(psd, frequencies, state, inletDegrees) {
   if (!state) return psd;
   const binHz = frequencies[1] - frequencies[0];
@@ -66,8 +67,9 @@ export function addTurbomachinery(psd, frequencies, state, inletDegrees) {
   state.buzzSaw?.tones.forEach((power, index) => tone(state.buzzSaw.shaftHz * (index + 1), power));
   if (state.hump > 0) {
     const sigma = state.humpOctaves * Math.LN2;
+    const centreHz = state.humpCentre * state.bladeHz;
     for (let bin = 1; bin < psd.length; bin += 1) {
-      const z = Math.log(frequencies[bin] / state.bladeHz) / sigma;
+      const z = Math.log(frequencies[bin] / centreHz) / sigma;
       if (Math.abs(z) > 5) continue;
       psd[bin] += gain * state.hump * Math.exp(-z * z / 2) / (Math.sqrt(2 * Math.PI) * sigma * frequencies[bin]);
     }
