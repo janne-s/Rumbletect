@@ -76,7 +76,7 @@ export function defaultJet(id = 'jet-1', name = 'Jet', seed = 20261015) {
     accelerationMetresPerSecondSquared: 0,
     bendDegrees: 0,
     turnStartPercent: 50,
-    turnLengthPercent: 30,
+    turnLengthPercent: 100,
     durationSeconds: 33,
     autoDuration: false,
     engineClass: 'fighter',
