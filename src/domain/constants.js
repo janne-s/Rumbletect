@@ -113,17 +113,22 @@ export const TURBULENCE = Object.freeze({
  * passes 85 % of its speed and its tips the speed of sound (C). The fan's broadband noise is log-normal about 2.5 times the
  * blade-passing frequency with a geometric deviation of 2.2 (B, Heidmann 1975, NASA TM X-71763 eq. 2, fans of the 1970s;
  * Doc/reviews/2026-10-22-airframe-reference.md). The split between tones, hump and
- * buzz-saw is assumed until recordings are measured; each class's fan level at full power and its drop to idle are set
- * so its LAmax 1 000 ft under a level pass at Mach 0.24 matches the ANP database 2.3 NPD at the same thrust per engine (EASA; C fit to B data), at departure: CJ4 FJ44-4
- * 3 300 lb 87.5 dB, CRJ900 CF34-8C5 13 525 lb 85.1 dB (interpolated), A320 CFM56-5A 22 500 lb 88.9 dB, 777-300ER
- * GE90-115B 97 000 lb 98.1 dB, 747-400 PW4056 50 000 lb 96.9 dB; and, falling linearly in dB to idle, at approach:
- * 900 lb 70.9 dB, 7 250 lb 75.4 dB, 6 000 lb 75.6 dB, 28 000 lb 81.1 dB, 16 000 lb 82.9 dB. Unfitted departure rows
- * between them fall within −7.2 to +3.6 dB, lowest for the business jet, whose buzz-saw lifts only its top row, highest
- * for the widebody at mid power, as the fan's level runs linearly in dB from idle to full.
+ * buzz-saw is assumed until recordings are measured. The fan's power goes as a power of its speed (C); each class's
+ * level at full speed and that exponent are fitted so its LAmax 1 000 ft under a level pass at Mach 0.24 matches the ANP
+ * database 2.3 NPD at the same thrust per engine (EASA; C fit to B data), the level to the top departure row (CJ4 FJ44-4
+ * 3 300 lb 87.5 dB, CRJ900 CF34-8C5 13 525 lb 85.1 dB interpolated, A320 CFM56-5A 22 500 lb 88.9 dB, 777-300ER GE90-115B
+ * 97 000 lb 98.1 dB, 747-400 PW4056 50 000 lb 96.9 dB), the exponent to the lower departure rows by least squares:
+ * regional N1³·³, narrowbody N1⁵·⁴, widebody N1⁸·⁶, four-engine N1⁶·¹, where Heidmann's correlation gives about N1⁵; the
+ * business jet's N1⁵·² to its approach rows as well, as no one power follows both. Approach rows, flown with gear and
+ * flaps out, are otherwise not fitted: on them jets and airframe come within about a decibel of ANP alone. Unfitted
+ * departure rows fall within −3.3 to +4.6 dB (business jet −5.8), approach rows within −1.4 to +2.4 dB except the
+ * regional jet's 7 250 lb, +4.4 dB, where ANP's own departure and approach rows differ by 3.3 dB at the same thrust.
  */
 const CIVIL_FLIGHT = Object.freeze({ mach: .25, heightMetres: 300 });
+/** Class C: below the departure rows the speed law is not extrapolated past this drop from full speed, about where ANP's approach rows leave the fan. */
+const CIVIL_FAN_QUIETEST_DECIBELS = 30;
 const HEIDMANN_BROADBAND = Object.freeze({ humpCentre: 2.5, humpOctaves: Math.log2(2.2) });
-const civilFan = (offset, idleDrop) => Object.freeze({ harmonics: Object.freeze([0, -6]), toneDecibels: Object.freeze([offset - idleDrop, offset]), humpDecibels: Object.freeze([3 + offset - idleDrop, 3 + offset]), ...HEIDMANN_BROADBAND, buzzSaw: Object.freeze({ fromSpeed: .85, decibels: 3 + offset, orderSpread: .6 }) });
+const civilFan = (offset, speedExponent) => Object.freeze({ harmonics: Object.freeze([0, -6]), fullToneDecibels: offset, fullHumpDecibels: 3 + offset, speedExponent, quietestDecibels: CIVIL_FAN_QUIETEST_DECIBELS, ...HEIDMANN_BROADBAND, buzzSaw: Object.freeze({ fromSpeed: .85, decibels: 3 + offset, orderSpread: .6 }) });
 
 /**
  * Fink's airframe noise (FAA-RD-77-29, 1977) as ANOPP gives it (Zorumski 1982, NASA TM-83199 part 2, section 8.8, tables
@@ -231,7 +236,7 @@ export const ENGINE = Object.freeze({
     }),
     business: Object.freeze({
       label: 'Business jet', civil: true, engines: 2, defaultPower: 1, flight: CIVIL_FLIGHT,
-      turbomachinery: Object.freeze({ ...civilFan(1.4, 14.4), blades: 22, fullBladeHz: 5900 }),
+      turbomachinery: Object.freeze({ ...civilFan(1.4, 5.2), blades: 22, fullBladeHz: 5900 }),
       airframe: AIRFRAMES.business,
       settings: Object.freeze([
         Object.freeze({ power: 0, label: 'Idle', pressureRatio: 1.044, totalTemperatureKelvin: 600, diameterMetres: 0.266 }),
@@ -244,7 +249,7 @@ export const ENGINE = Object.freeze({
     }),
     regional: Object.freeze({
       label: 'Regional jet', civil: true, engines: 2, defaultPower: 1, flight: CIVIL_FLIGHT,
-      turbomachinery: Object.freeze({ ...civilFan(-10.3, 13.2), blades: 24, fullBladeHz: 2900 }),
+      turbomachinery: Object.freeze({ ...civilFan(-10.7, 3.3), blades: 24, fullBladeHz: 2900 }),
       airframe: AIRFRAMES.regional,
       settings: Object.freeze([
         Object.freeze({ power: 0, label: 'Idle', pressureRatio: 1.047, totalTemperatureKelvin: 600, diameterMetres: 0.452 }),
@@ -257,7 +262,7 @@ export const ENGINE = Object.freeze({
     }),
     narrowbody: Object.freeze({
       label: 'Narrowbody', civil: true, engines: 2, defaultPower: 1, flight: CIVIL_FLIGHT,
-      turbomachinery: Object.freeze({ ...civilFan(-2.9, 16.8), blades: 36, fullBladeHz: 3000 }),
+      turbomachinery: Object.freeze({ ...civilFan(-3.6, 5.4), blades: 36, fullBladeHz: 3000 }),
       airframe: AIRFRAMES.narrowbody,
       settings: Object.freeze([
         Object.freeze({ power: 0, label: 'Idle', pressureRatio: 1.042, totalTemperatureKelvin: 600, diameterMetres: 0.622 }),
@@ -270,7 +275,7 @@ export const ENGINE = Object.freeze({
     }),
     widebody: Object.freeze({
       label: 'Widebody', civil: true, engines: 2, defaultPower: 1, flight: CIVIL_FLIGHT,
-      turbomachinery: Object.freeze({ ...civilFan(-0.6, 22.6), blades: 22, fullBladeHz: 864 }),
+      turbomachinery: Object.freeze({ ...civilFan(-1.9, 8.6), blades: 22, fullBladeHz: 864 }),
       airframe: AIRFRAMES.widebody,
       settings: Object.freeze([
         Object.freeze({ power: 0, label: 'Idle', pressureRatio: 1.055, totalTemperatureKelvin: 600, diameterMetres: 0.966 }),
@@ -283,7 +288,7 @@ export const ENGINE = Object.freeze({
     }),
     quad: Object.freeze({
       label: 'Four-engine', civil: true, engines: 4, defaultPower: 1, flight: CIVIL_FLIGHT,
-      turbomachinery: Object.freeze({ ...civilFan(-4.8, 16.7), blades: 38, fullBladeHz: 2153 }),
+      turbomachinery: Object.freeze({ ...civilFan(-5.6, 6.1), blades: 38, fullBladeHz: 2153 }),
       airframe: AIRFRAMES.quad,
       settings: Object.freeze([
         Object.freeze({ power: 0, label: 'Idle', pressureRatio: 1.049, totalTemperatureKelvin: 600, diameterMetres: 0.881 }),

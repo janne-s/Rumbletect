@@ -49,10 +49,16 @@ test('the fan turns with the square root of thrust, so the buzz-saw sounds at ta
   assert.ok(approach > .45 && approach < .5, `${approach} of full speed at ANP's 6 000 lb approach`);
 });
 
-test('a civil fan is far quieter at idle than at take-off, as approach levels require', () => {
+test('a civil fan grows with a power of its speed, from at most 30 dB under full at idle', () => {
   for (const key of AIRLINER_CLASSES) {
-    const { toneDecibels, humpDecibels } = ENGINE.classes[key].turbomachinery;
-    assert.ok(toneDecibels[1] - toneDecibels[0] > 12 && humpDecibels[1] - humpDecibels[0] > 12, key);
+    const reference = referencePower(key, 15);
+    const level = power => 10 * Math.log10(turbomachineryAt(key, power, reference).hump / reference);
+    const drop = level(1) - level(0);
+    assert.ok(drop > 12 && drop <= 30 + 1e-9, `${key}: ${drop} dB`);
+    const { speedExponent } = ENGINE.classes[key].turbomachinery;
+    const [a, b] = [.5, .8];
+    const expected = 10 * speedExponent * Math.log10(turbomachineryAt(key, b, reference).bladeHz / turbomachineryAt(key, a, reference).bladeHz);
+    assert.ok(Math.abs(level(b) - level(a) - expected) < 1e-9, key);
   }
 });
 

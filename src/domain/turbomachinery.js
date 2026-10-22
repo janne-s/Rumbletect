@@ -14,19 +14,22 @@ export function referencePower(engineClass, temperatureCelsius) {
   }, 0);
 }
 
-/** Class C: the blade-passing frequency and the tones' and hump's powers at a power share, or null for a class without turbomachinery. */
+const SLOWEST_FAN = .01;
+
+/** Class C: the blade-passing frequency and the tones' and hump's powers at a power share, or null for a class without turbomachinery; a civil fan's levels go as its speed to `speedExponent`, the others' run between idle and full by power. */
 export function turbomachineryAt(engineClass, power, referencePa2) {
   const turbo = ENGINE.classes[engineClass]?.turbomachinery;
   if (!turbo) return null;
   const weights = turbo.harmonics.map(decibels => 10 ** (decibels / 10));
   const total = weights.reduce((a, b) => a + b, 0);
-  const tones = referencePa2 * 10 ** (between(turbo.toneDecibels, power) / 10);
   const speed = turbo.blades ? fanSpeedShare(power, engineClass) : null;
+  const levelOf = (pair, full) => (turbo.speedExponent ? full + Math.max(-turbo.quietestDecibels, 10 * turbo.speedExponent * Math.log10(Math.max(speed, SLOWEST_FAN))) : between(pair, power));
+  const tones = referencePa2 * 10 ** (levelOf(turbo.toneDecibels, turbo.fullToneDecibels) / 10);
   const bladeHz = speed === null ? between([turbo.idleBladeHz, turbo.fullBladeHz], power) : turbo.fullBladeHz * speed;
   return {
     bladeHz,
     tones: weights.map(weight => tones * weight / total),
-    hump: turbo.humpDecibels ? referencePa2 * 10 ** (between(turbo.humpDecibels, power) / 10) : 0,
+    hump: turbo.humpDecibels || turbo.fullHumpDecibels !== undefined ? referencePa2 * 10 ** (levelOf(turbo.humpDecibels, turbo.fullHumpDecibels) / 10) : 0,
     humpOctaves: turbo.humpOctaves ?? JET.humpOctaves,
     humpCentre: turbo.humpCentre ?? 1,
     buzzSaw: turbo.buzzSaw ? buzzSawTones(turbo, bladeHz, speed, referencePa2) : null
