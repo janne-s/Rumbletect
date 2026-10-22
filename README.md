@@ -79,7 +79,8 @@ the flight, then delays, spreads, and filters that sound on its way there.
   seconds), engine count, thrust, exhaust velocity, nozzle diameter, acoustic
   efficiency, and water on the pad.
 - **Source** — Sound power from thrust and exhaust velocity, with the
-  spectrum and directivity of BYU's SATURN model; low frequencies radiate
+  spectrum and directivity of BYU's SATURN model, a single nozzle's peaking
+  about an octave higher than a cluster's, as measured; low frequencies radiate
   toward the plume and start once the plume has left the pad; the plume
   crackles.
 

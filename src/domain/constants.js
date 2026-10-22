@@ -256,6 +256,13 @@ export const ENGINE = Object.freeze({
 export const ROCKET = Object.freeze({
   /** Class B: Mathews 2025 eq. 6.4 (SATURN, Atlas V within 1 km), dB per unit Sr = f D_eff / U_e re W_OA; peak Sr 0.0108, matching Falcon 9 (Kellison et al. 2026). */
   spectrum: Object.freeze({ lowBreak: 3.6e-3, highBreak: 4.8e-2, peakStrouhal: .0108 }),
+  /**
+   * Class B: a single nozzle's sound power peaks near Sr 0.023: RSRM 0.025 at 45° (Lubert, Gee & Tsutsumi 2022), a 12.7 cm
+   * motor with RSRM propellant about 0.023 (Gee et al. 2010), rockets generally 0.02–0.025 (the review; SP-8072 0.02),
+   * where SATURN's clusters peak at 0.010–0.015 on D_eff. A one-engine rocket takes SATURN's spectrum and directivity
+   * stretched to peak here; Doc/reviews/2026-10-21-small-rocket-brightness.md.
+   */
+  singleNozzlePeakStrouhal: .024,
   /** Class B: Mathews 2025 eq. 6.6, GEM-60 intensity, s = 9.85 Sr^−0.21 D_eff behind the nozzle. */
   sourceLocation: Object.freeze({ coefficient: 9.85, exponent: -.21 }),
   /** Class B: SATURN and Kellison et al. 2026 take their directivity with the source 18 D_eff behind the nozzle. */

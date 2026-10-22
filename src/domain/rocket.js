@@ -124,7 +124,8 @@ export function vehicleOf(emitter) {
     efficiency: efficiencyPercent / 100,
     exitVelocityMetresPerSecond,
     effectiveDiameterMetres: exitDiameterMetres * Math.sqrt(engines),
-    totalThrustNewtons: engines * thrustKilonewtons * 1000
+    totalThrustNewtons: engines * thrustKilonewtons * 1000,
+    peakStrouhal: engines === 1 ? ROCKET.singleNozzlePeakStrouhal : SPECTRUM.peakStrouhal
   };
 }
 
@@ -133,7 +134,7 @@ export const soundPowerWatts = (vehicle, throttle = 1) => .5 * vehicle.efficienc
 
 export const ignitionSecondsOf = vehicle => Math.max(ROCKET.shortestIgnitionSeconds, ROCKET.ignitionSeconds * Math.cbrt(Math.min(1, vehicle.totalThrustNewtons / ROCKET.ignitionReferenceNewtons)));
 
-export const peakFrequencyHz = vehicle => SPECTRUM.peakStrouhal * vehicle.exitVelocityMetresPerSecond / vehicle.effectiveDiameterMetres;
+export const peakFrequencyHz = vehicle => vehicle.peakStrouhal * vehicle.exitVelocityMetresPerSecond / vehicle.effectiveDiameterMetres;
 
 const smoothStep = value => { const t = Math.min(1, Math.max(0, value)); return t * t * (3 - 2 * t); };
 
@@ -213,14 +214,18 @@ export function ascentPath(emitter, surface = FLAT_SURFACE) {
 
 const GRID_DEGREES = 181;
 
-/** Per frequency, once per rocket: SATURN's power as a linear share per unit Sr, the source's distance behind the nozzle, and its directivity every degree. */
-function spectralTable(frequencies, diameter, velocity) {
+/**
+ * Per frequency, once per rocket: SATURN's power as a linear share per unit Sr, the source's distance behind the nozzle,
+ * and its directivity every degree, read at the Strouhal number scaled by `stretch` so the spectrum peaks where the
+ * vehicle's does; the power is scaled by it too, keeping the whole.
+ */
+function spectralTable(frequencies, diameter, velocity, stretch) {
   const power = new Float64Array(frequencies.length);
   const location = new Float64Array(frequencies.length);
   const directivity = new Float32Array(frequencies.length * GRID_DEGREES);
   for (let index = 1; index < frequencies.length; index += 1) {
-    const strouhal = frequencies[index] * diameter / velocity;
-    power[index] = 10 ** (normalizedPowerDecibels(strouhal) / 10);
+    const strouhal = frequencies[index] * diameter / velocity * stretch;
+    power[index] = stretch * 10 ** (normalizedPowerDecibels(strouhal) / 10);
     location[index] = sourceLocationMetres(strouhal, diameter);
     directivityRow(strouhal, directivity, index * GRID_DEGREES);
   }
@@ -241,7 +246,7 @@ export function rocketSource(emitter, scene, path) {
   const ignitionSeconds = ignitionSecondsOf(vehicle);
   const tables = new WeakMap();
   const tableFor = frequencies => {
-    if (!tables.has(frequencies)) tables.set(frequencies, spectralTable(frequencies, diameter, velocity));
+    if (!tables.has(frequencies)) tables.set(frequencies, spectralTable(frequencies, diameter, velocity, SPECTRUM.peakStrouhal / vehicle.peakStrouhal));
     return tables.get(frequencies);
   };
   const sampleIndex = seconds => Math.min(path.seconds.length - 1, Math.max(0, Math.round((seconds - path.seconds[0]) / path.step)));

@@ -156,3 +156,20 @@ test('every size the Size slider reaches, with any engine count and propellant, 
     }
   }
 });
+
+test('a single nozzle peaks at Sr 0.024, a cluster at SATURN\'s 0.0108', async () => {
+  const { rocketSource, vehicleOf, peakFrequencyHz } = await import('../src/domain/rocket.js');
+  const scene = defaultScene('rocket');
+  const artillery = categoryRocket(defaultRocket(), ROCKET.categories.find(category => category.label === 'Artillery'));
+  const vehicle = vehicleOf(artillery);
+  assert.ok(Math.abs(peakFrequencyHz(vehicle) * vehicle.effectiveDiameterMetres / vehicle.exitVelocityMetresPerSecond - .024) < 1e-12);
+  assert.equal(vehicleOf(defaultRocket()).peakStrouhal, ROCKET.spectrum.peakStrouhal);
+  const path = ascentPath(artillery);
+  const source = rocketSource(artillery, scene, path);
+  const components = source.components({ seconds: 1, position: { x: 0, y: 0, z: 500 } });
+  const frequencies = Float64Array.from({ length: 24001 }, (_, index) => index);
+  const { shaped } = source.spectra(components, 90, frequencies);
+  let peak = 1;
+  for (let index = 1; index < shaped.length; index += 1) if (shaped[index] > shaped[peak]) peak = index;
+  assert.ok(peak > 1.5 * ROCKET.spectrum.peakStrouhal * vehicle.exitVelocityMetresPerSecond / vehicle.effectiveDiameterMetres, `${peak} Hz`);
+});
