@@ -32,7 +32,7 @@ function summary(emitter, scene) {
   const jet = jetOfEngine(emitter.engine, scene.air.temperatureCelsius);
   const aircraft = emitter.kind === 'formation' ? emitter.memberCount : 1;
   const { engines } = emitter.engine;
-  return `${aircraft > 1 ? `${aircraft} × ` : ''}${ENGINE.classes[emitter.engineClass].label}${engines > 1 ? `, ${engines} engines` : ''}, ${powerLabel(powerOfEngine(emitter.engine, emitter.engineClass), emitter.engineClass)}, exhaust ${Math.round(jet.velocityMetresPerSecond)} m/s · ${flightSpeedLabel(emitter, scene)} at ${formatMetres(emitter.startMetres.z)} for ${flownSeconds(emitter, scene)} s`;
+  return `${aircraft > 1 ? `${aircraft} × ` : ''}${ENGINE.classes[emitter.engineClass].label}${engines > 1 ? `, ${engines} engines` : ''}, ${powerLabel(powerOfEngine(emitter.engine, emitter.engineClass), emitter.engineClass)}, exhaust ${Math.round(jet.velocityMetresPerSecond)} m/s · ${flightSpeedLabel(emitter, scene)} at ${formatMetres(emitter.startMetres.z)} for ${flownSeconds(emitter, scene)} s${emitter.gearAndFlaps ? ' · gear & flaps down' : ''}`;
 }
 
 function details(emitter, { updateEmitter, scene }) {
@@ -50,6 +50,7 @@ function details(emitter, { updateEmitter, scene }) {
     }),
     section('Flight', container => {
       numbers(['headingDegrees', 'climbDegrees', 'mach', 'accelerationMetresPerSecondSquared', 'bendDegrees', 'turnStartPercent', 'turnLengthPercent'])(container);
+      if (emitter.kind === 'airliner') checkboxField(container, { label: 'Gear & flaps', value: emitter.gearAndFlaps, reliability: 'B', onCommit: set('gearAndFlaps') });
       checkboxField(container, { label: 'Auto flight time', value: emitter.autoDuration, reliability: 'C', onCommit: set('autoDuration') });
       if (!emitter.autoDuration) numberField(container, { key: 'flightSeconds', value: emitter.durationSeconds, onCommit: set('durationSeconds') });
       else {

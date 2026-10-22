@@ -125,6 +125,40 @@ const CIVIL_FLIGHT = Object.freeze({ mach: .25, heightMetres: 300 });
 const HEIDMANN_BROADBAND = Object.freeze({ humpCentre: 2.5, humpOctaves: Math.log2(2.2) });
 const civilFan = (offset, idleDrop) => Object.freeze({ harmonics: Object.freeze([0, -6]), toneDecibels: Object.freeze([offset - idleDrop, offset]), humpDecibels: Object.freeze([3 + offset - idleDrop, 3 + offset]), ...HEIDMANN_BROADBAND, buzzSaw: Object.freeze({ fromSpeed: .85, decibels: 3 + offset, orderSpread: .6 }) });
 
+/**
+ * Fink's airframe noise (FAA-RD-77-29, 1977) as ANOPP gives it (Zorumski 1982, NASA TM-83199 part 2, section 8.8, tables
+ * II and III; B within Fink's data, 1970s jet transports): acoustic power re ρc³b² as K Mᵃ G for trailing edges (a = 5),
+ * flaps, wheels and struts (a = 6); trailing edges at the conventional constant with flaps or slats out or numerous flap
+ * tracks, the clean one 8 dB lower for simple flaps. Doc/reviews/2026-10-22-airframe-reference.md.
+ */
+export const AIRFRAME = Object.freeze({
+  trailingEdgeConstant: Object.freeze({ conventional: 4.464e-5, clean: 7.075e-6 }),
+  flapConstant: Object.freeze({ slotted: 2.787e-4, triple: 3.509e-4 }),
+  wheelConstant: Object.freeze({ two: 4.349e-4, four: 3.414e-4 }),
+  strutConstant: 2.753e-4,
+  /** Class C: the convective factor's base is held above this, as near grazing ahead it would grow without bound. */
+  smallestConvection: .2
+});
+
+/**
+ * Each civil class's airframe after one aircraft. Wing areas and spans and tyre sizes are published (B): CJ4 30.66 m²,
+ * 15.49 m, tyres 22 in and 16 in (Textron, Michelin); CRJ900 71.1 m², 24.9 m, flaps 45°; A320 122.6 m², 34.1 m, tyres
+ * 46 in and 30 in (Airbus AC A320); 777-300ER 436.8 m², 64.8 m, two six-wheel bogies on 52 in tyres, 43 in nose tyres
+ * (Boeing, Tronair); 747-400 525 m², 64.4 m, triple-slotted flaps, sixteen 49 in main and two nose tyres (Dunlop). Tails,
+ * flap areas and spans, the other landing deflections, the CRJ900's tyres, and strut lengths are assumed (C); a bogie of
+ * more than four wheels takes Fink's four-wheel functions with its wheel count (C).
+ */
+const surface = (areaSquareMetres, spanMetres) => Object.freeze({ areaSquareMetres, spanMetres });
+const gearUnits = (count, wheels, tyreMetres, strutMetres) => Object.freeze({ count, wheels, tyreMetres, strutMetres });
+const airframeOf = ({ wing, horizontalTail, verticalTail, flaps, slats, cleanWing = false, mainGear, noseGear }) => Object.freeze({ wing, horizontalTail, verticalTail, flaps: Object.freeze(flaps), slats, cleanWing, mainGear, noseGear });
+const AIRFRAMES = Object.freeze({
+  business: airframeOf({ wing: surface(30.66, 15.49), horizontalTail: surface(6.5, 6), verticalTail: surface(5, 2.6), flaps: { areaSquareMetres: 3.7, spanMetres: 8.5, landingDegrees: 35, slots: 1 }, slats: false, cleanWing: true, mainGear: gearUnits(2, 1, .56, .9), noseGear: gearUnits(1, 1, .41, .6) }),
+  regional: airframeOf({ wing: surface(71.1, 24.9), horizontalTail: surface(15, 8.5), verticalTail: surface(10, 4), flaps: { areaSquareMetres: 10.7, spanMetres: 15, landingDegrees: 45, slots: 2 }, slats: true, mainGear: gearUnits(2, 2, 1.02, 1.4), noseGear: gearUnits(1, 2, .69, 1) }),
+  narrowbody: airframeOf({ wing: surface(122.6, 34.1), horizontalTail: surface(31, 12.45), verticalTail: surface(21.5, 5.9), flaps: { areaSquareMetres: 21, spanMetres: 22, landingDegrees: 40, slots: 1 }, slats: true, mainGear: gearUnits(2, 2, 1.17, 1.8), noseGear: gearUnits(1, 2, .76, 1.2) }),
+  widebody: airframeOf({ wing: surface(436.8, 64.8), horizontalTail: surface(101, 21.5), verticalTail: surface(53, 9.2), flaps: { areaSquareMetres: 52, spanMetres: 39, landingDegrees: 30, slots: 2 }, slats: true, mainGear: gearUnits(2, 6, 1.32, 2.4), noseGear: gearUnits(1, 2, 1.09, 1.8) }),
+  quad: airframeOf({ wing: surface(525, 64.4), horizontalTail: surface(136.6, 22.2), verticalTail: surface(77.1, 10), flaps: { areaSquareMetres: 79, spanMetres: 38.6, landingDegrees: 30, slots: 3 }, slats: true, mainGear: gearUnits(4, 4, 1.24, 2.3), noseGear: gearUnits(1, 2, 1.24, 1.8) })
+});
+
 export const ENGINE = Object.freeze({
   /** Class B: hot exhaust gas, γ and c_p of combustion products. */
   gasGamma: 1.33,
@@ -198,6 +232,7 @@ export const ENGINE = Object.freeze({
     business: Object.freeze({
       label: 'Business jet', civil: true, engines: 2, defaultPower: 1, flight: CIVIL_FLIGHT,
       turbomachinery: Object.freeze({ ...civilFan(1.4, 14.4), blades: 22, fullBladeHz: 5900 }),
+      airframe: AIRFRAMES.business,
       settings: Object.freeze([
         Object.freeze({ power: 0, label: 'Idle', pressureRatio: 1.171, totalTemperatureKelvin: 600, diameterMetres: 0.266 }),
         Object.freeze({ power: 1, label: 'Take-off', pressureRatio: 1.518, totalTemperatureKelvin: 780, diameterMetres: 0.266 })
@@ -210,6 +245,7 @@ export const ENGINE = Object.freeze({
     regional: Object.freeze({
       label: 'Regional jet', civil: true, engines: 2, defaultPower: 1, flight: CIVIL_FLIGHT,
       turbomachinery: Object.freeze({ ...civilFan(-10.3, 13.2), blades: 24, fullBladeHz: 2900 }),
+      airframe: AIRFRAMES.regional,
       settings: Object.freeze([
         Object.freeze({ power: 0, label: 'Idle', pressureRatio: 1.171, totalTemperatureKelvin: 600, diameterMetres: 0.452 }),
         Object.freeze({ power: 1, label: 'Take-off', pressureRatio: 1.515, totalTemperatureKelvin: 780, diameterMetres: 0.452 })
@@ -222,6 +258,7 @@ export const ENGINE = Object.freeze({
     narrowbody: Object.freeze({
       label: 'Narrowbody', civil: true, engines: 2, defaultPower: 1, flight: CIVIL_FLIGHT,
       turbomachinery: Object.freeze({ ...civilFan(-2.9, 16.8), blades: 36, fullBladeHz: 3000 }),
+      airframe: AIRFRAMES.narrowbody,
       settings: Object.freeze([
         Object.freeze({ power: 0, label: 'Idle', pressureRatio: 1.171, totalTemperatureKelvin: 600, diameterMetres: 0.622 }),
         Object.freeze({ power: 1, label: 'Take-off', pressureRatio: 1.447, totalTemperatureKelvin: 780, diameterMetres: 0.622 })
@@ -234,6 +271,7 @@ export const ENGINE = Object.freeze({
     widebody: Object.freeze({
       label: 'Widebody', civil: true, engines: 2, defaultPower: 1, flight: CIVIL_FLIGHT,
       turbomachinery: Object.freeze({ ...civilFan(-0.6, 22.6), blades: 22, fullBladeHz: 864 }),
+      airframe: AIRFRAMES.widebody,
       settings: Object.freeze([
         Object.freeze({ power: 0, label: 'Idle', pressureRatio: 1.171, totalTemperatureKelvin: 600, diameterMetres: 0.966 }),
         Object.freeze({ power: 1, label: 'Take-off', pressureRatio: 1.558, totalTemperatureKelvin: 780, diameterMetres: 0.966 })
@@ -246,6 +284,7 @@ export const ENGINE = Object.freeze({
     quad: Object.freeze({
       label: 'Four-engine', civil: true, engines: 4, defaultPower: 1, flight: CIVIL_FLIGHT,
       turbomachinery: Object.freeze({ ...civilFan(-4.8, 16.7), blades: 38, fullBladeHz: 2153 }),
+      airframe: AIRFRAMES.quad,
       settings: Object.freeze([
         Object.freeze({ power: 0, label: 'Idle', pressureRatio: 1.171, totalTemperatureKelvin: 600, diameterMetres: 0.881 }),
         Object.freeze({ power: 1, label: 'Take-off', pressureRatio: 1.54, totalTemperatureKelvin: 780, diameterMetres: 0.881 })

@@ -86,7 +86,7 @@ export function defaultJet(id = 'jet-1', name = 'Jet', seed = 20261015) {
 /** A narrowbody climbing out after take-off. */
 export function defaultAirliner(id = 'airliner-1', name = 'Airliner', seed = 20261021) {
   const { flight } = ENGINE.classes.narrowbody;
-  return { ...defaultJet(id, name, seed), kind: 'airliner', engineClass: 'narrowbody', engine: engineOfClass('narrowbody'), mach: flight.mach, startMetres: { x: -2500, y: 0, z: flight.heightMetres }, climbDegrees: 6 };
+  return { ...defaultJet(id, name, seed), kind: 'airliner', engineClass: 'narrowbody', engine: engineOfClass('narrowbody'), mach: flight.mach, startMetres: { x: -2500, y: 0, z: flight.heightMetres }, climbDegrees: 6, gearAndFlaps: false };
 }
 
 export const defaultFormation = (id = 'formation-1', name = 'Formation', seed = 20261014) => ({ ...defaultJet(id, name, seed), kind: 'formation', ...FORMATION_LAYOUT });
@@ -172,7 +172,7 @@ function readJet(value, fields, path, classes = ENGINE_CLASSES, fallback = 'figh
   };
 }
 
-const readAirliner = (value, fields, path) => readJet(value, fields, path, AIRLINER_CLASSES, 'narrowbody');
+const readAirliner = (value, fields, path) => ({ ...readJet(value, fields, path, AIRLINER_CLASSES, 'narrowbody'), gearAndFlaps: typeof value.gearAndFlaps === 'boolean' ? value.gearAndFlaps : false });
 
 const readFormation = (value, fields, path) => ({ ...readJet(value, fields, path), ...fields.numbers(value, Object.keys(FORMATION_LAYOUT), path) });
 

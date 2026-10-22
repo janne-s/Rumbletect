@@ -52,9 +52,11 @@ the flight, then delays, spreads, and filters that sound on its way there.
   four-engine airliner: changes the engines; the flight stays as set.
 - **Power, Mach, height, heading, bend, turn starts** — As for a jet.
 - **Source** — A turbofan as two jets, a fast core and a slower fan stream,
-  with the fan's blade-passing tones and broadband hump, and at take-off
+  with the fan's blade-passing tones and broadband noise, and at take-off
   power the buzz-saw: tones at every order of the shaft as the fan tips pass
-  the speed of sound.
+  the speed of sound. The airframe adds its wing and tail trailing edges.
+- **Gear & flaps** — In Details: landing gear, flaps, and slats out, as on
+  approach; their noise grows with the sixth power of speed.
 
 ## Rocket
 
@@ -131,8 +133,11 @@ the flight, then delays, spreads, and filters that sound on its way there.
 | Directivity | Tam 1996 figs. 6–7 | B |
 | Flight effects | Stone, Krejsa & Clark 2003 | B, combined C |
 | Skewness, intermittency | Gee et al. 2013; fitted to recordings | B, C |
-| Engine settings | from published thrust and mass flow; a heavy bomber's turbofans as one mixed jet | C |
+| Engine settings | from published thrust and mass flow; turbofans as a core and a fan stream | C |
 | Turbomachinery tones and fan hump | fitted to model-turbine and B-52 recordings | C |
+| Airliner fan broadband shape | Heidmann 1975 | B |
+| Airliner fan levels | fitted to the EASA ANP 2.3 noise-power-distance data | C |
+| Airframe noise | Fink 1977 as in ANOPP (Zorumski 1982) | B |
 | Crackle | simple-wave steepening of each grain, set by the jet's convection Mach number | C |
 | Rocket source | SATURN, Mathews 2025 | B |
 | Ascent, sizing, salvo | assumed | C |
@@ -143,8 +148,8 @@ the flight, then delays, spreads, and filters that sound on its way there.
 | Turbulence coherence | Clifford & Lataitis | B |
 | Scintillation | fitted to recordings | C |
 
-Not modelled: shock-cell noise and screech, afterburner combustion noise, fan
-and core noise, supersonic flight, terrain, forest, refraction by wind and
+Not modelled: shock-cell noise and screech, afterburner combustion noise, core
+and turbine noise, slat, cavity, and gear tones, supersonic flight, terrain, forest, refraction by wind and
 temperature. Rumbletect is a creative tool: its results are plausible, not
 measured, and levels are uncalibrated model values in pascals.
 

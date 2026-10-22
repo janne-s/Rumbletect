@@ -1,4 +1,5 @@
-import { JET, JET_FLIGHT, LOW_BAND, PROPAGATION, SHOCK_FORMATION, SYNTHESIS } from './constants.js';
+import { ENGINE, JET, JET_FLIGHT, LOW_BAND, PROPAGATION, SHOCK_FORMATION, SYNTHESIS } from './constants.js';
+import { addAirframe, airframeAt } from './airframe.js';
 import { powerOfEngine, streamsOf } from './engine.js';
 import { addTurbomachinery, referencePower, turbomachineryAt } from './turbomachinery.js';
 import { jetComponents, jetSpectra, speedOfSound } from './jet.js';
@@ -136,11 +137,24 @@ function removeMean(samples, first, last, sum) {
   for (let sample = first; sample <= last; sample += 1) samples[sample] -= sum * Math.sin(Math.PI * (sample - first + 1) / span) / weights;
 }
 
+/** Degrees round the flight direction from straight below to `departure`, for a body flying without roll. */
+function azimuthDegrees(velocity, speed, departure) {
+  if (!(speed > 0)) return 0;
+  const along = (velocity.x * departure.x + velocity.y * departure.y + velocity.z * departure.z) / speed;
+  const across = [departure.x - along * velocity.x / speed, departure.y - along * velocity.y / speed, departure.z - along * velocity.z / speed];
+  const climb = velocity.z / speed;
+  const below = [climb * velocity.x / speed, climb * velocity.y / speed, climb * climb - 1];
+  const lengths = Math.hypot(...across) * Math.hypot(...below);
+  if (lengths < 1e-12) return 0;
+  const cosine = (across[0] * below[0] + across[1] * below[1] + across[2] * below[2]) / lengths;
+  return Math.acos(Math.max(-1, Math.min(1, cosine))) * 180 / Math.PI;
+}
+
 /**
  * Grains along a path (`tect-shared-interfaces.md`, grains): sine-windowed frames at half overlap, each heard toward
  * a path's departure. `source.components(state)` gives a grain's source state or null when it is silent;
- * `source.spectra(components, inletDegrees, frequencies)` its shaped and plain PSDs at 1 m, inlet 0 ahead along its
- * axis; `source.packetHz(components)` the corner of its intermittency; `source.axis` and `source.place` optionally
+ * `source.spectra(components, inletDegrees, frequencies, azimuthDegrees)` its shaped and plain PSDs at 1 m, inlet 0
+ * ahead along its axis, azimuth round its flight from straight below; `source.packetHz(components)` the corner of its intermittency; `source.axis` and `source.place` optionally
  * its axis and emission point when they differ from its flight. Its Doppler shift and −10 log|1 − M cos ψ|
  * (Stone et al. 2003, eq. 2) come with the grain, so they count once. Ahead of a supersonic grain's Mach cone the
  * factor is negative and the grain arrives reversed.
@@ -186,7 +200,7 @@ export function pathGrains(emitter, scene, path, unbanded, band = 'full') {
     const squeeze = Math.abs(compression);
     const axial = grain.axis ? grain.axis.x * departure.x + grain.axis.y * departure.y + grain.axis.z * departure.z : cosine;
     const inletDegrees = Math.acos(Math.max(-1, Math.min(1, axial))) * 180 / Math.PI;
-    const { shaped: shapedPsd, plain } = source.spectra(grain.components, inletDegrees, frequencies);
+    const { shaped: shapedPsd, plain } = source.spectra(grain.components, inletDegrees, frequencies, azimuthDegrees(grain.velocity, grain.speed, departure));
     const cutoff = source.packetHz(grain.components);
     const lowPass = frequencies.map(frequency => (frequency > 0 ? 1 / (1 + (frequency / cutoff) ** 2) : 0));
     const lowPassSum = lowPass.reduce((sum, value) => sum + value, 0) * binHz;
@@ -277,7 +291,7 @@ function lowBandGrains(emitter, scene, path, source) {
     const squeeze = Math.abs(compression);
     const axial = grain.axis ? grain.axis.x * departure.x + grain.axis.y * departure.y + grain.axis.z * departure.z : cosine;
     const inletDegrees = Math.acos(Math.max(-1, Math.min(1, axial))) * 180 / Math.PI;
-    const { shaped, plain } = source.spectra(grain.components, inletDegrees, frequencies);
+    const { shaped, plain } = source.spectra(grain.components, inletDegrees, frequencies, azimuthDegrees(grain.velocity, grain.speed, departure));
     const psd = shaped.map((value, bin) => value + plain[bin]);
     const frame = gaussianFrame(createRandom((emitter.seed ^ Math.imul(index + 1, 0x27d4eb2d) ^ STREAMS.low) >>> 0), psd, rate, size);
     let mean = 0;
@@ -345,19 +359,24 @@ export function jetGrains(emitter, scene, band = 'full') {
   const streams = streamsOf(emitter.engine, emitter.engineClass, air.temperatureCelsius);
   const { engines } = emitter.engine;
   const turbo = turbomachineryAt(emitter.engineClass, powerOfEngine(emitter.engine, emitter.engineClass), referencePower(emitter.engineClass, air.temperatureCelsius));
+  const airframe = ENGINE.classes[emitter.engineClass]?.airframe;
   const source = {
-    components: ({ speed }) => streams.map(jet => jetComponents(jet, { temperatureCelsius: air.temperatureCelsius, flightMetresPerSecond: speed })),
-    spectra: (components, inletDegrees, frequencies) => {
-      const { large, fine } = jetSpectra(components[0], inletDegrees, frequencies);
-      for (const stream of components.slice(1)) {
+    components: ({ speed }) => ({
+      streams: streams.map(jet => jetComponents(jet, { temperatureCelsius: air.temperatureCelsius, flightMetresPerSecond: speed })),
+      airframe: airframeAt(airframe, { speedMetresPerSecond: speed, temperatureCelsius: air.temperatureCelsius, deployed: Boolean(emitter.gearAndFlaps) })
+    }),
+    spectra: ({ streams: parts, airframe: frame }, inletDegrees, frequencies, azimuth) => {
+      const { large, fine } = jetSpectra(parts[0], inletDegrees, frequencies);
+      for (const stream of parts.slice(1)) {
         const other = jetSpectra(stream, inletDegrees, frequencies);
         other.large.forEach((value, index) => { large[index] += value; fine[index] += other.fine[index]; });
       }
       addTurbomachinery(fine, frequencies, turbo, inletDegrees);
-      return engines === 1 ? { shaped: large, plain: fine } : { shaped: large.map(value => value * engines), plain: fine.map(value => value * engines) };
+      const [shaped, plain] = engines === 1 ? [large, fine] : [large.map(value => value * engines), fine.map(value => value * engines)];
+      return { shaped, plain: addAirframe(plain, frequencies, frame, inletDegrees, azimuth) };
     },
-    packetHz: ([core]) => core.large.peakHz / JET.packetCycles,
-    crackle: ([core]) => {
+    packetHz: ({ streams: [core] }) => core.large.peakHz / JET.packetCycles,
+    crackle: ({ streams: [core] }) => {
       const [from, to] = JET.crackleConvection;
       const share = Math.min(1, Math.max(0, (core.staticConvection - from) / (to - from)));
       return { index: JET.crackleIndex * share, hz: core.large.peakHz, share: JET.shockShare * share };

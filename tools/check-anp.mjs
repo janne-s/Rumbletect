@@ -2,7 +2,8 @@
 // node tools/check-anp.mjs <ANP folder> [class[=ANP aircraft] ...] [--spectra]
 // The ANP tables are downloaded from EASA (https://www.easa.europa.eu/en/downloads/138164/en) and stay out of the repository.
 // For each LAmax row of the class's aircraft: a level pass at Mach 0.24 (160 kt), 1 000 ft above an omni at 1.2 m over grass,
-// 25 °C and 70 %, at the power whose thrust per engine equals the row's; LAmax is the largest 1 s A-weighted level.
+// 25 °C and 70 %, at the power whose thrust per engine equals the row's, approach rows with gear and flaps out as ANP
+// measured them; LAmax is the largest 1 s A-weighted level.
 // --spectra also prints the third-octave spectrum of that second against the ANP spectral class, both re 70 dB at 1 kHz.
 import { readdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
@@ -48,9 +49,9 @@ function powerForThrust(engineClass, newtons) {
   return (low + high) / 2;
 }
 
-function levelPass(engineClass, power) {
+function levelPass(engineClass, power, gearAndFlaps) {
   const base = defaultScene();
-  const airliner = { ...defaultAirliner(), engineClass, engine: { ...engineAtPower(power, engineClass), engines: ENGINE.classes[engineClass].engines }, mach: NPD_MACH, climbDegrees: 0, startMetres: { x: -PASS_START_METRES, y: 0, z: NPD_HEIGHT_FEET * METRES_PER_FOOT }, durationSeconds: PASS_SECONDS };
+  const airliner = { ...defaultAirliner(), engineClass, engine: { ...engineAtPower(power, engineClass), engines: ENGINE.classes[engineClass].engines }, gearAndFlaps, mach: NPD_MACH, climbDegrees: 0, startMetres: { x: -PASS_START_METRES, y: 0, z: NPD_HEIGHT_FEET * METRES_PER_FOOT }, durationSeconds: PASS_SECONDS };
   const scene = parseScene({
     ...base,
     air: { ...base.air, refraction: false, temperatureCelsius: 25, relativeHumidityPercent: 70 },
@@ -88,7 +89,7 @@ for (const { engineClass, id } of requests) {
     const anp = Number(row[`L_${NPD_HEIGHT_FEET}ft`]);
     const power = powerForThrust(engineClass, pounds * NEWTONS_PER_POUND);
     const reached = thrustNewtons(power, engineClass) / NEWTONS_PER_POUND;
-    const { level, power: spectrum, sampleRate } = loudestSecond(levelPass(engineClass, power));
+    const { level, power: spectrum, sampleRate } = loudestSecond(levelPass(engineClass, power, row['Op Mode'] === 'A'));
     const clipped = Math.abs(reached - pounds) > 1 ? ` (thrust reaches only ${Math.round(reached)} lb)` : '';
     const mode = row['Op Mode'] === 'A' ? 'approach ' : 'departure';
     console.log(`  ${mode} ${String(pounds).padStart(7)} lb  power ${power.toFixed(3)}  LAmax ${level.toFixed(1)}  ANP ${anp.toFixed(1)}  diff ${(level - anp >= 0 ? '+' : '') + (level - anp).toFixed(1)}${clipped}`);
