@@ -125,6 +125,9 @@ the flight, then delays, spreads, and filters that sound on its way there.
 - **Length** — Up to 400 s from the first arrival; later sound is left out
   and the render says so.
 - **Level** — Peak at −3 dBFS or a fixed full scale in pascals.
+- **Distance loss** — 100 % is physical; less eases how fast a source fades
+  with distance beyond the microphone's nearest pass, keeping air absorption,
+  directivity, and Doppler.
 - **Spatial** — Ambisonics up to third order, heard binaurally.
 - **Export** — The scene, a stereo mix, one file per microphone, and AmbiX.
 
@@ -152,6 +155,7 @@ the flight, then delays, spreads, and filters that sound on its way there.
 | Ground reflection | Delany–Bazley, Weyl–Van der Pol | B |
 | Turbulence coherence | Clifford & Lataitis | B |
 | Scintillation | fitted to recordings | C |
+| Distance loss below 100 % | creative easing of spreading | C |
 
 Not modelled: shock-cell noise and screech, afterburner combustion noise, core
 and turbine noise, slat, cavity, and gear tones, supersonic flight, terrain, forest, refraction by wind and
