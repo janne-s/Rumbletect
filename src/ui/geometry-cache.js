@@ -1,7 +1,8 @@
-import { formationJets, jetPath } from '../domain/grains.js';
+import { formationJets, jetPath, jetSource } from '../domain/grains.js';
+import { sourceLevels } from '../domain/source-levels.js';
 import { ascentPath, rocketSource } from '../domain/rocket.js';
 import { salvoRounds } from '../domain/salvo.js';
-import { ventPath } from '../domain/volcano.js';
+import { ventPath, volcanoSource } from '../domain/volcano.js';
 import { cached, currentSurface } from '../shared/ui/geometry-cache.js';
 
 export { currentSurface, useTerrain } from '../shared/ui/geometry-cache.js';
@@ -36,4 +37,22 @@ export function cachedSoundTracks(emitter, scene) {
     });
     return { ...path, x: points.map(point => point.x), y: points.map(point => point.y), z: points.map(point => point.z) };
   }));
+}
+
+const levels = new Map();
+
+const sourceOf = (emitter, scene, path) => (emitter.kind === 'volcano'
+  ? volcanoSource(emitter, scene)
+  : emitter.kind === 'rocket' || emitter.kind === 'salvo'
+  ? rocketSource(salvoRounds(emitter)[0], scene, path)
+  : jetSource(emitter, scene));
+
+/** The loudest moment of one aircraft, rocket round or vent; a formation's aircraft add up. */
+export function cachedLevels(emitter, scene) {
+  const [path] = cachedTracks(emitter, scene);
+  return cached(levels, emitter, [scene.air, scene.render.sampleRate, path.seconds.length, path.step], () => {
+    const one = sourceLevels(sourceOf(emitter, scene, path), path, scene);
+    const members = 10 * Math.log10(emitter.kind === 'formation' ? emitter.memberCount : 1);
+    return { soundPowerDecibels: one.soundPowerDecibels + members, aWeightedAtKilometreDecibels: one.aWeightedAtKilometreDecibels + members };
+  });
 }

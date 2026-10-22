@@ -4,11 +4,12 @@ import { speedOfSound } from '../domain/jet.js';
 import { defaultAirliner, defaultFormation, defaultJet, defaultRocket, defaultSalvo, defaultVolcano, PROPELLANTS, ROCKET_ASCENT_NUMBERS } from '../domain/scene.js';
 import { RENDER, ROCKET } from '../domain/constants.js';
 import { heardCounts } from '../domain/rocket-grains.js';
-import { peakFrequencyHz, sizedRocket, soundPowerWatts, totalThrustNewtons, vehicleOf } from '../domain/rocket.js';
+import { peakFrequencyHz, sizedRocket, totalThrustNewtons, vehicleOf } from '../domain/rocket.js';
 import { newSeed } from '../shared/domain/random.js';
 import { formatMetres } from '../shared/ui/canvas.js';
 import { checkboxField, numberField, pointFields, seedField, selectField, textField } from './fields.js';
-import { cachedSoundTracks, cachedTracks } from './geometry-cache.js';
+import { cachedLevels, cachedSoundTracks, cachedTracks } from './geometry-cache.js';
+import { formatAtKilometre, formatDecibels } from '../shared/ui/levels.js';
 import { macrosFor, rocketMacros, thrustLabel, volcanoMacros } from './macros.js';
 import { volcanoCategory, volcanoSourcePosition } from '../domain/volcano.js';
 import { machCone, soundSpeedAt } from '../shared/domain/trajectory.js';
@@ -16,6 +17,12 @@ import { frontProfile } from '../shared/domain/refraction.js';
 
 /** The first sample at or above the speed of sound of the air at its height, or −1. */
 export const supersonicIndex = (path, air) => path.speed.findIndex((speed, index) => speed >= soundSpeedAt(air, path.z[index]));
+
+function levelInfo(emitter, scene) {
+  const { soundPowerDecibels, aWeightedAtKilometreDecibels } = cachedLevels(emitter, scene);
+  const line = `LW ${formatDecibels(soundPowerDecibels)} · ${formatAtKilometre(formatDecibels(aWeightedAtKilometreDecibels).replace(/ dB$/, ' dB(A)'))}`;
+  return [emitter.kind === 'salvo' ? `${line} per round` : line];
+}
 
 const flownSeconds = (emitter, scene) => { const [path] = cachedTracks(emitter, scene); return Math.round((path.seconds.length - 1) * path.step); };
 
@@ -94,10 +101,9 @@ function warnings(emitter, scene) {
 }
 
 function rocketSummary(emitter) {
-  const vehicle = vehicleOf(emitter);
   const engines = emitter.engine.engines === 1 ? '1 engine' : `${emitter.engine.engines} engines`;
   const salvo = emitter.kind === 'salvo' ? ` · ${emitter.roundCount} rounds over ${emitter.salvoSeconds} s` : '';
-  return `${ROCKET.propellants[emitter.propellant].label}, ${engines}, ${thrustLabel(totalThrustNewtons(emitter))} · ${(10 * Math.log10(soundPowerWatts(vehicle) / 1e-12)).toFixed(0)} dB power · burns ${emitter.ascent.burnSeconds} s to ${kilometresPerHour(emitter.ascent.burnoutMetresPerSecond)} km/h${salvo}`;
+  return `${ROCKET.propellants[emitter.propellant].label}, ${engines}, ${thrustLabel(totalThrustNewtons(emitter))} · burns ${emitter.ascent.burnSeconds} s to ${kilometresPerHour(emitter.ascent.burnoutMetresPerSecond)} km/h${salvo}`;
 }
 
 function rocketDetails(emitter, { updateEmitter }) {
@@ -184,7 +190,7 @@ const VOLCANO_PANEL = Object.freeze({
   details: volcanoDetails,
   seeded: () => true,
   anchorName: () => 'vent',
-  info: () => [],
+  info: levelInfo,
   bounds: (emitter, scene, include) => { include(emitter.ventMetres); include(volcanoSourcePosition(emitter)); },
   measure: pathPoints,
   move: () => false,
@@ -207,7 +213,7 @@ const KIND_PANELS_EXTENDED = {
     details,
     seeded: () => true,
     anchorName: () => 'start',
-    info: () => [],
+    info: levelInfo,
     bounds: (emitter, scene, include) => pathPoints(emitter, scene, include),
     measure: pathPoints,
     move: () => false,
@@ -228,7 +234,7 @@ const KIND_PANELS_EXTENDED = {
     details: rocketDetails,
     seeded: () => true,
     anchorName: () => 'pad',
-    info: () => [],
+    info: levelInfo,
     bounds: (emitter, scene, include) => pathPoints(emitter, scene, include),
     measure: pathPoints,
     move: () => false,

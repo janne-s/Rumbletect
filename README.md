@@ -27,6 +27,10 @@ the flight, then delays, spreads, and filters that sound on its way there.
   independent of source power. Emissions along each path form one outer boundary,
   joining the initial front to supersonic propagation; interior cone lines are hidden.
   The volcano's front starts at its modeled acoustic source above the vent.
+- **Levels** — A microphone shows its peak in pascals and decibels and its
+  loudest A-weighted Fast level (LAFmax, IEC 61672-1). An emitter shows its
+  sound power level LW and its A-weighted level 1 km away toward its loudest
+  direction, at its loudest moment.
 
 ## Jet
 
