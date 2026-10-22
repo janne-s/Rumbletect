@@ -34,11 +34,11 @@ the flight, then delays, spreads, and filters that sound on its way there.
   bomber: changes the engine and its count; the flight stays as set.
 - **Power** — Idle to full power, for a fighter through military power to
   full afterburner.
-- **Mach, height, climb, heading** — Where and how fast it flies.
-- **Bend, turn starts** — Straight, then turning by the bend from a point
-  along the flight; rings on the path mark the turn. Turn length in the
-  details.
-- **Acceleration** — Speeding up or slowing down along the flight.
+- **Height, climb, heading, Mach, acceleration** — Where it flies and how
+  fast, speeding up or slowing down along the flight.
+- **Turn, turn starts, turn length** — Straight, then turning by the set
+  angle from a point along the flight over a share of what is left of it;
+  rings on the path mark the turn.
 - **Flight time** — How long it flies; setting it ends an automatic flight
   time.
 - **Formation** — Its own kind: aircraft flying a V behind the leader, each
@@ -53,8 +53,8 @@ the flight, then delays, spreads, and filters that sound on its way there.
 
 - **Category** — Business jet, regional jet, narrowbody, widebody, or
   four-engine airliner: changes the engines; the flight stays as set.
-- **Power, Mach, acceleration, height, climb, heading, bend, turn starts,
-  flight time** — As for a jet.
+- **Power, height, climb, heading, Mach, acceleration, turn, turn starts,
+  turn length, flight time** — As for a jet.
 - **Source** — A turbofan as two jets, a fast core and a slower fan stream,
   with the fan's blade-passing tones and broadband noise, and at take-off
   power the buzz-saw: tones at every order of the shaft as the fan tips pass
@@ -69,14 +69,14 @@ the flight, then delays, spreads, and filters that sound on its way there.
   propellant, and nozzle; the flight stays as set.
 - **Size** — Total thrust from a 10 N hobby motor to a 100 MN super-heavy
   launcher; the nozzle and water on the pad follow.
-- **Heading, launch angle, bend, turn starts** — The path, set rather than
-  simulated: straight along the launch angle, or turning by the bend from a
-  point along it, down toward level flight or, negative, lofting up as ATACMS
+- **Heading, launch angle, turn, turn starts, turn length** — The path, set
+  rather than simulated: straight along the launch angle, or turning by the
+  set angle from a point along it, down toward level flight or, negative, lofting up as ATACMS
   does after leaving its rail; marks on the path show the turn and where the rocket passes
   the speed of sound of the air at its height.
 - **Top speed** — The speed at burnout. The flight ends at burnout or where
   it comes down to the ground; sound already sent travels on. How late the
-  speed builds and the turn's length in the details.
+  speed builds in the details.
 - **Burn time** — How long the engine burns.
 - **Salvo** — Its own kind, by default a 122 mm launcher's 40 rounds in 20 s:
   a multiple launcher's rounds, each the same

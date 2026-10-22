@@ -181,7 +181,7 @@ test('a negative bend lofts a rocket above its launch angle after the turn, as A
   const angle = index => Math.atan2(path.vz[index], Math.hypot(path.vx[index], path.vy[index])) * 180 / Math.PI;
   assert.ok(Math.abs(angle(path.speed.length - 1) - 75) < 1e-6);
   const item = structuredClone(rocket);
-  const bend = rocketMacros(item).find(macro => macro.label === 'Bend');
+  const bend = rocketMacros(item).find(macro => macro.label === 'Turn');
   bend.write(item, 0);
   assert.equal(item.ascent.bendDegrees, -90);
   bend.write(item, 1 / 3);

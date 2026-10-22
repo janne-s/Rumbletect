@@ -27,7 +27,7 @@ const RUMBLETECT_PARAMETERS = Object.freeze({
   burnSeconds: { minimum: 1, maximum: 590, unit: 's', label: 'Burn time', reliability: 'C' },
   burnoutMetresPerSecond: { minimum: 1, maximum: 8000, unit: 'm/s', label: 'Top speed', reliability: 'C' },
   accelerationPercent: { minimum: 0, maximum: 100, unit: '%', label: 'Late acceleration', reliability: 'C' },
-  bendDegrees: { minimum: -180, maximum: 180, unit: '°', label: 'Bend', reliability: null },
+  bendDegrees: { minimum: -180, maximum: 180, unit: '°', label: 'Turn', reliability: null },
   turnStartPercent: { minimum: 0, maximum: 100, unit: '%', label: 'Turn starts', reliability: 'C' },
   turnLengthPercent: { minimum: 1, maximum: 100, unit: '%', label: 'Turn length', reliability: 'C' },
   throttleDownSeconds: { minimum: 0, maximum: 590, unit: 's', label: 'Throttle down at', reliability: 'C' },

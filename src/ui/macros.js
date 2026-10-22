@@ -56,8 +56,8 @@ const flightHeading = {
   entry: { unit: '°', get: item => item.headingDegrees, set: (item, value) => { item.headingDegrees = ((value % 360) + 360) % 360; } }
 };
 
-const jetBend = {
-  label: 'Bend',
+const jetTurn = {
+  label: 'Turn',
   read: item => (item.bendDegrees + 180) / 360,
   write: (item, t) => { item.bendDegrees = Math.round(t * 360 - 180); },
   show: item => `${item.bendDegrees}°`,
@@ -100,6 +100,14 @@ const flightTime = {
   entry: { unit: 's', get: item => item.durationSeconds, set: (item, value) => { item.durationSeconds = value; item.autoDuration = false; } }
 };
 
+const jetTurnLength = {
+  label: 'Turn length',
+  read: item => item.turnLengthPercent / 100,
+  write: (item, t) => { item.turnLengthPercent = Math.max(range('turnLengthPercent')[0], Math.round(t * 100)); },
+  show: item => `${item.turnLengthPercent} %`,
+  entry: { unit: '%', get: item => item.turnLengthPercent, set: (item, value) => { item.turnLengthPercent = value; } }
+};
+
 const onset = {
   label: 'Onset',
   read: item => clamp01(Math.cbrt(item.startSeconds / range('startSeconds')[1])),
@@ -135,7 +143,7 @@ function setSpacing(item, lateral) {
 }
 
 export function macrosFor(emitter, { onset: withOnset = false } = {}) {
-  const list = [...(emitter.kind === 'formation' ? [formationCount, formationSpacing] : []), emitter.kind === 'airliner' ? airlinerCategory : jetCategory, power, machNumber, flightAcceleration, flightHeight, flightClimb, flightHeading, jetBend, jetTurnStart, flightTime];
+  const list = [...(emitter.kind === 'formation' ? [formationCount, formationSpacing] : []), emitter.kind === 'airliner' ? airlinerCategory : jetCategory, power, flightHeight, flightClimb, flightHeading, machNumber, flightAcceleration, jetTurn, jetTurnStart, jetTurnLength, flightTime];
   return withOnset ? [...list, onset] : list;
 }
 
@@ -177,8 +185,8 @@ const setAscent = (item, key, value) => { item.ascent = { ...item.ascent, [key]:
 /** Positive bends the path down toward level flight, negative lofts it up after launch. */
 const ROCKET_BEND_SPAN = Object.freeze([-90, 180]);
 
-const rocketBend = {
-  label: 'Bend',
+const rocketTurn = {
+  label: 'Turn',
   read: item => clamp01((item.ascent.bendDegrees - ROCKET_BEND_SPAN[0]) / (ROCKET_BEND_SPAN[1] - ROCKET_BEND_SPAN[0])),
   write: (item, t) => setAscent(item, 'bendDegrees', Math.round(ROCKET_BEND_SPAN[0] + t * (ROCKET_BEND_SPAN[1] - ROCKET_BEND_SPAN[0]))),
   show: item => `${item.ascent.bendDegrees}°`,
@@ -191,6 +199,14 @@ const rocketTurnStart = {
   write: (item, t) => setAscent(item, 'turnStartPercent', Math.round(t * 100)),
   show: item => `${item.ascent.turnStartPercent} %`,
   entry: { unit: '%', get: item => item.ascent.turnStartPercent, set: (item, value) => setAscent(item, 'turnStartPercent', value) }
+};
+
+const rocketTurnLength = {
+  label: 'Turn length',
+  read: item => item.ascent.turnLengthPercent / 100,
+  write: (item, t) => setAscent(item, 'turnLengthPercent', Math.max(range('turnLengthPercent')[0], Math.round(t * 100))),
+  show: item => `${item.ascent.turnLengthPercent} %`,
+  entry: { unit: '%', get: item => item.ascent.turnLengthPercent, set: (item, value) => setAscent(item, 'turnLengthPercent', value) }
 };
 
 const kilometresPerHour = metresPerSecond => `${Math.round(metresPerSecond * 3.6)} km/h`;
@@ -238,7 +254,7 @@ const salvoDuration = {
 };
 
 export function rocketMacros(emitter, { onset: withOnset = false } = {}) {
-  const list = [...(emitter.kind === 'salvo' ? [salvoRounds, salvoDuration] : []), rocketCategory, rocketSize, flightHeading, rocketLaunch, rocketBend, rocketTurnStart, rocketBurnout, rocketBurnTime];
+  const list = [...(emitter.kind === 'salvo' ? [salvoRounds, salvoDuration] : []), rocketCategory, rocketSize, flightHeading, rocketLaunch, rocketTurn, rocketTurnStart, rocketTurnLength, rocketBurnout, rocketBurnTime];
   return withOnset ? [...list, onset] : list;
 }
 
