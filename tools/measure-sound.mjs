@@ -1,45 +1,12 @@
 // Measures a flyover recording or render as in Doc/reviews/2026-10-15-jet-sound-diagnosis.md.
 // node tools/measure-sound.mjs <file.wav>... prints one JSON line per file.
-import { readFileSync } from 'node:fs';
 import { basename } from 'node:path';
 import { fft, nextPowerOfTwo } from '../src/shared/domain/fft.js';
+import { readAudio } from './audio-file.mjs';
 
 const OCTAVES = [31.5, 63, 125, 250, 500, 1000, 2000, 4000, 8000, 16000];
 const ENVELOPE_BANDS = [[30, 250], [250, 2000], [2000, 8000]];
 const SWIRL_OCTAVES = [250, 500, 1000, 2000];
-
-function readWav(file) {
-  const bytes = readFileSync(file);
-  const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
-  let format = null;
-  let data = null;
-  for (let at = 12; at + 8 <= bytes.length;) {
-    const id = bytes.toString('ascii', at, at + 4);
-    const size = view.getUint32(at + 4, true);
-    if (id === 'fmt ') {
-      const tag = view.getUint16(at + 8, true);
-      format = { tag: tag === 0xfffe ? view.getUint16(at + 32, true) : tag, channels: view.getUint16(at + 10, true), sampleRate: view.getUint32(at + 12, true), bits: view.getUint16(at + 22, true) };
-    }
-    if (id === 'data') data = { at: at + 8, size: Math.min(size, bytes.length - at - 8) };
-    at += 8 + size + (size % 2);
-  }
-  const { tag, channels, sampleRate, bits } = format;
-  const width = bits / 8;
-  const frames = Math.floor(data.size / (width * channels));
-  const mono = new Float64Array(frames);
-  for (let frame = 0; frame < frames; frame += 1) {
-    let sum = 0;
-    for (let channel = 0; channel < channels; channel += 1) {
-      const at = data.at + (frame * channels + channel) * width;
-      if (tag === 3) sum += bits === 64 ? view.getFloat64(at, true) : view.getFloat32(at, true);
-      else if (bits === 16) sum += view.getInt16(at, true) / 32768;
-      else if (bits === 24) sum += ((view.getUint8(at) | view.getUint8(at + 1) << 8 | view.getInt8(at + 2) << 16)) / 8388608;
-      else sum += view.getInt32(at, true) / 2147483648;
-    }
-    mono[frame] = sum / channels;
-  }
-  return { samples: mono, sampleRate };
-}
 
 function spectrum(samples) {
   const size = nextPowerOfTwo(samples.length);
@@ -111,7 +78,7 @@ function octaveShares(samples, sampleRate) {
 }
 
 function measure(file) {
-  const { samples, sampleRate } = readWav(file);
+  const { samples, sampleRate } = readAudio(file);
   const twoSeconds = 2 * sampleRate;
   const windows = levels(samples, sampleRate, 2, .25);
   const peakIndex = windows.indexOf(Math.max(...windows));
