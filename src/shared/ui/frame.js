@@ -330,14 +330,14 @@ export function startFrame(tect) {
     const starting = player.busy();
     const rendering = operations.has('render');
     const busy = !playing && !starting && rendering;
-    button.textContent = starting ? 'Cancel' : playing ? 'Stop' : busy ? '' : state.results ? 'Play' : 'Render';
+    button.textContent = playing || starting ? 'Stop' : busy ? '' : state.results ? 'Play' : 'Render';
     button.setAttribute('aria-label', busy ? 'Rendering' : button.textContent);
     if (busy || starting) button.setAttribute('aria-busy', 'true'); else button.removeAttribute('aria-busy');
     button.disabled = !playing && !starting && (rendering || (!state.results && !state.scene.emitters.some(emitter => emitter.enabled)));
     button.setAttribute('aria-pressed', playing ? 'true' : 'false');
     const pause = $('plot-play');
     pause.disabled = !state.results;
-    pause.setAttribute('aria-label', starting ? 'Cancel' : playing ? 'Pause' : 'Play');
+    pause.setAttribute('aria-label', playing || starting ? 'Pause' : 'Play');
     pause.classList.toggle('playing', playing || starting);
     $('results').classList.toggle('playable', Boolean(state.results));
   }
