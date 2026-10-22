@@ -28,6 +28,7 @@ import { attachTimelineSeek } from './timeline.js';
 import { createRenderMarker, unfinishedRenderText } from './render-marker.js';
 import { createFrontStyle } from './front-style.js';
 import { outerSpheres, sampleEnvelopeSources } from './wavefront-envelope.js';
+import { formatMicrophoneLevels } from './levels.js';
 
 export function startFrame(tect) {
   const {
@@ -1446,7 +1447,7 @@ export function startFrame(tect) {
       const { metres, direction } = bearing(receiver.positionMetres, emitterAnchor(selected));
       const anchorName = kinds[selected.kind].anchorName(selected);
       selectedInfo.append(element('span', '', metres < 1 ? `${receiver.name} is at its ${anchorName}` : `Its ${anchorName} is ${formatMetres(metres)} ${direction} of ${receiver.name}`));
-      for (const line of kinds[selected.kind].info(selected)) selectedInfo.append(element('span', '', line));
+      for (const line of kinds[selected.kind].info(selected, scene)) selectedInfo.append(element('span', '', line));
       if (selected.startSeconds) selectedInfo.append(element('span', '', `Onset ${formatSeconds(selected.startSeconds)}`));
     } else if (selected) {
       const surface = currentSurface();
@@ -1473,7 +1474,8 @@ export function startFrame(tect) {
         last = Math.max(last, result.arrivals.seconds[index]);
       }
       listenInfo.append(element('span', '', last > first ? `Sound ${formatSeconds(first)}–${formatSeconds(last)} after ${onsetName}` : `Sound ${formatSeconds(first)} after ${onsetName}`));
-      listenInfo.append(element('span', '', `Peak ${result.peakPa.toPrecision(3)} Pa · c ${result.speedOfSound.toFixed(1)} m/s`));
+      listenInfo.append(element('span', '', formatMicrophoneLevels(result)));
+      listenInfo.append(element('span', '', `c ${result.speedOfSound.toFixed(1)} m/s`));
       let shadowed = 0;
       let sources = 0;
       for (let index = 0; index < result.arrivals.count; index += 1) {
