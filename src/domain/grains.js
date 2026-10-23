@@ -14,10 +14,6 @@ const GRAIN = PROPAGATION.grainSamples;
 const WINDOW = Float64Array.from({ length: GRAIN }, (_, index) => Math.sin(Math.PI * (index + .5) / GRAIN));
 const STREAMS = Object.freeze({ fine: 0, large: 0x9e3779b9, envelope: 0x85ebca6b, low: 0xc2b2ae35 });
 
-/**
- * The jet's flight in still air of the ground's temperature, as the near listen flew it. With `autoDuration` it
- * flies on until every microphone is `JET_FLIGHT.hearingDecibels` below its closest approach by spreading.
- */
 /** The flight's bend, eased from the turn's start to its end as shares of `seconds` of flight, or none. */
 function turnOf(emitter, seconds) {
   if (!emitter.bendDegrees) return null;
@@ -27,6 +23,10 @@ function turnOf(emitter, seconds) {
 
 const withTurn = (path, turn) => ({ ...path, turnSeconds: turn ? [turn.fromSeconds, turn.toSeconds] : null });
 
+/**
+ * The jet's flight in still air of the ground's temperature, as the near listen flew it. With `autoDuration` it
+ * flies on until every microphone is `JET_FLIGHT.hearingDecibels` below its closest approach by spreading.
+ */
 export function jetPath(emitter, scene) {
   const air = { ...scene.air, refraction: false };
   const flown = seconds => ({ ...emitter, turnDegreesPerSecond: 0, turn: turnOf(emitter, seconds) });

@@ -38,7 +38,6 @@ export function powerLabel(power, engineClass = 'fighter') {
   return power < military ? `${Math.round(power / military * 100)} %` : `AB ${Math.round((power - military) / (1 - military) * 100)} %`;
 }
 
-/** Each stream's fully expanded jet: the engine's own, and for a class with a separate fan stream its bypass at the same power. */
 /** A class's separate fan stream at a power, or null. */
 function bypassAt(power, engineClass) {
   const bypass = ENGINE.classes[engineClass]?.bypass;
@@ -53,6 +52,7 @@ function bypassAt(power, engineClass) {
   };
 }
 
+/** Each stream's fully expanded jet: the engine's own, and for a class with a separate fan stream its bypass at the same power. */
 export function streamsOf(engine, engineClass, temperatureCelsius) {
   const fan = bypassAt(powerOfEngine(engine, engineClass), engineClass);
   const core = jetOfEngine(engine, temperatureCelsius);
