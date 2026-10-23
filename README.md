@@ -281,6 +281,22 @@ All files are 32-bit float at one full scale. Files of more than two channels
 are WAVE_FORMAT_EXTENSIBLE with no speaker positions. With per-microphone
 files, every file starts at the same moment.
 
+## Calibration
+
+Rumbletect plays through the browser at the computer's volume, like any other
+sound. Its levels are model values; with a fixed full scale they keep their
+real relation, so a sound system can be set to play them at that level.
+
+- **Peak** — The loudest moment plays at −3 dBFS whatever its pressure, so a
+  quiet scene plays as loud as a loud one.
+- **Fixed** — Full scale is a pressure: at 20 Pa a sample of 1.0 is 20 Pa, and
+  0 dBFS is 120 dB SPL peak. Exported files keep the same scale.
+- **To calibrate** — Choose Fixed, one omni microphone, and Ear reflex and
+  Loudness off. Play a 1 kHz sine at −20 dBFS from any tone generator and set
+  the speakers or headphones with a sound level meter to read the full scale's
+  level less 23 dB: 97 dB SPL at 20 Pa. Leave the volume there. Binaural
+  playback and mixes of several microphones are scaled down for headroom.
+
 ## Echotect
 
 For echoes from buildings and streets, place a Rumbletect sound in an
@@ -381,8 +397,7 @@ B/C marks a part that combines the two.
 | Ear reflex | threshold, latency, low-frequency attenuation, adaptation | B/C |
 | Loudness | Stevens' power law on the level envelope | B/C |
 
-Not modelled: a supersonic jet's shock-cell noise and screech, afterburner
-combustion noise, and sonic booms, which Boomtect makes.
+Not modelled: a supersonic jet's shock-cell noise and screech, afterburner combustion noise, and sonic booms, which Boomtect makes.
 
 Rumbletect is a creative tool. Where published models exist it follows them,
 but a result is a plausible sound, not a reconstruction or a measurement.
