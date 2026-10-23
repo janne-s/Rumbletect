@@ -14,7 +14,7 @@ import { macrosFor, rocketMacros, thrustLabel, volcanoMacros } from './macros.js
 import { volcanoCategory, volcanoSourcePosition } from '../domain/volcano.js';
 import { machCone, soundSpeedAt } from '../shared/domain/trajectory.js';
 import { followerPlacement, followerSeed } from '../shared/domain/follower.js';
-import { engineOfClass } from '../domain/engine.js';
+import { engineAtPower, engineOfClass } from '../domain/engine.js';
 import { frontProfile } from '../shared/domain/refraction.js';
 
 /** The first sample at or above the speed of sound of the air at its height, or −1. */
@@ -287,12 +287,14 @@ export const ADD_EMITTERS = Object.freeze({
 
 const within = (key, value) => Math.min(PARAMETERS[key].maximum, Math.max(PARAMETERS[key].minimum, value));
 
-/** A jet on a linked tect's flight, so that its engines come from Rumbletect; the category and power are kept once chosen. */
+/** A jet on a linked tect's flight, so that its engines come from Rumbletect: a fighter in full afterburner when the flight is supersonic; the category and power are kept once chosen. */
 export function followerJet(ghost, existing, { partner, uniqueId, scene }) {
   if (ghost.follow.role !== 'aircraft') return null;
-  const engineClass = ghost.follow.size === 'bomber' ? 'bomber' : 'fighter';
-  const base = existing ?? { ...defaultJet(uniqueId('jet'), `${ghost.name} engines`.slice(0, 64), followerSeed(partner, ghost.id)), engineClass, engine: engineOfClass(engineClass) };
   const placement = followerPlacement(ghost.follow.paths[0]);
+  const supersonic = placement.topSpeedMetresPerSecond >= soundSpeedAt(scene.air, placement.startMetres.z);
+  const engineClass = ghost.follow.size === 'bomber' && !supersonic ? 'bomber' : 'fighter';
+  const engine = supersonic ? { ...engineAtPower(1, engineClass), engines: ENGINE.classes[engineClass].engines } : engineOfClass(engineClass);
+  const base = existing ?? { ...defaultJet(uniqueId('jet'), `${ghost.name} engines`.slice(0, 64), followerSeed(partner, ghost.id)), engineClass, engine };
   return {
     ...base,
     follows: { app: partner, id: ghost.id, name: ghost.name },
