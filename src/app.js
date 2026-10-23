@@ -15,6 +15,7 @@ startFrame({
   worker: new URL('./render-worker.js', import.meta.url),
   scene: { MODES, PARAMETERS, defaultScene, parseScene, readScene, sceneInMode, serializeScene },
   prepareScene,
+  linkModes: { Boomtect: { jet: 'sonic', rocket: 'sonic', volcano: 'blast' } },
   fields,
   kinds: KIND_PANELS,
   views: kindViews(),
