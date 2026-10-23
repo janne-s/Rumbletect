@@ -143,6 +143,7 @@ function setSpacing(item, lateral) {
 }
 
 export function macrosFor(emitter, { onset: withOnset = false } = {}) {
+  if (emitter.follows) return [emitter.kind === 'airliner' ? airlinerCategory : jetCategory, power];
   const list = [...(emitter.kind === 'formation' ? [formationCount, formationSpacing] : []), emitter.kind === 'airliner' ? airlinerCategory : jetCategory, power, flightHeight, flightClimb, flightHeading, machNumber, flightAcceleration, jetTurn, jetTurnStart, jetTurnLength, flightTime];
   return withOnset ? [...list, onset] : list;
 }

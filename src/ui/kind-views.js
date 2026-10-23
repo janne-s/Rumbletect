@@ -33,6 +33,7 @@ function drawTurn(context, path, frame) {
 export function kindViews() {
   const jet = {
     handles(emitter, box) {
+      if (emitter.follows) return [];
       const start = emitter.startMetres;
       const reach = box ? Math.max(box.x1 - box.x0, box.y1 - box.y0) * VIEW.box.facingLengthShare : 1000;
       const heading = emitter.headingDegrees * Math.PI / 180;

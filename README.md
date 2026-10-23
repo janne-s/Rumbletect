@@ -296,15 +296,27 @@ that moves.
 ## Boomtect
 
 **Open Boomtect** opens [Boomtect](https://github.com/janne-s/Boomtect) in its own
-window with this scene's place, terrain, air, ground, microphones, and render
-settings, and links the two windows. When Boomtect is already open, the button
-reads **Link Boomtect**. While linked, a change to these in either window
-reaches the other. Each window renders its own emitters, and the microphones
-hear both: plots, levels, playback, the export, and Echotect get the sum.
-Boomtect's emitters show dimmed in the scene; a click on one shows it in
-Boomtect. The button with the linked name brings its window forward, and the
-sliders beside it set Boomtect's level or mute it, choose whether its new
-sound comes in at once or with **Update**, and unlink. Boomtect makes sonic booms, blasts, thunder, and volcanic explosions.
+window and links the two windows. When Boomtect is already open, the button
+reads **Link Boomtect**. Boomtect makes sonic booms, blasts, thunder, and
+volcanic explosions.
+
+- **One scene** — The place, terrain, air, ground, microphones, and render
+  settings are the same in both windows, and a change in either reaches the
+  other. A window the link opens starts with no emitters of its own, and its
+  saved scenes stay as they were; after **Unlink** the scene on screen stays.
+- **Heard together** — Each window renders its own emitters, and the
+  microphones hear both: plots, levels, playback, the export, and Echotect get
+  the sum. With **Auto** render on, Boomtect's new sound comes in at once;
+  with it off, the arrows beside Boomtect's name take it in.
+- **Followers** — Each Boomtect flight gets a jet here on its path, named after
+  it, for its engines; each supersonic jet or rocket here gets a flight in
+  Boomtect for its booms and Mach cone. A follower moves with what it follows
+  and keeps a copy of the path, so it still sounds without the link. Its
+  category and power are set here. Removed, it stays away while both windows are
+  open.
+- **Boomtect's emitters** — Dimmed in the scene; a click on one shows it in
+  Boomtect. Boomtect's name opens its level or mute, a button to bring its window
+  forward, and **Unlink**.
 
 ## Model
 

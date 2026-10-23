@@ -1,3 +1,4 @@
+import { followerFields } from '../shared/domain/follower.js';
 import { ENGINE, MODEL_VERSION, ROCKET, VOLCANO } from './constants.js';
 import { categoryRocket } from './rocket.js';
 import { AIRLINER_CLASSES, ENGINE_CLASSES, engineOfClass } from './engine.js';
@@ -161,6 +162,7 @@ function readJet(value, fields, path, classes = ENGINE_CLASSES, fallback = 'figh
   const engine = value.engine ?? {};
   check(typeof value.autoDuration === 'boolean', `${path}.autoDuration must be true or false.`);
   return {
+    ...followerFields(value),
     engineClass: classes.includes(value.engineClass) ? value.engineClass : fallback,
     startMetres: point(value.startMetres, `${path}.startMetres`),
     durationSeconds: number(value.durationSeconds, 'flightSeconds', `${path}.durationSeconds`),

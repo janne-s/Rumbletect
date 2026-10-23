@@ -3,7 +3,7 @@ import { prepareScene } from './domain/render.js';
 import { defaultScene, emitterAnchor, MODES, PARAMETERS, parseScene, readScene, sceneInMode, serializeScene } from './domain/scene.js';
 import * as fields from './ui/fields.js';
 import { kindViews } from './ui/kind-views.js';
-import { ADD_EMITTERS, isSupersonic, KIND_PANELS } from './ui/kinds.js';
+import { ADD_EMITTERS, followerJet, isSupersonic, KIND_PANELS } from './ui/kinds.js';
 import { startFrame } from './shared/ui/frame.js';
 
 startFrame({
@@ -16,6 +16,7 @@ startFrame({
   scene: { MODES, PARAMETERS, defaultScene, parseScene, readScene, sceneInMode, serializeScene },
   prepareScene,
   linkModes: { Boomtect: { jet: 'sonic', rocket: 'sonic', volcano: 'blast' } },
+  follower: followerJet,
   fields,
   kinds: KIND_PANELS,
   views: kindViews(),

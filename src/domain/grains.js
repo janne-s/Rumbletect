@@ -1,3 +1,4 @@
+import { followedPath } from '../shared/domain/follower.js';
 import { ENGINE, JET, JET_FLIGHT, LOW_BAND, PROPAGATION, SHOCK_FORMATION, SYNTHESIS } from './constants.js';
 import { addAirframe, airframeAt } from './airframe.js';
 import { powerOfEngine, streamsOf } from './engine.js';
@@ -28,6 +29,7 @@ const withTurn = (path, turn) => ({ ...path, turnSeconds: turn ? [turn.fromSecon
  * flies on until every microphone is `JET_FLIGHT.hearingDecibels` below its closest approach by spreading.
  */
 export function jetPath(emitter, scene) {
+  if (emitter.paths) return followedPath(emitter.paths[0]);
   const air = { ...scene.air, refraction: false };
   const flown = seconds => ({ ...emitter, turnDegreesPerSecond: 0, turn: turnOf(emitter, seconds) });
   if (!emitter.autoDuration) return withTurn(flightPath(flown(emitter.durationSeconds), air), turnOf(emitter, emitter.durationSeconds));
@@ -341,6 +343,7 @@ export function mergedGrains(members) {
  * for each aircraft, the leader's its own; any other jet is its only member.
  */
 export function formationJets(emitter) {
+  if (emitter.paths) return emitter.paths.map((saved, index) => ({ ...emitter, kind: 'jet', seed: index ? (emitter.seed + Math.imul(index, 0x9e3779b9)) >>> 0 : emitter.seed, paths: [saved] }));
   if (emitter.kind !== 'formation') return [emitter];
   const random = createRandom(emitter.seed);
   return formationMembers(emitter, emitter.memberCount, emitter.lateralSpacingMetres, emitter.trailSpacingMetres)

@@ -1,7 +1,7 @@
 import { ENGINE } from '../domain/constants.js';
 import { jetOfEngine, powerLabel, powerOfEngine } from '../domain/engine.js';
 import { speedOfSound } from '../domain/jet.js';
-import { defaultAirliner, defaultFormation, defaultJet, defaultRocket, defaultSalvo, defaultVolcano, PROPELLANTS, ROCKET_ASCENT_NUMBERS } from '../domain/scene.js';
+import { defaultAirliner, defaultFormation, defaultJet, defaultRocket, defaultSalvo, defaultVolcano, PARAMETERS, PROPELLANTS, ROCKET_ASCENT_NUMBERS } from '../domain/scene.js';
 import { RENDER, ROCKET } from '../domain/constants.js';
 import { heardCounts } from '../domain/rocket-grains.js';
 import { peakFrequencyHz, sizedRocket, totalThrustNewtons, vehicleOf } from '../domain/rocket.js';
@@ -13,6 +13,8 @@ import { formatAtKilometre, formatDecibels } from '../shared/ui/levels.js';
 import { macrosFor, rocketMacros, thrustLabel, volcanoMacros } from './macros.js';
 import { volcanoCategory, volcanoSourcePosition } from '../domain/volcano.js';
 import { machCone, soundSpeedAt } from '../shared/domain/trajectory.js';
+import { followerPlacement, followerSeed } from '../shared/domain/follower.js';
+import { engineOfClass } from '../domain/engine.js';
 import { frontProfile } from '../shared/domain/refraction.js';
 
 /** The first sample at or above the speed of sound of the air at its height, or −1. */
@@ -39,8 +41,23 @@ function summary(emitter, scene) {
   const jet = jetOfEngine(emitter.engine, scene.air.temperatureCelsius);
   const aircraft = emitter.kind === 'formation' ? emitter.memberCount : 1;
   const { engines } = emitter.engine;
+  if (emitter.follows) return `${ENGINE.classes[emitter.engineClass].label}, ${powerLabel(powerOfEngine(emitter.engine, emitter.engineClass), emitter.engineClass)}, on ${emitter.follows.app}'s ${emitter.follows.name} · ${flightSpeedLabel(emitter, scene)}`;
   return `${aircraft > 1 ? `${aircraft} × ` : ''}${ENGINE.classes[emitter.engineClass].label}${engines > 1 ? `, ${engines} engines` : ''}, ${powerLabel(powerOfEngine(emitter.engine, emitter.engineClass), emitter.engineClass)}, exhaust ${Math.round(jet.velocityMetresPerSecond)} m/s · ${flightSpeedLabel(emitter, scene)} at ${formatMetres(emitter.startMetres.z)} for ${flownSeconds(emitter, scene)} s${emitter.gearAndFlaps ? ' · gear & flaps down' : ''}`;
 }
+
+const engineSection = (emitter, setEngine, jet) => ({
+  title: 'Set by category',
+  build: container => {
+    numberField(container, { key: 'engines', value: emitter.engine.engines, onCommit: setEngine('engines') });
+    numberField(container, { key: 'pressureRatio', value: emitter.engine.pressureRatio, onCommit: setEngine('pressureRatio') });
+    numberField(container, { key: 'totalTemperatureKelvin', value: emitter.engine.totalTemperatureKelvin, onCommit: setEngine('totalTemperatureKelvin') });
+    numberField(container, { key: 'nozzleDiameterMetres', value: emitter.engine.diameterMetres, onCommit: setEngine('diameterMetres') });
+    const note = document.createElement('p');
+    note.className = 'field-note';
+    note.textContent = `Exhaust ${Math.round(jet.velocityMetresPerSecond)} m/s · ${jet.temperatureRatio.toFixed(2)} × ambient temperature`;
+    container.append(note);
+  }
+});
 
 function details(emitter, { updateEmitter, scene }) {
   const set = key => value => updateEmitter(emitter.id, item => { item[key] = value; });
@@ -48,6 +65,15 @@ function details(emitter, { updateEmitter, scene }) {
   const section = (title, build) => ({ title, build });
   const numbers = keys => container => keys.forEach(key => numberField(container, { key, value: emitter[key], onCommit: set(key) }));
   const jet = jetOfEngine(emitter.engine, scene.air.temperatureCelsius);
+  if (emitter.follows) {
+    return [
+      section('Placement', container => {
+        textField(container, { label: 'Name', value: emitter.name, onCommit: set('name') });
+        seedField(container, { value: emitter.seed, onCommit: set('seed'), onNew: () => set('seed')(newSeed()) });
+      }),
+      engineSection(emitter, setEngine, jet)
+    ];
+  }
   return [
     section('Placement', container => {
       textField(container, { label: 'Name', value: emitter.name, onCommit: set('name') });
@@ -67,16 +93,7 @@ function details(emitter, { updateEmitter, scene }) {
         container.append(note);
       }
     }),
-    section('Set by category', container => {
-      numberField(container, { key: 'engines', value: emitter.engine.engines, onCommit: setEngine('engines') });
-      numberField(container, { key: 'pressureRatio', value: emitter.engine.pressureRatio, onCommit: setEngine('pressureRatio') });
-      numberField(container, { key: 'totalTemperatureKelvin', value: emitter.engine.totalTemperatureKelvin, onCommit: setEngine('totalTemperatureKelvin') });
-      numberField(container, { key: 'nozzleDiameterMetres', value: emitter.engine.diameterMetres, onCommit: setEngine('diameterMetres') });
-      const note = document.createElement('p');
-      note.className = 'field-note';
-      note.textContent = `Exhaust ${Math.round(jet.velocityMetresPerSecond)} m/s · ${jet.temperatureRatio.toFixed(2)} × ambient temperature`;
-      container.append(note);
-    }),
+    engineSection(emitter, setEngine, jet),
     ...(emitter.kind === 'formation' ? [section('Formation', numbers(['memberCount', 'lateralSpacingMetres', 'trailSpacingMetres', 'verticalSpacingMetres']))] : [])
   ];
 }
@@ -95,7 +112,7 @@ function warnings(emitter, scene) {
   const supersonic = supersonicIndex(path, scene.air);
   const outrun = path.speed.findIndex(speed => speed >= jet);
   return [
-    ...(supersonic >= 0 ? [`Passes the speed of sound at ${at(supersonic)}; its boom is not heard here`] : []),
+    ...(supersonic >= 0 ? [`Passes the speed of sound at ${at(supersonic)}; Boomtect makes its boom`] : []),
     ...(outrun >= 0 ? [`No jet noise above Mach ${(jet / sound).toFixed(1)} at this power`] : [])
   ];
 }
@@ -151,7 +168,7 @@ function rocketWarnings(emitter, scene) {
   const cut = counts.filter((count, index) => count < paths[index].seconds.length).length;
   const beyond = `beyond the ${RENDER.maximumSeconds} s render`;
   return [
-    ...(supersonic >= 0 ? [`Passes the speed of sound at T+${(supersonic * path.step - path.heldSeconds).toFixed(0)} s; its boom is not heard here`] : []),
+    ...(supersonic >= 0 ? [`Passes the speed of sound at T+${(supersonic * path.step - path.heldSeconds).toFixed(0)} s; Boomtect makes its boom`] : []),
     ...(paths.length === 1 && grounded ? [`Hits the ground at T+${path.groundSeconds.toFixed(0)} s`] : []),
     ...(paths.length > 1 && grounded ? [`${grounded} of ${paths.length} rounds hit the ground`] : []),
     ...(paths.length === 1 && cut ? [`Heard until T+${((counts[0] - 1) * path.step - path.heldSeconds).toFixed(0)} s; later sound arrives ${beyond}`] : []),
@@ -225,7 +242,8 @@ const KIND_PANELS_EXTENDED = {
     cone: (path, now, profile) => machCone(path, now, profile, { profileAt: frontProfile, envelope: true }),
     wavefrontSources,
     mergesSources: false,
-    warnings
+    warnings,
+    followAs: (emitter, scene) => (!emitter.follows && isSupersonic(emitter, scene) ? { role: 'aircraft', size: emitter.engineClass === 'bomber' || ENGINE.classes[emitter.engineClass]?.civil ? 'bomber' : 'fighter' } : null)
   }),
   rocket: Object.freeze({
     label: () => 'Rocket',
@@ -246,7 +264,8 @@ const KIND_PANELS_EXTENDED = {
     cone: (path, now, profile, emitter, scene, member) => machCone(cachedSoundTracks(emitter, scene)[member], now, profile, { profileAt: frontProfile, envelope: true }),
     wavefrontSources,
     mergesSources: false,
-    warnings: rocketWarnings
+    warnings: rocketWarnings,
+    followAs: (emitter, scene) => (cachedTracks(emitter, scene).some(path => supersonicIndex(path, scene.air) >= 0) ? { role: 'rocket' } : null)
   }),
   volcano: VOLCANO_PANEL
 };
@@ -265,3 +284,27 @@ export const ADD_EMITTERS = Object.freeze({
   salvo: Object.freeze({ create: defaultSalvo, label: 'Salvo', mode: 'rocket' }),
   volcano: Object.freeze({ create: defaultVolcano, label: 'Volcano', mode: 'volcano' })
 });
+
+const within = (key, value) => Math.min(PARAMETERS[key].maximum, Math.max(PARAMETERS[key].minimum, value));
+
+/** A jet on a linked tect's flight, so that its engines come from Rumbletect; the category and power are kept once chosen. */
+export function followerJet(ghost, existing, { partner, uniqueId, scene }) {
+  if (ghost.follow.role !== 'aircraft') return null;
+  const engineClass = ghost.follow.size === 'bomber' ? 'bomber' : 'fighter';
+  const base = existing ?? { ...defaultJet(uniqueId('jet'), `${ghost.name} engines`.slice(0, 64), followerSeed(partner, ghost.id)), engineClass, engine: engineOfClass(engineClass) };
+  const placement = followerPlacement(ghost.follow.paths[0]);
+  return {
+    ...base,
+    follows: { app: partner, id: ghost.id, name: ghost.name },
+    paths: ghost.follow.paths,
+    startMetres: placement.startMetres,
+    startSeconds: within('startSeconds', placement.startSeconds),
+    headingDegrees: +within('headingDegrees', placement.headingDegrees).toFixed(1),
+    climbDegrees: +within('climbDegrees', placement.climbDegrees).toFixed(1),
+    mach: +within('mach', placement.topSpeedMetresPerSecond / soundSpeedAt(scene.air, placement.startMetres.z)).toFixed(2),
+    accelerationMetresPerSecondSquared: 0,
+    bendDegrees: 0,
+    durationSeconds: +within('flightSeconds', placement.durationSeconds).toFixed(2),
+    autoDuration: false
+  };
+}
