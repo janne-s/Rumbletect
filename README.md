@@ -314,9 +314,17 @@ volcanic explosions.
   and keeps a copy of the path, so it still sounds without the link. Its
   category and power are set here. Removed, it stays away while both windows are
   open.
+- **Real and Balanced** — Above the pressure plot while linked: Real plays
+  both tects at their real pressures; Balanced lifts the quieter one to the
+  louder one's loudest A-weighted level, turning nothing down. The plot shows
+  each tect in its own half, scaled to its own peak, with the lift beside its
+  name. The microphone's levels are always the real sum.
+- **Tects** — In the export while linked: Together exports the sum as heard;
+  Separately exports each tect's sound in its own files at its real level, on
+  one full scale and one time axis per microphone, with one scene file.
 - **Boomtect's emitters** — Dimmed in the scene; a click on one shows it in
-  Boomtect. Boomtect's name opens its level or mute, a button to bring its window
-  forward, and **Unlink**.
+  Boomtect. Boomtect's name opens a button to bring its window forward and
+  **Unlink**.
 
 ## Model
 
