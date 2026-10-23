@@ -142,12 +142,11 @@ export const emitterAnchor = emitter => emitter.ventMetres ?? emitter.startMetre
 const ROCKET_ENGINE_NUMBERS = Object.freeze(['engines', 'thrustKilonewtons', 'exitVelocityMetresPerSecond', 'exitDiameterMetres', 'efficiencyPercent']);
 export const ROCKET_ASCENT_NUMBERS = Object.freeze(['burnSeconds', 'burnoutMetresPerSecond', 'accelerationPercent', 'bendDegrees', 'turnStartPercent', 'turnLengthPercent', 'throttleDownSeconds', 'throttleUpSeconds', 'throttlePercent']);
 
-function readRocket(value, { check, point, numbers }, path) {
-  check(PROPELLANTS.includes(value.propellant), `${path}.propellant is not supported.`);
+function readRocket(value, { check, point, numbers, choice }, path, fallbackPropellant = defaultRocket().propellant) {
   check(value.engine && typeof value.engine === 'object' && value.ascent && typeof value.ascent === 'object', `${path} needs an engine and an ascent.`);
   check(typeof value.ascent.water === 'boolean', `${path}.ascent.water must be true or false.`);
   return {
-    propellant: value.propellant,
+    propellant: choice(value.propellant, PROPELLANTS, fallbackPropellant, `${path}.propellant`),
     startMetres: point(value.startMetres, `${path}.startMetres`),
     ...numbers(value, ['startSeconds', 'headingDegrees', 'launchDegrees'], path),
     engine: numbers(value.engine, ROCKET_ENGINE_NUMBERS, `${path}.engine`),
@@ -155,7 +154,7 @@ function readRocket(value, { check, point, numbers }, path) {
   };
 }
 
-const readSalvo = (value, fields, path) => ({ ...readRocket(value, fields, path), ...fields.numbers(value, Object.keys(ROCKET.salvoLayout), path) });
+const readSalvo = (value, fields, path) => ({ ...readRocket(value, fields, path, defaultSalvo().propellant), ...fields.numbers(value, Object.keys(ROCKET.salvoLayout), path) });
 
 function readJet(value, fields, path, classes = ENGINE_CLASSES, fallback = 'fighter') {
   const { check, number, point, numbers } = fields;

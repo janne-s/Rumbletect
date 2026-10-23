@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { defaultJet, defaultScene, parseScene, readScene, SceneError, serializeScene } from '../src/domain/scene.js';
+import { defaultJet, defaultRocket, defaultSalvo, defaultScene, parseScene, readScene, SceneError, serializeScene } from '../src/domain/scene.js';
 
 test('the default scene is a jet heard by a binaural microphone, and it round-trips', () => {
   const scene = defaultScene();
@@ -16,4 +16,10 @@ test('a jet lacking its engine takes the default engine, and a foreign scene is 
   assert.deepEqual(readScene(saved).emitters[0].engine, defaultJet().engine);
   assert.throws(() => readScene({ ...saved, format: 'boomtect.scene' }), /not a Rumbletect scene/);
   assert.throws(() => parseScene({ ...defaultScene(), emitters: [{ ...defaultJet(), mach: 4 }] }), SceneError);
+});
+
+test('a rocket or salvo with a propellant this version does not know takes its kind\'s default', () => {
+  const saved = JSON.parse(serializeScene({ ...defaultScene('rocket'), emitters: [defaultRocket(), { ...defaultSalvo(), id: 'salvo-1' }] }));
+  saved.emitters.forEach(emitter => { emitter.propellant = 'nitrous'; });
+  assert.deepEqual(readScene(saved).emitters.map(emitter => emitter.propellant), [defaultRocket().propellant, defaultSalvo().propellant]);
 });
