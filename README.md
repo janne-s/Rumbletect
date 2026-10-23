@@ -293,6 +293,19 @@ Source the way the sound came from; with Direction, only its Source moves;
 with Sound only, its scene stays as it is. One direction stands for a sound
 that moves.
 
+## Boomtect
+
+**Open Boomtect** opens [Boomtect](https://github.com/janne-s/Boomtect) in its own
+window with this scene's place, terrain, air, ground, microphones, and render
+settings, and links the two windows. When Boomtect is already open, the button
+reads **Link Boomtect**. While linked, a change to these in either window
+reaches the other. Each window renders its own emitters, and the microphones
+hear both: plots, levels, playback, the export, and Echotect get the sum.
+Boomtect's emitters show dimmed in the scene; a click on one shows it in
+Boomtect. The button with the linked name brings its window forward, and the
+sliders beside it set Boomtect's level or mute it, choose whether its new
+sound comes in at once or with **Update**, and unlink. Boomtect makes sonic booms, blasts, thunder, and volcanic explosions.
+
 ## Model
 
 Every part of the model is marked with a class that says how far it can be
