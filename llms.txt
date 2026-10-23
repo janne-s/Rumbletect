@@ -1,24 +1,23 @@
 # Rumbletect
 
-> Rumbletect is a browser app that designs the continuous sound of jets, rockets, and eruptions from their physics. A scene places jets, singly or in formation, and airliners on flight paths or rockets, singly or as a launcher's salvo, on an ascent from a launch pad, or eruption jets from a volcanic vent, sustained or in Strombolian bursts, and microphones in 3D over level ground, and renders what each microphone hears: jet mixing noise in two components with their spectra and directivity, an airliner's fan and, with gear and flaps out, its airframe noise, or a rocket plume's sound power with SATURN's spectrum and frequency-dependent directivity, carried with delay, spreading, Doppler shift, air absorption, ground reflection, and turbulence. It is a creative tool for sound design: a result is a plausible flyover, not a measurement, and levels are uncalibrated model values in pascals.
+> Rumbletect is a browser app that designs the continuous sound of jets, airliners, rockets, and volcanic eruptions from their physics. A scene places sources (jets, formations, airliners, rockets, salvos, eruption jets) on authored paths and microphones in 3D over real terrain and layered air, and renders what each microphone hears. It is a creative tool for sound design: a result is a plausible sound, not a reconstruction or a measurement, and levels are uncalibrated model values in pascals.
 
-Rumbletect runs entirely in the browser, with no account and no server of its own. Every part of the model is marked A (first principles), B (literature), or C (heuristic or synthetic). It belongs to the tect family with Boomtect and Echotect and shares Boomtect's interface.
+Rumbletect runs entirely in the browser, with no account and no server of its own. A source is a stream of short noise grains along its path, each with a position, an emission time, and a spectrum toward every direction; each grain travels to each microphone with its own delay, Doppler shift, and loss, and the microphone hears their sum. Long grains carry the sound below 20 Hz. Every part of the model is marked A (first principles), B (literature), or C (heuristic or synthetic). Rumbletect shares its place, terrain, air, propagation, and interface with Boomtect.
 
-Wavefronts and Mach cones show propagation geometry with indicative, source-independent brightness. Emissions along each source path form one outer boundary, joining the initial front and supersonic propagation. Interior cone lines are hidden by the same reached volume. Rocket origins follow the acoustic plume positions; the volcano front originates at the same effective height as its audio grains. These visuals do not display sound level.
-
-Exports are 32-bit float WAV at one full scale in pascals, recorded in the scene JSON; per-microphone files start at the same moment. A scene is JSON with `"format": "rumbletect.scene"` and opens again as a scene. A scene reader fills in missing fields with defaults and never refuses an older or newer version.
+Exports are 32-bit float WAV at one full scale in pascals, recorded in the scene JSON; per-microphone files start at the same moment. A scene is JSON with `"format": "rumbletect.scene"` and opens again as a scene. A sound sent to Echotect is mono pressure without terrain echoes with a `tect.handoff` JSON: positions in metres east, north, and up from the place's geographic point, angles in compass degrees clockwise from north. The scene and handoff readers fill in missing fields with defaults, bring values into range, and never refuse an older or newer version.
 
 ## Docs
 
-- [README](https://github.com/janne-s/Rumbletect/blob/main/README.md): what every control does and the model table with sources and classes
+- [README](https://github.com/janne-s/Rumbletect/blob/main/README.md): what every control does, the export files, and the model table with sources and classes
 - [Live app](https://janne-s.github.io/Rumbletect/)
 
 ## Formats
 
 - [Scene](https://github.com/janne-s/Rumbletect/blob/main/src/domain/scene.js): every parameter with its default and range
+- [Handoff](https://github.com/janne-s/Rumbletect/blob/main/src/shared/domain/handoff.js): the `tect.handoff` format shared with Boomtect and Echotect
 - [Constants](https://github.com/janne-s/Rumbletect/blob/main/src/domain/constants.js): the model's tuning values and limits
 
 ## Optional
 
-- [Boomtect](https://janne-s.github.io/Boomtect/llms.txt): lightning, blasts, and sonic booms
-- [Echotect](https://janne-s.github.io/Echotect/llms.txt): echoes from buildings, streets, and terrain
+- [Boomtect](https://janne-s.github.io/Boomtect/llms.txt): lightning, blasts, and sonic booms simulated from their physics
+- [Echotect](https://janne-s.github.io/Echotect/llms.txt): echoes from buildings, streets, and terrain for a sound, including one sent from Rumbletect
