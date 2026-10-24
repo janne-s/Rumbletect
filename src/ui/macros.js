@@ -4,6 +4,7 @@ import { ENGINE, ROCKET, VOLCANO } from '../domain/constants.js';
 import { volcanoCategory } from '../domain/volcano.js';
 import { categoryEngine, nearestCategory, sizedRocket } from '../domain/rocket.js';
 import { clamp01, logPosition, logValue, METRES, metres } from '../shared/ui/macros.js';
+import { cachedTracks } from './geometry-cache.js';
 
 const range = key => [PARAMETERS[key].minimum, PARAMETERS[key].maximum];
 
@@ -88,7 +89,10 @@ const flightClimb = {
   label: 'Climb',
   read: item => clamp01((item.climbDegrees - CLIMB_SPAN[0]) / (CLIMB_SPAN[1] - CLIMB_SPAN[0])),
   write: (item, t) => { item.climbDegrees = Math.round(CLIMB_SPAN[0] + t * (CLIMB_SPAN[1] - CLIMB_SPAN[0])); },
-  show: item => `${item.climbDegrees}°`,
+  show: (item, scene) => {
+    const endMetres = item.climbDegrees && scene ? cachedTracks(item, scene)[0]?.z.at(-1) : undefined;
+    return endMetres === undefined ? `${item.climbDegrees}°` : `${item.climbDegrees}° · ${metres(endMetres)}`;
+  },
   entry: { unit: '°', get: item => item.climbDegrees, set: (item, value) => { item.climbDegrees = value; } }
 };
 
