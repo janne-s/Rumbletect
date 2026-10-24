@@ -40,7 +40,7 @@ const RUMBLETECT_PARAMETERS = Object.freeze({
   lateralSpacingMetres: { minimum: 0, maximum: 2000, unit: 'm', label: 'Lateral spacing', reliability: null },
   trailSpacingMetres: { minimum: 0, maximum: 3000, unit: 'm', label: 'Trail spacing', reliability: null },
   verticalSpacingMetres: { minimum: -1000, maximum: 1000, unit: 'm', label: 'Vertical spacing', reliability: null },
-  ventDiameterMetres: { minimum: 1, maximum: 500, unit: 'm', label: 'Vent diameter', reliability: 'C' },
+  ventDiameterMetres: { minimum: 1, maximum: 500, unit: 'm', label: 'Jet width', reliability: 'C' },
   ventVelocityMetresPerSecond: { minimum: 10, maximum: 600, unit: 'm/s', label: 'Exit velocity', reliability: 'C' },
   gasTemperatureKelvin: { minimum: 300, maximum: 1600, unit: 'K', label: 'Gas temperature', reliability: 'C' },
   eruptionSeconds: { minimum: 5, maximum: 400, unit: 's', label: 'Duration', reliability: null },

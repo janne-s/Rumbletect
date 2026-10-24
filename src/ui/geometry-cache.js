@@ -19,7 +19,7 @@ const soundTracks = new Map();
 const rocketTracks = (emitter, surface) => cached(tracks, emitter, [surfaceId(surface)], () => salvoRounds(emitter).map(round => ascentPath(round, surface)));
 
 export const cachedTracks = (emitter, scene) => (emitter.kind === 'volcano'
-  ? cached(tracks, emitter, [], () => [ventPath(emitter)])
+  ? cached(tracks, emitter, [surfaceId(currentSurface())], () => [ventPath(emitter, currentSurface())])
   : emitter.kind === 'rocket' || emitter.kind === 'salvo'
   ? rocketTracks(emitter, currentSurface())
   : cached(tracks, emitter, [scene.air, emitter.autoDuration ? scene.receivers.map(receiver => receiver.positionMetres) : null], () => formationJets(emitter).map(member => jetPath(member, scene))));

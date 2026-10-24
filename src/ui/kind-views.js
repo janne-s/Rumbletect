@@ -1,7 +1,9 @@
 import { TRACK_MARKS, VIEW } from '../domain/constants.js';
-import { cachedTracks } from './geometry-cache.js';
-import { volcanoSourcePosition } from '../domain/volcano.js';
+import { cachedTracks, currentSurface } from './geometry-cache.js';
+import { craterPosition, volcanoSourcePosition } from '../domain/volcano.js';
 import { supersonicIndex } from './kinds.js';
+
+const VOLCANO_VIEW = Object.freeze({ topWidthShare: 2, fillAlpha: .18, sourceRadiusPixels: 3.5 });
 
 const pointOf = (path, index) => ({ x: path.x[index], y: path.y[index], z: path.z[index] });
 
@@ -84,21 +86,44 @@ export function kindViews() {
       ];
     }
   };
+  const crater = emitter => craterPosition(emitter, currentSurface());
   const volcano = {
     ...jet,
-    handles: emitter => [{ type: 'emitter', id: emitter.id, field: 'ventMetres', point: emitter.ventMetres, role: 'start' }],
-    selectedPoints: emitter => [emitter.ventMetres],
-    label: emitter => emitter.ventMetres,
+    handles: emitter => [{ type: 'emitter', id: emitter.id, field: 'ventMetres', point: crater(emitter), role: 'start' }],
+    shadowPoints: emitter => [crater(emitter)],
+    selectedPoints: emitter => [crater(emitter)],
+    label: emitter => crater(emitter),
     extent(emitter, { includeExtent, scene }) {
       const paths = cachedTracks(emitter, scene);
-      includeExtent(paths, () => [emitter.ventMetres, volcanoSourcePosition(emitter)]);
+      includeExtent(paths, () => [crater(emitter), volcanoSourcePosition(emitter, crater(emitter))]);
     },
     draw(context, emitter, { frame }, { colors, selected }) {
-      const vent = frame.project(emitter.ventMetres);
-      const top = frame.project(volcanoSourcePosition(emitter));
-      context.strokeStyle = selected ? colors.accent : colors.end;
-      context.lineWidth = selected ? 2.4 : 2;
-      context.beginPath(); context.moveTo(vent.x, vent.y); context.lineTo(top.x, top.y); context.stroke();
+      const base = crater(emitter);
+      const source = volcanoSourcePosition(emitter, base);
+      const bottom = frame.project(base);
+      const top = frame.project(source);
+      const length = Math.hypot(top.x - bottom.x, top.y - bottom.y);
+      const colour = selected ? colors.accent : colors.end;
+      if (length > 0) {
+        const near = length / (source.z - base.z) * emitter.jet.ventDiameterMetres / 2;
+        const far = near * VOLCANO_VIEW.topWidthShare;
+        const [nx, ny] = [-(top.y - bottom.y) / length, (top.x - bottom.x) / length];
+        context.beginPath();
+        context.moveTo(bottom.x - nx * near, bottom.y - ny * near);
+        context.lineTo(top.x - nx * far, top.y - ny * far);
+        context.lineTo(top.x + nx * far, top.y + ny * far);
+        context.lineTo(bottom.x + nx * near, bottom.y + ny * near);
+        context.closePath();
+        context.globalAlpha = VOLCANO_VIEW.fillAlpha;
+        context.fillStyle = colour;
+        context.fill();
+        context.globalAlpha = 1;
+        context.strokeStyle = colour;
+        context.lineWidth = selected ? 1.4 : 1;
+        context.stroke();
+      }
+      context.fillStyle = colour;
+      context.beginPath(); context.arc(top.x, top.y, VOLCANO_VIEW.sourceRadiusPixels, 0, 2 * Math.PI); context.fill();
     }
   };
   return { jet, formation: jet, airliner: jet, rocket, salvo: rocket, volcano };

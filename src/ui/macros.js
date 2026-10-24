@@ -297,6 +297,24 @@ const eruptionSlider = (key, label, span, unit = 's') => ({
   entry: { unit, get: item => item.eruption[key], set: (item, value) => { item.eruption = { ...item.eruption, [key]: value }; } }
 });
 
+const CRATER_HEIGHT_METRES = 6000;
+
+const craterHeight = {
+  label: 'Crater height',
+  read: item => clamp01(Math.sqrt(item.ventMetres.z / CRATER_HEIGHT_METRES)),
+  write: (item, t) => { item.ventMetres = { ...item.ventMetres, z: Math.round(t * t * CRATER_HEIGHT_METRES / 10) * 10 }; },
+  show: item => metres(item.ventMetres.z),
+  entry: { units: METRES, get: item => item.ventMetres.z, set: (item, value) => { item.ventMetres = { ...item.ventMetres, z: value }; } }
+};
+
+const jetWidth = {
+  label: 'Jet width',
+  read: item => clamp01(logPosition(item.jet.ventDiameterMetres, range('ventDiameterMetres'))),
+  write: (item, t) => { item.jet = { ...item.jet, ventDiameterMetres: +logValue(t, range('ventDiameterMetres')).toPrecision(2) }; },
+  show: item => metres(item.jet.ventDiameterMetres),
+  entry: { units: METRES, get: item => item.jet.ventDiameterMetres, set: (item, value) => { item.jet = { ...item.jet, ventDiameterMetres: value }; } }
+};
+
 const volcanoPulsing = {
   label: 'Pulsing',
   read: item => item.eruption.pulseDepthPercent / 100,
@@ -315,7 +333,7 @@ const volcanoBursts = {
 
 export function volcanoMacros(emitter, { onset: withOnset = false } = {}) {
   const list = [
-    volcanoKind, volcanoIntensity,
+    volcanoKind, craterHeight, jetWidth, volcanoIntensity,
     eruptionSlider('eruptionSeconds', 'Duration', [range('eruptionSeconds')[0], range('eruptionSeconds')[1]]),
     volcanoPulsing, volcanoBursts,
     eruptionSlider('pulsePeriodSeconds', 'Pulse period', [range('pulsePeriodSeconds')[0], range('pulsePeriodSeconds')[1]]),

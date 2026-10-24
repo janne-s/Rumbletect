@@ -3,6 +3,7 @@ import { mergedGrains, pathGrains } from './grains.js';
 import { jetComponents, jetSpectra } from './jet.js';
 import { waveformShape } from './waveform.js';
 import { createRandom, normalDeviate } from '../shared/domain/random.js';
+import { FLAT_SURFACE, terrainSurface } from '../shared/domain/terrain.js';
 
 const SHAPE = waveformShape({ skewness: JET.largeScaleSkewness, kurtosis: JET.largeScaleKurtosis });
 const UPWARD_INLET = Object.freeze({ x: 0, y: 0, z: -1 });
@@ -10,7 +11,9 @@ const VENT_GAIN = 10 ** (VOLCANO.ventJets.decibels / 10);
 
 export const volcanoCategory = key => VOLCANO.categories.find(category => category.key === key) ?? VOLCANO.categories.at(-1);
 
-export const volcanoSourcePosition = (volcano, position = volcano.ventMetres) => ({ x: position.x, y: position.y, z: position.z + VOLCANO.sourceDiameters * volcano.jet.ventDiameterMetres });
+export const craterPosition = (volcano, surface = FLAT_SURFACE) => ({ ...volcano.ventMetres, z: surface.heightAt(volcano.ventMetres.x, volcano.ventMetres.y) + volcano.ventMetres.z });
+
+export const volcanoSourcePosition = (volcano, position) => ({ x: position.x, y: position.y, z: position.z + VOLCANO.sourceDiameters * volcano.jet.ventDiameterMetres });
 
 const smoothStep = value => { const t = Math.min(1, Math.max(0, value)); return t * t * (3 - 2 * t); };
 
@@ -71,12 +74,12 @@ function wander(seed, cycles) {
   return phase + (next - phase) * (cycles - whole);
 }
 
-/** The vent held still for the eruption, sampled like `flightPath`. */
-export function ventPath(volcano) {
+/** The crater held still for the eruption, its height above the ground of `surface`, sampled like `flightPath`. */
+export function ventPath(volcano, surface = FLAT_SURFACE) {
   const total = volcano.eruption.eruptionSeconds;
   const steps = Math.min(TRAJECTORY.maximumSteps, Math.max(2, Math.ceil(total / TRAJECTORY.stepSeconds)));
   const step = total / steps;
-  const at = volcano.ventMetres;
+  const at = craterPosition(volcano, surface);
   const path = { seconds: [], x: [], y: [], z: [], vx: [], vy: [], vz: [], speed: [], step };
   for (let index = 0; index <= steps; index += 1) {
     path.seconds.push(volcano.startSeconds + index * step);
@@ -112,4 +115,4 @@ export function volcanoSource(volcano, scene) {
   };
 }
 
-export const volcanoGrains = (volcano, scene, band = 'full') => mergedGrains([pathGrains(volcano, scene, ventPath(volcano), volcanoSource(volcano, scene), band)]);
+export const volcanoGrains = (volcano, scene, band = 'full') => mergedGrains([pathGrains(volcano, scene, ventPath(volcano, terrainSurface(scene.terrain)), volcanoSource(volcano, scene), band)]);

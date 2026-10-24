@@ -2,8 +2,8 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import { VOLCANO } from '../src/domain/constants.js';
 import { defaultScene, defaultVolcano, parseScene, readScene, serializeScene } from '../src/domain/scene.js';
-import { eruptionShare, ventPath, volcanoGrains } from '../src/domain/volcano.js';
-import { KIND_PANELS } from '../src/ui/kinds.js';
+import { craterPosition, eruptionShare, ventPath, volcanoGrains, volcanoSourcePosition } from '../src/domain/volcano.js';
+import { follower, KIND_PANELS } from '../src/ui/kinds.js';
 
 test('a volcano scene round-trips, and a volcano saved without its eruption takes the default one', () => {
   const scene = defaultScene('volcano');
@@ -67,4 +67,31 @@ test('Strombolian bursts come at gaps about the pulse period, lift the eruption 
   assert.ok(Math.abs(eruptionShare(volcano, between) - (1 - volcano.eruption.pulseDepthPercent / 100)) < .02, `${eruptionShare(volcano, between)}`);
   const steady = { ...volcano, eruption: { ...volcano.eruption, burstsPercent: 0 } };
   assert.ok(Math.abs(eruptionShare(steady, between) - eruptionShare({ ...steady, eruption: { ...steady.eruption, burstSeconds: 9 } }, between)) < 1e-12);
+});
+
+test('the crater stands its height above the ground of the terrain, and the roar rises five jet widths above it', () => {
+  const volcano = { ...defaultVolcano(), ventMetres: { x: 100, y: -200, z: 30 } };
+  const hill = { heightAt: (x, y) => 1500 + x / 10 - y / 100 };
+  const crater = craterPosition(volcano, hill);
+  assert.equal(crater.z, 1500 + 10 + 2 + 30);
+  assert.equal(ventPath(volcano, hill).z[0], crater.z);
+  assert.equal(volcanoSourcePosition(volcano, crater).z, crater.z + VOLCANO.sourceDiameters * volcano.jet.ventDiameterMetres);
+});
+
+test('a volcano follows the linked Boomtect volcano\'s crater and onset, its category chosen once from the eruption', () => {
+  const scene = defaultScene('volcano');
+  const ghost = { id: 'volcano-2', name: 'Volcano 2', follow: { role: 'volcano', crater: { x: 40, y: 50, z: 0 }, startSeconds: 3, eruption: 'strongVulcanian', paths: [] } };
+  const options = { partner: 'Boomtect', uniqueId: base => `${base}-9`, scene };
+  const made = follower(ghost, null, options);
+  assert.equal(made.category, 'plinian');
+  assert.deepEqual(made.ventMetres, { x: 40, y: 50, z: 0 });
+  assert.equal(made.startSeconds, 3);
+  assert.deepEqual(made.follows, { app: 'Boomtect', id: 'volcano-2', name: 'Volcano 2' });
+  const kept = follower({ ...ghost, follow: { ...ghost.follow, crater: { x: 60, y: 50, z: 0 }, eruption: 'strombolian' } }, { ...made, category: 'fountain' }, options);
+  assert.equal(kept.category, 'fountain');
+  assert.equal(kept.ventMetres.x, 60);
+  assert.ok(parseScene({ ...scene, emitters: [kept] }));
+  assert.equal(follower(ghost, null, { ...options, scene: defaultScene('jet') }), null);
+  assert.equal(KIND_PANELS.volcano.followAs(made), null);
+  assert.equal(KIND_PANELS.volcano.followAs(scene.emitters[0]).role, 'volcano');
 });

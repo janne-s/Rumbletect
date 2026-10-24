@@ -110,14 +110,21 @@ active place and terrain travel with you when switching modes.
 ## Volcano
 
 - **Category** — Strombolian, lava fountain, sub-Plinian, or Plinian
-  eruption. Sets the vent, its exit velocity, gas temperature, and pulsing.
+  eruption. Sets the jet's width, exit velocity, gas temperature, and pulsing.
+- **Crater height** — The crater above the ground around it, or above the
+  terrain when a map is on.
+- **Jet width** — The width of the gas jet at the crater, which may be only
+  part of the crater. The roar rises five jet widths above the crater, where
+  the scene shows it.
 - **Intensity, duration, pulsing, pulse period, rise, fade** — The
   eruption's strength and its course in time.
 - **Bursts** — From a steady swell to Strombolian bursts: a background roar
   broken every pulse period or so by a burst that rises in tenths of a
   second, as at Mount Yasur.
-- **Source** — The roar of a hot jet rising from the vent, and the vent's
-  smaller jets, which carry the audible roar.
+- **Source** — The roar of a hot jet rising from the crater, and the smaller
+  jets around it, which carry the audible roar.
+- **Linked volcano** — A Boomtect volcano and a Rumbletect volcano follow
+  each other's crater and onset when the tects are linked.
 
 ## Listening
 

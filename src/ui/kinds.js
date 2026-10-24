@@ -8,10 +8,10 @@ import { peakFrequencyHz, sizedRocket, totalThrustNewtons, vehicleOf } from '../
 import { newSeed } from '../shared/domain/random.js';
 import { formatMetres, formatMetresSpan } from '../shared/ui/canvas.js';
 import { checkboxField, numberField, pointFields, seedField, selectField, textField } from './fields.js';
-import { cachedCoastedTracks, cachedLevels, cachedSoundTracks, cachedTracks } from './geometry-cache.js';
+import { cachedCoastedTracks, cachedLevels, cachedSoundTracks, cachedTracks, currentSurface } from './geometry-cache.js';
 import { formatAtKilometre, formatDecibels } from '../shared/ui/levels.js';
 import { macrosFor, rocketMacros, thrustLabel, volcanoMacros } from './macros.js';
-import { volcanoCategory, volcanoSourcePosition } from '../domain/volcano.js';
+import { craterPosition, volcanoCategory, volcanoSourcePosition } from '../domain/volcano.js';
 import { machCone, soundSpeedAt } from '../shared/domain/trajectory.js';
 import { followerPlacement, followerSeed } from '../shared/domain/follower.js';
 import { engineAtPower, engineOfClass } from '../domain/engine.js';
@@ -186,7 +186,7 @@ function rocketWarnings(emitter, scene) {
 function volcanoSummary(emitter) {
   const { ventDiameterMetres, ventVelocityMetresPerSecond } = emitter.jet;
   const peak = .19 * ventVelocityMetresPerSecond / ventDiameterMetres;
-  return `${volcanoCategory(emitter.category).label}, vent ${formatMetres(ventDiameterMetres)} at ${Math.round(ventVelocityMetresPerSecond)} m/s · peak ${peak < 10 ? peak.toFixed(1) : Math.round(peak)} Hz · ${emitter.eruption.eruptionSeconds} s`;
+  return `${volcanoCategory(emitter.category).label}, jet ${formatMetres(ventDiameterMetres)} wide at ${Math.round(ventVelocityMetresPerSecond)} m/s · peak ${peak < 10 ? peak.toFixed(1) : Math.round(peak)} Hz · ${emitter.eruption.eruptionSeconds} s`;
 }
 
 function volcanoDetails(emitter, { updateEmitter }) {
@@ -198,7 +198,7 @@ function volcanoDetails(emitter, { updateEmitter }) {
       textField(container, { label: 'Name', value: emitter.name, onCommit: set('name') });
       seedField(container, { value: emitter.seed, onCommit: set('seed'), onNew: () => set('seed')(newSeed()) });
       numberField(container, { key: 'startSeconds', value: emitter.startSeconds, onCommit: set('startSeconds') });
-      pointFields(container, { label: 'Vent', point: emitter.ventMetres, onCommit: set('ventMetres') });
+      pointFields(container, { label: 'Crater', point: emitter.ventMetres, onCommit: set('ventMetres') });
     }),
     section('Jet', container => ['ventDiameterMetres', 'ventVelocityMetresPerSecond', 'gasTemperatureKelvin'].forEach(key => numberField(container, { key, value: emitter.jet[key], onCommit: setIn('jet', key) }))),
     section('Eruption', container => ['eruptionSeconds', 'riseSeconds', 'fadeSeconds', 'pulsePeriodSeconds', 'pulseDepthPercent', 'burstsPercent', 'burstSeconds'].forEach(key => numberField(container, { key, value: emitter.eruption[key], onCommit: setIn('eruption', key) })))
@@ -213,20 +213,21 @@ const VOLCANO_PANEL = Object.freeze({
   macros: volcanoMacros,
   details: volcanoDetails,
   seeded: () => true,
-  anchorName: () => 'vent',
+  anchorName: () => 'crater',
   info: levelInfo,
-  bounds: (emitter, scene, include) => { include(emitter.ventMetres); include(volcanoSourcePosition(emitter)); },
+  bounds: (emitter, scene, include) => { const crater = craterPosition(emitter, currentSurface()); include(crater); include(volcanoSourcePosition(emitter, crater)); },
   measure: pathPoints,
   move: () => false,
-  groundAnchored: () => false,
+  groundAnchored: field => field === 'ventMetres',
   timeline: () => [],
   alwaysTimed: () => false,
   eventSeconds: 0,
   tracks: (emitter, scene) => cachedTracks(emitter, scene),
   cone: () => null,
-  wavefrontSources: (emitter, scene, placedPoint, candidates) => candidates.push({ point: volcanoSourcePosition(emitter), emitted: emitter.startSeconds, group: `${emitter.id}:0` }),
+  wavefrontSources: (emitter, scene, placedPoint, candidates) => candidates.push({ point: volcanoSourcePosition(emitter, craterPosition(emitter, currentSurface())), emitted: emitter.startSeconds, group: `${emitter.id}:0` }),
   mergesSources: false,
-  warnings: () => []
+  warnings: () => [],
+  followAs: emitter => (emitter.follows ? null : { role: 'volcano', crater: { ...emitter.ventMetres }, startSeconds: emitter.startSeconds, category: emitter.category, paths: [] })
 });
 
 const KIND_PANELS_EXTENDED = {
@@ -300,8 +301,30 @@ export const ADD_EMITTERS = Object.freeze({
 const within = (key, value) => Math.min(PARAMETERS[key].maximum, Math.max(PARAMETERS[key].minimum, value));
 
 /** A jet on a linked tect's flight, so that its engines come from Rumbletect: a fighter in full afterburner when the flight is supersonic; the category and power are kept once chosen. */
+const CATEGORY_OF_ERUPTION = Object.freeze({ strombolian: 'strombolian', vulcanian: 'subplinian', strongVulcanian: 'plinian' });
+
+function withCategory(volcano, key) {
+  const category = volcanoCategory(key);
+  const { ventDiameterMetres, ventVelocityMetresPerSecond, gasTemperatureKelvin, eruption } = category;
+  return { ...volcano, category: category.key, jet: { ventDiameterMetres, ventVelocityMetresPerSecond, gasTemperatureKelvin }, eruption: { ...volcano.eruption, ...eruption } };
+}
+
+function followerVolcano(ghost, existing, { partner, uniqueId, scene }) {
+  if (scene.mode !== 'volcano') return null;
+  const { crater, startSeconds, eruption } = ghost.follow;
+  const base = existing ?? withCategory(defaultVolcano(uniqueId('volcano'), `${ghost.name} jet`.slice(0, 64), followerSeed(partner, ghost.id)), CATEGORY_OF_ERUPTION[eruption] ?? 'subplinian');
+  return {
+    ...base,
+    follows: { app: partner, id: ghost.id, name: ghost.name },
+    ventMetres: { x: crater.x, y: crater.y, z: within('heightMetres', crater.z) },
+    startSeconds: within('startSeconds', startSeconds)
+  };
+}
+
+export const follower = (ghost, existing, context) => (ghost.follow.role === 'volcano' ? followerVolcano : followerJet)(ghost, existing, context);
+
 export function followerJet(ghost, existing, { partner, uniqueId, scene }) {
-  if (ghost.follow.role !== 'aircraft') return null;
+  if (ghost.follow.role !== 'aircraft' || scene.mode !== 'jet') return null;
   const placement = followerPlacement(ghost.follow.paths[0]);
   const supersonic = placement.topSpeedMetresPerSecond >= soundSpeedAt(scene.air, placement.startMetres.z);
   const engineClass = ghost.follow.size === 'bomber' && !supersonic ? 'bomber' : 'fighter';
