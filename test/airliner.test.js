@@ -99,10 +99,10 @@ test('a jet\'s and an airliner\'s quick controls set the acceleration, the climb
   assert.equal(defaultAirliner().climbDegrees, 0);
 });
 
-test('a jet and a rocket show their path together after the device, with Turn and its length among the quick controls', async () => {
+test('a jet and a rocket show their path together after the device, with Turn, its start, and a jet radius or a rocket length among the quick controls', async () => {
   const { defaultRocket } = await import('../src/domain/scene.js');
   const { rocketMacros } = await import('../src/ui/macros.js');
-  assert.deepEqual(macrosFor(defaultAirliner()).map(macro => macro.label), ['Category', 'Power', 'Height', 'Climb', 'Heading', 'Mach', 'Acceleration', 'Turn', 'Turn starts', 'Turn length', 'Flight time']);
+  assert.deepEqual(macrosFor(defaultAirliner()).map(macro => macro.label), ['Category', 'Power', 'Height', 'Climb', 'Heading', 'Mach', 'Acceleration', 'Turn', 'Turn starts', 'Turn radius', 'Flight time']);
   assert.deepEqual(rocketMacros(defaultRocket()).map(macro => macro.label), ['Category', 'Size', 'Heading', 'Launch angle', 'Turn', 'Turn starts', 'Turn length', 'Top speed', 'Burn time']);
   const rocket = defaultRocket();
   rocketMacros(rocket).find(macro => macro.label === 'Turn length').write(rocket, 0);

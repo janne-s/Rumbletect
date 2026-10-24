@@ -15,14 +15,12 @@ const GRAIN = PROPAGATION.grainSamples;
 const WINDOW = Float64Array.from({ length: GRAIN }, (_, index) => Math.sin(Math.PI * (index + .5) / GRAIN));
 const STREAMS = Object.freeze({ fine: 0, large: 0x9e3779b9, envelope: 0x85ebca6b, low: 0xc2b2ae35 });
 
-/** The flight's bend, eased from the turn's start to its end as shares of `seconds` of flight, or none. */
-function turnOf(emitter, seconds) {
-  if (!emitter.bendDegrees) return null;
-  const from = emitter.turnStartPercent / 100;
-  return { degrees: emitter.bendDegrees, fromSeconds: seconds * from, toSeconds: seconds * (from + (1 - from) * emitter.turnLengthPercent / 100) };
-}
+/** The flight's turn on its radius from its start, or none; it does not depend on how long the flight is. */
+const arcOf = emitter => (emitter.turnDegrees ? { degrees: emitter.turnDegrees, fromSeconds: emitter.turnStartSeconds, radiusMetres: emitter.turnRadiusMetres } : null);
 
-const withTurn = (path, turn) => ({ ...path, turnSeconds: turn ? [turn.fromSeconds, turn.toSeconds] : null });
+const withTurn = ({ arcSeconds, ...path }) => ({ ...path, turnSeconds: arcSeconds ? arcSeconds.filter(seconds => seconds !== null) : null });
+
+const cut = (path, kept) => Object.fromEntries(Object.entries(path).map(([key, values]) => [key, Array.isArray(values) && key !== 'arcSeconds' ? values.slice(0, kept) : values]));
 
 /**
  * The jet's flight in still air of the ground's temperature, as the near listen flew it. With `autoDuration` it
@@ -31,13 +29,10 @@ const withTurn = (path, turn) => ({ ...path, turnSeconds: turn ? [turn.fromSecon
 export function jetPath(emitter, scene) {
   if (emitter.paths) return followedPath(emitter.paths[0]);
   const air = { ...scene.air, refraction: false };
-  const flown = seconds => ({ ...emitter, turnDegreesPerSecond: 0, turn: turnOf(emitter, seconds) });
-  if (!emitter.autoDuration) return withTurn(flightPath(flown(emitter.durationSeconds), air), turnOf(emitter, emitter.durationSeconds));
+  const flight = { ...emitter, turnDegreesPerSecond: 0, arc: arcOf(emitter) };
+  if (!emitter.autoDuration) return withTurn(flightPath(flight, air));
   const heard = heardFlight(flightPath({ ...emitter, turnDegreesPerSecond: 0, durationSeconds: PARAMETERS.flightSeconds.maximum }, air), scene);
-  const seconds = (heard.seconds.length - 1) * heard.step;
-  const path = flightPath({ ...flown(seconds), durationSeconds: PARAMETERS.flightSeconds.maximum }, air);
-  const kept = heard.seconds.length;
-  return withTurn(Object.fromEntries(Object.entries(path).map(([key, values]) => [key, Array.isArray(values) ? values.slice(0, kept) : values])), turnOf(emitter, seconds));
+  return withTurn(cut(flightPath({ ...flight, durationSeconds: PARAMETERS.flightSeconds.maximum }, air), heard.seconds.length));
 }
 
 /** A straight flight cut where every microphone has fallen out of hearing after its closest pass. */
@@ -50,8 +45,7 @@ function heardFlight(path, scene) {
     const quiet = distances.findIndex((distance, index) => index > closest && distance >= ratio * distances[closest]);
     end = Math.max(end, quiet < 0 ? distances.length - 1 : quiet);
   }
-  const kept = Math.max(1, end) + 1;
-  return Object.fromEntries(Object.entries(path).map(([key, values]) => [key, Array.isArray(values) ? values.slice(0, kept) : values]));
+  return cut(path, Math.max(1, end) + 1);
 }
 
 export function sampled(path, seconds) {

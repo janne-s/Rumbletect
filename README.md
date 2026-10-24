@@ -51,9 +51,9 @@ active place and terrain travel with you when switching modes.
   full afterburner.
 - **Height, climb, heading, Mach, acceleration** — Where it flies and how
   fast, speeding up or slowing down along the flight.
-- **Turn, turn starts, turn length** — Flies straight, then turns by the set
-  angle from a point along the flight, over a share of the rest of it. Rings
-  on the path mark the turn.
+- **Turn, turn starts, turn radius** — Flies straight, then turns by the set
+  angle on the set radius from the set second, up to five full circles; a
+  long turn circles until the flight ends. Rings on the path mark the turn.
 - **Flight time** — How long it flies. Setting it ends an automatic flight
   time.
 - **Formation** — Its own kind: aircraft in a V behind the leader, each with
@@ -70,7 +70,7 @@ active place and terrain travel with you when switching modes.
 - **Category** — Business jet, regional jet, narrowbody, widebody, or
   four-engine airliner. Changes the engines; the flight stays as set.
 - **Power, height, climb, heading, Mach, acceleration, turn, turn starts,
-  turn length, flight time** — As for a jet.
+  turn radius, flight time** — As for a jet.
 - **Source** — A turbofan as two jets, a fast core and a slower fan stream,
   with the fan's blade-passing tones and broadband noise. At take-off power
   the buzz-saw adds a tone at every order of the shaft as the fan tips pass

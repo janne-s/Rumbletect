@@ -62,7 +62,7 @@ export function kindViews() {
         }
         context.stroke();
         drawSoundBarrier(context, path, frame, scene.air);
-        if (emitter.ascent?.bendDegrees ?? emitter.bendDegrees) drawTurn(context, path, frame);
+        if (emitter.ascent?.bendDegrees ?? emitter.turnDegrees) drawTurn(context, path, frame);
       }
       for (const body of state?.flights?.get(emitter.id) ?? []) {
         const p = frame.project(body);

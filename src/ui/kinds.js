@@ -88,7 +88,7 @@ function details(emitter, { updateEmitter, scene }) {
       pointFields(container, { label: 'Start', point: emitter.startMetres, onCommit: set('startMetres') });
     }),
     section('Flight', container => {
-      numbers(['headingDegrees', 'climbDegrees', 'mach', 'accelerationMetresPerSecondSquared', 'bendDegrees', 'turnStartPercent', 'turnLengthPercent'])(container);
+      numbers(['headingDegrees', 'climbDegrees', 'mach', 'accelerationMetresPerSecondSquared', 'turnDegrees', 'turnStartSeconds', 'turnRadiusMetres'])(container);
       if (emitter.kind === 'airliner') checkboxField(container, { label: 'Gear & flaps', value: emitter.gearAndFlaps, reliability: 'B', onCommit: set('gearAndFlaps') });
       checkboxField(container, { label: 'Auto flight time', value: emitter.autoDuration, reliability: 'C', onCommit: set('autoDuration') });
       if (!emitter.autoDuration) numberField(container, { key: 'flightSeconds', value: emitter.durationSeconds, onCommit: set('durationSeconds') });
@@ -341,7 +341,7 @@ export function followerJet(ghost, existing, { partner, uniqueId, scene }) {
     climbDegrees: +within('climbDegrees', placement.climbDegrees).toFixed(1),
     mach: +within('mach', placement.topSpeedMetresPerSecond / soundSpeedAt(scene.air, placement.startMetres.z)).toFixed(2),
     accelerationMetresPerSecondSquared: 0,
-    bendDegrees: 0,
+    turnDegrees: 0,
     durationSeconds: +within('flightSeconds', placement.durationSeconds).toFixed(2),
     autoDuration: false
   };

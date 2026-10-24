@@ -61,20 +61,28 @@ test('OASPL at 100 D_j does not depend on the nozzle\'s size and lies near Khava
   close(oaspl(1), 107, 6, 'Khavaran & Bridges at 140°');
 });
 
-test('a jet flies straight, bends by its Bend from where its turn starts, and its category leaves its flight as it was', async () => {
+test('a jet flies straight, turns by its Turn on its radius from when its turn starts whatever its flight time, and its category leaves its flight as it was', async () => {
   const { defaultJet, defaultScene, parseScene } = await import('../src/domain/scene.js');
   const { jetPath } = await import('../src/domain/grains.js');
   const { macrosFor } = await import('../src/ui/macros.js');
   const base = defaultScene();
-  const jet = { ...defaultJet(), bendDegrees: 90, turnStartPercent: 40, turnLengthPercent: 50, durationSeconds: 40 };
+  const jet = { ...defaultJet(), turnDegrees: 90, turnStartSeconds: 16, turnRadiusMetres: 1500, durationSeconds: 40 };
   const scene = parseScene({ ...base, emitters: [jet] });
   const path = jetPath(scene.emitters[0], scene);
   const heading = index => (Math.atan2(path.vx[index], path.vy[index]) * 180 / Math.PI + 360) % 360;
   assert.ok(Math.abs(heading(Math.round(15 / path.step)) - 90) < 1e-6);
   assert.ok(Math.abs(heading(path.speed.length - 1) - 180) < 1e-6);
-  assert.deepEqual(path.turnSeconds, [16, 28]);
+  const quarterSeconds = 1500 * Math.PI / 2 / path.speed[0];
+  assert.equal(path.turnSeconds[0], 16);
+  assert.ok(Math.abs(path.turnSeconds[1] - 16 - quarterSeconds) < path.step);
+  const longer = jetPath(parseScene({ ...base, emitters: [{ ...jet, durationSeconds: 80 }] }).emitters[0], scene);
+  assert.deepEqual(longer.turnSeconds, path.turnSeconds);
+  assert.deepEqual(longer.x.slice(0, path.x.length), path.x);
+  const circling = jetPath(parseScene({ ...base, emitters: [{ ...jet, turnDegrees: -1800, turnStartSeconds: 0, turnRadiusMetres: 800, durationSeconds: 120 }] }).emitters[0], scene);
+  assert.deepEqual(circling.turnSeconds, [0]);
+  assert.ok(circling.x.every((x, index) => Math.abs(Math.hypot(x - jet.startMetres.x, circling.y[index] - jet.startMetres.y - 800) - 800) < 10));
   const item = structuredClone(scene.emitters[0]);
   macrosFor(item).find(macro => macro.label === 'Category').write(item, 0);
   assert.equal(item.engineClass, 'hobby');
-  assert.deepEqual([item.mach, item.startMetres, item.durationSeconds, item.bendDegrees], [jet.mach, jet.startMetres, jet.durationSeconds, jet.bendDegrees]);
+  assert.deepEqual([item.mach, item.startMetres, item.durationSeconds, item.turnDegrees], [jet.mach, jet.startMetres, jet.durationSeconds, jet.turnDegrees]);
 });

@@ -31,6 +31,9 @@ const RUMBLETECT_PARAMETERS = Object.freeze({
   bendDegrees: { minimum: -180, maximum: 180, unit: '°', label: 'Turn', reliability: null },
   turnStartPercent: { minimum: 0, maximum: 100, unit: '%', label: 'Turn starts', reliability: 'C' },
   turnLengthPercent: { minimum: 1, maximum: 100, unit: '%', label: 'Turn length', reliability: 'C' },
+  turnDegrees: { minimum: -1800, maximum: 1800, unit: '°', label: 'Turn', reliability: null },
+  turnStartSeconds: { minimum: 0, maximum: 600, unit: 's', label: 'Turn starts', reliability: null },
+  turnRadiusMetres: { minimum: 20, maximum: 50000, unit: 'm', label: 'Turn radius', reliability: null },
   throttleDownSeconds: { minimum: 0, maximum: 590, unit: 's', label: 'Throttle down at', reliability: 'C' },
   throttleUpSeconds: { minimum: 0, maximum: 590, unit: 's', label: 'Throttle up at', reliability: 'C' },
   throttlePercent: { minimum: 30, maximum: 100, unit: '%', label: 'Throttle', reliability: 'C' },
@@ -65,7 +68,7 @@ export const PROPELLANTS = Object.freeze(Object.keys(ROCKET.propellants));
 /** Class C: a close formation, wingtips some 10 m apart. */
 const FORMATION_LAYOUT = Object.freeze({ memberCount: 4, lateralSpacingMetres: 20, trailSpacingMetres: 30, verticalSpacingMetres: 0 });
 
-const JET_NUMBERS = Object.freeze(['startSeconds', 'headingDegrees', 'climbDegrees', 'mach', 'accelerationMetresPerSecondSquared', 'bendDegrees', 'turnStartPercent', 'turnLengthPercent']);
+const JET_NUMBERS = Object.freeze(['startSeconds', 'headingDegrees', 'climbDegrees', 'mach', 'accelerationMetresPerSecondSquared', 'turnDegrees', 'turnStartSeconds', 'turnRadiusMetres']);
 
 export function defaultJet(id = 'jet-1', name = 'Jet', seed = 20261015) {
   return {
@@ -76,9 +79,9 @@ export function defaultJet(id = 'jet-1', name = 'Jet', seed = 20261015) {
     climbDegrees: 0,
     mach: .44,
     accelerationMetresPerSecondSquared: 0,
-    bendDegrees: 0,
-    turnStartPercent: 50,
-    turnLengthPercent: 100,
+    turnDegrees: 0,
+    turnStartSeconds: 15,
+    turnRadiusMetres: 2000,
     durationSeconds: 33,
     autoDuration: false,
     engineClass: 'fighter',

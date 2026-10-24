@@ -56,20 +56,31 @@ const flightHeading = {
   entry: { unit: '°', get: item => item.headingDegrees, set: (item, value) => { item.headingDegrees = ((value % 360) + 360) % 360; } }
 };
 
+const MOST_TURN = range('turnDegrees')[1];
+
+/** Squared from the middle, so that the first half turn is fine and five full circles are still in reach. */
 const jetTurn = {
   label: 'Turn',
-  read: item => (item.bendDegrees + 180) / 360,
-  write: (item, t) => { item.bendDegrees = Math.round(t * 360 - 180); },
-  show: item => `${item.bendDegrees}°`,
-  entry: { unit: '°', get: item => item.bendDegrees, set: (item, value) => { item.bendDegrees = value; } }
+  read: item => (1 + Math.sign(item.turnDegrees) * Math.sqrt(Math.abs(item.turnDegrees) / MOST_TURN)) / 2,
+  write: (item, t) => { const u = 2 * t - 1; item.turnDegrees = Math.round(Math.sign(u) * u * u * MOST_TURN); },
+  show: item => `${item.turnDegrees}°`,
+  entry: { unit: '°', get: item => item.turnDegrees, set: (item, value) => { item.turnDegrees = value; } }
 };
 
 const jetTurnStart = {
   label: 'Turn starts',
-  read: item => item.turnStartPercent / 100,
-  write: (item, t) => { item.turnStartPercent = Math.round(t * 100); },
-  show: item => `${item.turnStartPercent} %`,
-  entry: { unit: '%', get: item => item.turnStartPercent, set: (item, value) => { item.turnStartPercent = value; } }
+  read: item => clamp01(Math.cbrt(item.turnStartSeconds / range('turnStartSeconds')[1])),
+  write: (item, t) => { item.turnStartSeconds = Math.round(range('turnStartSeconds')[1] * t ** 3); },
+  show: item => `${item.turnStartSeconds} s`,
+  entry: { unit: 's', get: item => item.turnStartSeconds, set: (item, value) => { item.turnStartSeconds = value; } }
+};
+
+const jetTurnRadius = {
+  label: 'Turn radius',
+  read: item => clamp01(logPosition(item.turnRadiusMetres, range('turnRadiusMetres'))),
+  write: (item, t) => { item.turnRadiusMetres = Math.round(logValue(t, range('turnRadiusMetres'))); },
+  show: item => metres(item.turnRadiusMetres),
+  entry: { units: METRES, get: item => item.turnRadiusMetres, set: (item, value) => { item.turnRadiusMetres = value; } }
 };
 
 const ACCELERATION_SPAN = Object.freeze([-20, 20]);
@@ -98,14 +109,6 @@ const flightTime = {
   write: (item, t) => { item.durationSeconds = Math.round(logValue(t, range('flightSeconds'))); item.autoDuration = false; },
   show: item => (item.autoDuration ? 'Auto' : `${item.durationSeconds} s`),
   entry: { unit: 's', get: item => item.durationSeconds, set: (item, value) => { item.durationSeconds = value; item.autoDuration = false; } }
-};
-
-const jetTurnLength = {
-  label: 'Turn length',
-  read: item => item.turnLengthPercent / 100,
-  write: (item, t) => { item.turnLengthPercent = Math.max(range('turnLengthPercent')[0], Math.round(t * 100)); },
-  show: item => `${item.turnLengthPercent} %`,
-  entry: { unit: '%', get: item => item.turnLengthPercent, set: (item, value) => { item.turnLengthPercent = value; } }
 };
 
 const onset = {
@@ -144,7 +147,7 @@ function setSpacing(item, lateral) {
 
 export function macrosFor(emitter, { onset: withOnset = false } = {}) {
   if (emitter.follows) return [emitter.kind === 'airliner' ? airlinerCategory : jetCategory, power];
-  const list = [...(emitter.kind === 'formation' ? [formationCount, formationSpacing] : []), emitter.kind === 'airliner' ? airlinerCategory : jetCategory, power, flightHeight, flightClimb, flightHeading, machNumber, flightAcceleration, jetTurn, jetTurnStart, jetTurnLength, flightTime];
+  const list = [...(emitter.kind === 'formation' ? [formationCount, formationSpacing] : []), emitter.kind === 'airliner' ? airlinerCategory : jetCategory, power, flightHeight, flightClimb, flightHeading, machNumber, flightAcceleration, jetTurn, jetTurnStart, jetTurnRadius, flightTime];
   return withOnset ? [...list, onset] : list;
 }
 
