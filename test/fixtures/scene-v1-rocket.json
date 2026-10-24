@@ -1,0 +1,156 @@
+{
+  "format": "rumbletect.scene",
+  "version": 1,
+  "mode": "rocket",
+  "modelVersion": "0.2.0",
+  "air": {
+    "temperatureCelsius": 15,
+    "lapseRateKelvinPerMetre": 0.0065,
+    "relativeHumidityPercent": 70,
+    "pressureKpa": 101.325,
+    "refraction": true,
+    "shadowFloorDecibels": 25,
+    "absorption": true,
+    "turbulenceStrength": 0.000001,
+    "turbulenceScaleMetres": 1.1,
+    "windSpeedMetresPerSecond": 0,
+    "windFromDegrees": 270,
+    "windShearPerSecond": 0,
+    "upperWindMetresPerSecond": 30,
+    "upperWindFromDegrees": 270,
+    "humidityScaleHeightMetres": 2000,
+    "groundLayerMetres": 0,
+    "groundLayerLapseKelvinPerMetre": -0.02,
+    "tropopauseMetres": 11000
+  },
+  "ground": {
+    "enabled": true,
+    "type": "grass",
+    "forest": true,
+    "treeHeightMetres": 15,
+    "forestDensity": 1,
+    "surroundings": true
+  },
+  "place": {
+    "name": "Koli",
+    "latitude": 63.0964,
+    "longitude": 29.8061
+  },
+  "terrain": null,
+  "emitters": [
+    {
+      "id": "rocket-1",
+      "name": "Rocket",
+      "kind": "rocket",
+      "enabled": true,
+      "seed": 20261017,
+      "propellant": "kerosene",
+      "startMetres": {
+        "x": 0,
+        "y": 0,
+        "z": 10
+      },
+      "startSeconds": 0,
+      "headingDegrees": 90,
+      "launchDegrees": 90,
+      "lengthMetres": 70,
+      "engine": {
+        "engines": 9,
+        "thrustKilonewtons": 844.4,
+        "exitVelocityMetresPerSecond": 2984,
+        "exitDiameterMetres": 0.845,
+        "efficiencyPercent": 0.3
+      },
+      "ascent": {
+        "burnSeconds": 150,
+        "burnoutMetresPerSecond": 2400,
+        "accelerationPercent": 100,
+        "bendDegrees": 50,
+        "turnStartPercent": 1,
+        "turnLengthPercent": 30,
+        "throttleDownSeconds": 47,
+        "throttleUpSeconds": 65,
+        "throttlePercent": 75,
+        "water": true
+      }
+    },
+    {
+      "id": "salvo-1",
+      "name": "Salvo",
+      "kind": "salvo",
+      "enabled": true,
+      "seed": 20261012,
+      "propellant": "solid",
+      "startMetres": {
+        "x": 0,
+        "y": 0,
+        "z": 10
+      },
+      "startSeconds": 0,
+      "headingDegrees": 90,
+      "launchDegrees": 50,
+      "lengthMetres": 2.87,
+      "engine": {
+        "engines": 1,
+        "thrustKilonewtons": 21,
+        "exitVelocityMetresPerSecond": 2500,
+        "exitDiameterMetres": 0.0869,
+        "efficiencyPercent": 0.3
+      },
+      "ascent": {
+        "burnSeconds": 2,
+        "burnoutMetresPerSecond": 690,
+        "accelerationPercent": 31,
+        "bendDegrees": 0,
+        "turnStartPercent": 1,
+        "turnLengthPercent": 30,
+        "throttleDownSeconds": 47,
+        "throttleUpSeconds": 65,
+        "throttlePercent": 75,
+        "water": false
+      },
+      "roundCount": 40,
+      "salvoSize": 1,
+      "salvoSeconds": 20,
+      "salvoSpreadSeconds": 0,
+      "launcherRadiusMetres": 2,
+      "headingSpreadDegrees": 2,
+      "launchSpreadDegrees": 1,
+      "thrustSpreadPercent": 5
+    }
+  ],
+  "receivers": [
+    {
+      "id": "receiver-1",
+      "name": "Mic 1",
+      "type": "binaural",
+      "listen": true,
+      "positionMetres": {
+        "x": -1500,
+        "y": -2600,
+        "z": 1.7
+      },
+      "headingDegrees": 30,
+      "pitchDegrees": 0
+    }
+  ],
+  "render": {
+    "sampleRate": 48000,
+    "levelMode": "peak",
+    "fullScalePa": 20,
+    "distanceLossPercent": 100,
+    "ambisonicOrder": 1,
+    "earReflex": false,
+    "earLoudness": false,
+    "earCapOnsets": true,
+    "quality": {
+      "cutoffDecibels": -121.6024549329105,
+      "highestFrequencyHz": 24000,
+      "sourceMerge": 1,
+      "echoCellScale": 1,
+      "scatterArrivals": 12,
+      "coarseForest": false,
+      "sharedScatter": false
+    }
+  }
+}

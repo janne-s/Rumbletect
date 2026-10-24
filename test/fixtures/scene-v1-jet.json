@@ -1,0 +1,168 @@
+{
+  "format": "rumbletect.scene",
+  "version": 1,
+  "mode": "jet",
+  "modelVersion": "0.2.0",
+  "air": {
+    "temperatureCelsius": 15,
+    "lapseRateKelvinPerMetre": 0.0065,
+    "relativeHumidityPercent": 70,
+    "pressureKpa": 101.325,
+    "refraction": true,
+    "shadowFloorDecibels": 25,
+    "absorption": true,
+    "turbulenceStrength": 0.000001,
+    "turbulenceScaleMetres": 1.1,
+    "windSpeedMetresPerSecond": 0,
+    "windFromDegrees": 270,
+    "windShearPerSecond": 0,
+    "upperWindMetresPerSecond": 30,
+    "upperWindFromDegrees": 270,
+    "humidityScaleHeightMetres": 2000,
+    "groundLayerMetres": 0,
+    "groundLayerLapseKelvinPerMetre": -0.02,
+    "tropopauseMetres": 11000
+  },
+  "ground": {
+    "enabled": true,
+    "type": "grass",
+    "forest": true,
+    "treeHeightMetres": 15,
+    "forestDensity": 1,
+    "surroundings": true
+  },
+  "place": {
+    "name": "Koli",
+    "latitude": 63.0964,
+    "longitude": 29.8061
+  },
+  "terrain": null,
+  "emitters": [
+    {
+      "id": "jet-1",
+      "name": "Jet",
+      "kind": "jet",
+      "enabled": true,
+      "seed": 20261015,
+      "engineClass": "fighter",
+      "startMetres": {
+        "x": -2500,
+        "y": 0,
+        "z": 300
+      },
+      "durationSeconds": 33,
+      "autoDuration": false,
+      "startSeconds": 0,
+      "headingDegrees": 90,
+      "climbDegrees": 0,
+      "mach": 0.44,
+      "accelerationMetresPerSecondSquared": 0,
+      "bendDegrees": 0,
+      "turnStartPercent": 50,
+      "turnLengthPercent": 100,
+      "engine": {
+        "pressureRatio": 3.5,
+        "totalTemperatureKelvin": 750,
+        "diameterMetres": 0.9,
+        "engines": 1
+      }
+    },
+    {
+      "id": "formation-1",
+      "name": "Formation",
+      "kind": "formation",
+      "enabled": true,
+      "seed": 20261014,
+      "engineClass": "fighter",
+      "startMetres": {
+        "x": -2500,
+        "y": 0,
+        "z": 300
+      },
+      "durationSeconds": 33,
+      "autoDuration": false,
+      "startSeconds": 0,
+      "headingDegrees": 90,
+      "climbDegrees": 0,
+      "mach": 0.44,
+      "accelerationMetresPerSecondSquared": 0,
+      "bendDegrees": 0,
+      "turnStartPercent": 50,
+      "turnLengthPercent": 100,
+      "engine": {
+        "pressureRatio": 3.5,
+        "totalTemperatureKelvin": 750,
+        "diameterMetres": 0.9,
+        "engines": 1
+      },
+      "memberCount": 4,
+      "lateralSpacingMetres": 20,
+      "trailSpacingMetres": 30,
+      "verticalSpacingMetres": 0
+    },
+    {
+      "id": "airliner-1",
+      "name": "Airliner",
+      "kind": "airliner",
+      "enabled": true,
+      "seed": 20261021,
+      "engineClass": "narrowbody",
+      "startMetres": {
+        "x": -2500,
+        "y": 0,
+        "z": 300
+      },
+      "durationSeconds": 59,
+      "autoDuration": false,
+      "startSeconds": 0,
+      "headingDegrees": 90,
+      "climbDegrees": 0,
+      "mach": 0.25,
+      "accelerationMetresPerSecondSquared": 0,
+      "bendDegrees": 0,
+      "turnStartPercent": 50,
+      "turnLengthPercent": 100,
+      "engine": {
+        "pressureRatio": 1.447,
+        "totalTemperatureKelvin": 780,
+        "diameterMetres": 0.622,
+        "engines": 2
+      },
+      "gearAndFlaps": false
+    }
+  ],
+  "receivers": [
+    {
+      "id": "receiver-1",
+      "name": "Mic 1",
+      "type": "binaural",
+      "listen": true,
+      "positionMetres": {
+        "x": 0,
+        "y": 0,
+        "z": 1.7
+      },
+      "headingDegrees": 270,
+      "pitchDegrees": 0
+    }
+  ],
+  "render": {
+    "sampleRate": 48000,
+    "levelMode": "peak",
+    "fullScalePa": 20,
+    "distanceLossPercent": 100,
+    "ambisonicOrder": 1,
+    "earReflex": false,
+    "earLoudness": false,
+    "earCapOnsets": true,
+    "quality": {
+      "cutoffDecibels": -121.6024549329105,
+      "highestFrequencyHz": 24000,
+      "sourceMerge": 1,
+      "echoCellScale": 1,
+      "scatterArrivals": 12,
+      "coarseForest": false,
+      "sharedScatter": false
+    }
+  }
+}
