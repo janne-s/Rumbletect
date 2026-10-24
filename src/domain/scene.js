@@ -1,4 +1,4 @@
-import { followerFields } from '../shared/domain/follower.js';
+import { followerFields, followsField } from '../shared/domain/follower.js';
 import { ENGINE, MODEL_VERSION, ROCKET, VOLCANO } from './constants.js';
 import { categoryRocket, typicalLengthMetres } from './rocket.js';
 import { AIRLINER_CLASSES, ENGINE_CLASSES, engineOfClass } from './engine.js';
@@ -135,7 +135,8 @@ function readVolcano(value, { point, numbers }, path) {
     ventMetres: point(value.ventMetres, `${path}.ventMetres`),
     ...numbers(value, ['startSeconds'], path),
     jet: numbers(value.jet, ['ventDiameterMetres', 'ventVelocityMetresPerSecond', 'gasTemperatureKelvin'], `${path}.jet`),
-    eruption: numbers(value.eruption, Object.keys(VOLCANO.defaultEruption), `${path}.eruption`)
+    eruption: numbers(value.eruption, Object.keys(VOLCANO.defaultEruption), `${path}.eruption`),
+    ...followsField(value)
   };
 }
 

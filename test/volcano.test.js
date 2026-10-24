@@ -90,7 +90,8 @@ test('a volcano follows the linked Boomtect volcano\'s crater and onset, its cat
   const kept = follower({ ...ghost, follow: { ...ghost.follow, crater: { x: 60, y: 50, z: 0 }, eruption: 'strombolian' } }, { ...made, category: 'fountain' }, options);
   assert.equal(kept.category, 'fountain');
   assert.equal(kept.ventMetres.x, 60);
-  assert.ok(parseScene({ ...scene, emitters: [kept] }));
+  assert.deepEqual(parseScene({ ...scene, emitters: [kept] }).emitters[0].follows, kept.follows);
+  assert.equal(KIND_PANELS.volcano.followAs(parseScene({ ...scene, emitters: [kept] }).emitters[0]), null);
   assert.equal(follower(ghost, null, { ...options, scene: defaultScene('jet') }), null);
   assert.equal(KIND_PANELS.volcano.followAs(made), null);
   assert.equal(KIND_PANELS.volcano.followAs(scene.emitters[0]).role, 'volcano');
