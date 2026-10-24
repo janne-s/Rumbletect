@@ -333,12 +333,12 @@ const volcanoBursts = {
 
 export function volcanoMacros(emitter, { onset: withOnset = false } = {}) {
   const list = [
-    volcanoKind, craterHeight, jetWidth, volcanoIntensity,
+    volcanoKind, ...(emitter.follows ? [] : [craterHeight]), jetWidth, volcanoIntensity,
     eruptionSlider('eruptionSeconds', 'Duration', [range('eruptionSeconds')[0], range('eruptionSeconds')[1]]),
     volcanoPulsing, volcanoBursts,
     eruptionSlider('pulsePeriodSeconds', 'Pulse period', [range('pulsePeriodSeconds')[0], range('pulsePeriodSeconds')[1]]),
     eruptionSlider('riseSeconds', 'Rise', [1, range('riseSeconds')[1]]),
     eruptionSlider('fadeSeconds', 'Fade', [1, range('fadeSeconds')[1]])
   ];
-  return withOnset ? [...list, onset] : list;
+  return withOnset && !emitter.follows ? [...list, onset] : list;
 }

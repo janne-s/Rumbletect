@@ -94,5 +94,8 @@ test('a volcano follows the linked Boomtect volcano\'s crater and onset, its cat
   assert.equal(KIND_PANELS.volcano.followAs(parseScene({ ...scene, emitters: [kept] }).emitters[0]), null);
   assert.equal(follower(ghost, null, { ...options, scene: defaultScene('jet') }), null);
   assert.equal(KIND_PANELS.volcano.followAs(made), null);
+  const labels = KIND_PANELS.volcano.macros(made, { onset: true }).map(macro => macro.label);
+  assert.ok(labels.includes('Jet width') && labels.includes('Category'));
+  assert.ok(!labels.includes('Crater height') && !labels.includes('Onset'));
   assert.equal(KIND_PANELS.volcano.followAs(scene.emitters[0]).role, 'volcano');
 });

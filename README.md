@@ -124,7 +124,8 @@ active place and terrain travel with you when switching modes.
 - **Source** — The roar of a hot jet rising from the crater, and the smaller
   jets around it, which carry the audible roar.
 - **Linked volcano** — A Boomtect volcano and a Rumbletect volcano follow
-  each other's crater and onset when the tects are linked.
+  each other's crater and onset when the tects are linked; everything else
+  is set in each tect.
 
 ## Listening
 

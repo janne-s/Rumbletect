@@ -186,7 +186,7 @@ function rocketWarnings(emitter, scene) {
 function volcanoSummary(emitter) {
   const { ventDiameterMetres, ventVelocityMetresPerSecond } = emitter.jet;
   const peak = .19 * ventVelocityMetresPerSecond / ventDiameterMetres;
-  return `${volcanoCategory(emitter.category).label}, jet ${formatMetres(ventDiameterMetres)} wide at ${Math.round(ventVelocityMetresPerSecond)} m/s · peak ${peak < 10 ? peak.toFixed(1) : Math.round(peak)} Hz · ${emitter.eruption.eruptionSeconds} s`;
+  return `${volcanoCategory(emitter.category).label}, jet ${formatMetres(ventDiameterMetres)} wide at ${Math.round(ventVelocityMetresPerSecond)} m/s · peak ${peak < 10 ? peak.toFixed(1) : Math.round(peak)} Hz · ${emitter.eruption.eruptionSeconds} s${emitter.follows ? `, at ${emitter.follows.app}'s ${emitter.follows.name}` : ''}`;
 }
 
 function volcanoDetails(emitter, { updateEmitter }) {
@@ -197,6 +197,7 @@ function volcanoDetails(emitter, { updateEmitter }) {
     section('Placement', container => {
       textField(container, { label: 'Name', value: emitter.name, onCommit: set('name') });
       seedField(container, { value: emitter.seed, onCommit: set('seed'), onNew: () => set('seed')(newSeed()) });
+      if (emitter.follows) return;
       numberField(container, { key: 'startSeconds', value: emitter.startSeconds, onCommit: set('startSeconds') });
       pointFields(container, { label: 'Crater', point: emitter.ventMetres, onCommit: set('ventMetres') });
     }),
