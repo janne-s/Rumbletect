@@ -1,6 +1,6 @@
 import { followerFields } from '../shared/domain/follower.js';
 import { ENGINE, MODEL_VERSION, ROCKET, VOLCANO } from './constants.js';
-import { categoryRocket } from './rocket.js';
+import { categoryRocket, typicalLengthMetres } from './rocket.js';
 import { AIRLINER_CLASSES, ENGINE_CLASSES, engineOfClass } from './engine.js';
 import { createScene } from '../shared/domain/scene.js';
 import { speedOfSoundMetresPerSecond } from '../shared/domain/air.js';
@@ -35,6 +35,7 @@ const RUMBLETECT_PARAMETERS = Object.freeze({
   throttleUpSeconds: { minimum: 0, maximum: 590, unit: 's', label: 'Throttle up at', reliability: 'C' },
   throttlePercent: { minimum: 30, maximum: 100, unit: '%', label: 'Throttle', reliability: 'C' },
   launchDegrees: { minimum: 5, maximum: 90, unit: '°', label: 'Launch angle', reliability: null },
+  lengthMetres: { minimum: .1, maximum: 200, unit: 'm', label: 'Length', reliability: 'B' },
   memberCount: { minimum: 2, maximum: 24, unit: '', label: 'Aircraft', reliability: null, integer: true },
   lateralSpacingMetres: { minimum: 0, maximum: 2000, unit: 'm', label: 'Lateral spacing', reliability: null },
   trailSpacingMetres: { minimum: 0, maximum: 3000, unit: 'm', label: 'Trail spacing', reliability: null },
@@ -149,7 +150,7 @@ function readRocket(value, { check, point, numbers, choice }, path, fallbackProp
   return {
     propellant: choice(value.propellant, PROPELLANTS, fallbackPropellant, `${path}.propellant`),
     startMetres: point(value.startMetres, `${path}.startMetres`),
-    ...numbers(value, ['startSeconds', 'headingDegrees', 'launchDegrees'], path),
+    ...numbers(value, ['startSeconds', 'headingDegrees', 'launchDegrees', 'lengthMetres'], path),
     engine: numbers(value.engine, ROCKET_ENGINE_NUMBERS, `${path}.engine`),
     ascent: { ...numbers(value.ascent, ROCKET_ASCENT_NUMBERS, `${path}.ascent`), water: value.ascent.water }
   };
@@ -196,8 +197,8 @@ export const { PARAMETERS, MODES, defaultScene, parseScene, readScene, serialize
     jet: { defaults: () => defaultJet(), read: readJet },
     formation: { defaults: () => defaultFormation(), read: readFormation },
     airliner: { defaults: () => defaultAirliner(), read: readAirliner },
-    rocket: { defaults: () => defaultRocket(), read: readRocket },
-    salvo: { defaults: () => defaultSalvo(), read: readSalvo },
+    rocket: { defaults: item => ({ ...defaultRocket(), lengthMetres: typicalLengthMetres(item) ?? defaultRocket().lengthMetres }), read: readRocket },
+    salvo: { defaults: item => ({ ...defaultSalvo(), lengthMetres: typicalLengthMetres(item) ?? defaultSalvo().lengthMetres }), read: readSalvo },
     volcano: { defaults: () => defaultVolcano(), read: readVolcano }
   },
   parameters: RUMBLETECT_PARAMETERS

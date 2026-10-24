@@ -93,10 +93,10 @@ export function directivityRow(strouhal, out, offset) {
   }
 }
 
-/** A rocket's engine set to a category's: thrust, engines, propellant, nozzle, efficiency and the pad's water; its flight kept. */
+/** A rocket's engine set to a category's: thrust, engines, propellant, nozzle, efficiency, length and the pad's water; its flight kept. */
 export function categoryEngine(item, category) {
   const sized = sizedRocket(category.newtons, category.engines, category.propellant);
-  return { ...item, propellant: category.propellant, engine: { ...item.engine, ...sized.engine, efficiencyPercent: category.efficiencyPercent }, ascent: { ...item.ascent, water: sized.ascent.water } };
+  return { ...item, propellant: category.propellant, lengthMetres: category.lengthMetres, engine: { ...item.engine, ...sized.engine, efficiencyPercent: category.efficiencyPercent }, ascent: { ...item.ascent, water: sized.ascent.water } };
 }
 
 /** A rocket set to a category's thrust, engines, propellant, efficiency and ascent; the throttle schedule kept. */
@@ -107,9 +107,26 @@ export function categoryRocket(item, category) {
     ...item,
     propellant: category.propellant,
     launchDegrees: category.launchDegrees,
+    lengthMetres: category.lengthMetres,
     engine: { ...item.engine, ...sized.engine, efficiencyPercent: category.efficiencyPercent },
     ascent: { ...item.ascent, ...sized.ascent, burnSeconds: category.burnSeconds, turnStartPercent, turnLengthPercent, ...category.flight }
   };
+}
+
+/** A vehicle's length for a saved rocket's total thrust, between its categories' on log–log; none without an engine. Class C. */
+export function typicalLengthMetres(item) {
+  const engine = item?.engine;
+  const newtons = engine?.engines * engine?.thrustKilonewtons * 1000;
+  if (!(newtons > 0)) return null;
+  const points = ROCKET.categories.map(category => [Math.log(category.newtons), Math.log(category.lengthMetres)]);
+  const x = Math.log(newtons);
+  if (x <= points[0][0]) return Math.exp(points[0][1]);
+  for (let index = 1; index < points.length; index += 1) {
+    const [x1, y1] = points[index];
+    const [x0, y0] = points[index - 1];
+    if (x <= x1) return +Math.exp(y0 + (y1 - y0) * (x - x0) / (x1 - x0)).toPrecision(3);
+  }
+  return Math.exp(points.at(-1)[1]);
 }
 
 /** The category whose thrust is nearest, in octaves, to the rocket's. */

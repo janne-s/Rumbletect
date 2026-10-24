@@ -2,7 +2,7 @@ import { AIRLINER_CLASSES, ENGINE_CLASSES, engineAtPower, engineOfClass, powerLa
 import { PARAMETERS } from '../domain/scene.js';
 import { ENGINE, ROCKET, VOLCANO } from '../domain/constants.js';
 import { volcanoCategory } from '../domain/volcano.js';
-import { categoryEngine, nearestCategory, sizedRocket } from '../domain/rocket.js';
+import { categoryEngine, nearestCategory, sizedRocket, typicalLengthMetres } from '../domain/rocket.js';
 import { clamp01, logPosition, logValue, METRES, metres } from '../shared/ui/macros.js';
 
 const range = key => [PARAMETERS[key].minimum, PARAMETERS[key].maximum];
@@ -164,11 +164,12 @@ const rocketCategory = {
 const SIZE_SPAN = ROCKET.sizing.totalNewtons;
 const totalOf = item => item.engine.engines * item.engine.thrustKilonewtons * 1000;
 
-/** A new size changes the engine and the pad's water, not the flight; Category sets a typical burn and flight. */
+/** A new size changes the engine, the length and the pad's water, not the flight; Category sets a typical burn and flight. */
 const resize = (item, newtons) => {
   const sized = sizedRocket(newtons, item.engine.engines, item.propellant);
   item.engine = { ...item.engine, ...sized.engine };
   item.ascent = { ...item.ascent, water: sized.ascent.water };
+  item.lengthMetres = typicalLengthMetres(item);
 };
 
 const rocketSize = {

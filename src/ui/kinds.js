@@ -151,6 +151,7 @@ function rocketDetails(emitter, { updateEmitter }) {
       ROCKET_ASCENT_NUMBERS.forEach(key => numberField(container, { key, value: emitter.ascent[key], onCommit: setIn('ascent', key) }));
     }),
     section('Set by category', container => {
+      numberField(container, { key: 'lengthMetres', value: emitter.lengthMetres, onCommit: set('lengthMetres') });
       selectField(container, { label: 'Propellant', value: emitter.propellant, options: PROPELLANTS.map(key => [key, ROCKET.propellants[key].label]), reliability: 'B', onCommit: choose });
       ['engines', 'thrustKilonewtons', 'exitVelocityMetresPerSecond', 'exitDiameterMetres', 'efficiencyPercent'].forEach(key => numberField(container, { key, value: emitter.engine[key], onCommit: setIn('engine', key) }));
       const note = document.createElement('p');
@@ -271,7 +272,7 @@ const KIND_PANELS_EXTENDED = {
     wavefrontSources,
     mergesSources: false,
     warnings: rocketWarnings,
-    followAs: (emitter, scene) => (cachedTracks(emitter, scene).some(path => supersonicIndex(path, scene.air) >= 0) ? { role: 'rocket' } : null)
+    followAs: (emitter, scene) => (cachedTracks(emitter, scene).some(path => supersonicIndex(path, scene.air) >= 0) ? { role: 'rocket', lengthMetres: emitter.lengthMetres } : null)
   }),
   volcano: VOLCANO_PANEL
 };

@@ -72,3 +72,13 @@ test('an Artillery round burns out at a Grad\'s 690 m/s and flies straight off i
   assert.ok(Math.abs(angle(path.speed.length - 1) - round.launchDegrees) < 1e-9);
   assert.ok(path.throttle.every(value => value > 0) && path.speed.every(Number.isFinite));
 });
+
+test("a rocket's length comes with its category, and a saved rocket without one takes its thrust's", () => {
+  assert.equal(defaultSalvo().lengthMetres, 2.87);
+  assert.equal(defaultRocket().lengthMetres, 70);
+  const saved = JSON.parse(serializeScene({ ...defaultScene('rocket'), emitters: [defaultSalvo()] }));
+  delete saved.emitters[0].lengthMetres;
+  assert.equal(readScene(saved).emitters[0].lengthMetres, 2.87);
+  const kept = JSON.parse(serializeScene({ ...defaultScene('rocket'), emitters: [{ ...defaultSalvo(), lengthMetres: 3.2 }] }));
+  assert.equal(readScene(kept).emitters[0].lengthMetres, 3.2);
+});
