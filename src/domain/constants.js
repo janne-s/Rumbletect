@@ -77,6 +77,35 @@ export const JET_FLIGHT = Object.freeze({
 });
 
 /**
+ * Broadband shock-cell noise of an imperfectly expanded jet. Class B: Stone, Krejsa & Clark 2003 (NASA/CR-2003-212522),
+ * inner-stream shock noise, eqs. 14–15, coefficient eq. 42 for a nozzle without plug, spectra of their Table VII; their
+ * data are static model-scale jets, the flight term is theory.
+ */
+export const SHOCK_NOISE = Object.freeze({
+  levelDecibels: 158,
+  convectionShare: .7,
+  convectionSpread: .04,
+  flightDecibels: 40,
+  aftFallDecibelsPerDegree: .75,
+  /**
+   * Table VII: third-octave level re the unscaled overall level against log S, per 10° of inlet angle from 0 to 180,
+   * as its values at log S = −0.2, −0.1, 0 and 0.1 and its fall per decade above 0.1; below −0.2 every column rises
+   * `lowRiseDecibelsPerDecade`. This form reproduces the table from log S = −3.6 to 2, which spans the audible range.
+   */
+  spectrumLogStrouhal: Object.freeze([-.2, -.1, 0, .1]),
+  lowRiseDecibelsPerDecade: 50,
+  spectrum: Object.freeze([
+    [-11, -6, -4, -5.5, 20], [-11, -6, -4, -5.5, 20], [-11, -6, -4, -5.5, 20], [-11, -6, -4, -5.5, 20], [-11, -6, -4, -5.5, 20],
+    [-11.5, -6.5, -4.5, -6, 20], [-12, -7, -5, -6.5, 20], [-12.5, -7.5, -5.5, -7, 20], [-8, -6, -7.5, -9.5, 20],
+    [-8.4, -6.4, -7.9, -9.4, 15], [-8.6, -6.6, -8.1, -9.6, 15], [-8.8, -6.8, -8.3, -9.8, 15], [-9, -7, -8.5, -10, 15],
+    [-9.2, -7.2, -8.7, -10.2, 15], [-9.4, -7.4, -8.9, -10.4, 15], [-9.6, -7.6, -9.1, -10.6, 15], [-9.8, -7.8, -9.3, -10.8, 15],
+    [-10, -8, -9.5, -11, 15], [-10.2, -8.2, -9.7, -11.2, 15]
+  ].map(Object.freeze)),
+  /** Class C: Stone's flight term is evaluated at most at this flight Mach number, +21 dB straight ahead. */
+  flightMachLimit: .8
+});
+
+/**
  * Infrasound: below the crossover each source also emits long grains, synthesised at a low internal rate and evaluated
  * only up to `highestFrequencyHz`; the short grains take the rest. The bands split power by complementary fourth-order
  * shares, so their sum is the source's spectrum.

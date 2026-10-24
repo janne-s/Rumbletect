@@ -1,5 +1,6 @@
 import { JET, JET_FLIGHT, REFERENCE_SOUND_PRESSURE_PA } from './constants.js';
 import { speedOfSoundMetresPerSecond as speedOfSound } from '../shared/domain/air.js';
+import { shockComponent, shockSpectrum } from './shock.js';
 
 export { speedOfSound };
 
@@ -35,8 +36,9 @@ export const effectiveVelocity = (jetVelocity, flightVelocity) => jetVelocity * 
 const convection = (mach, cosine) => (1 + mach * cosine) ** 2 + JET_FLIGHT.convectionSpread * mach * mach;
 
 /**
- * The jet's two mixing-noise components in flight, as peak level and peak frequency. `jet` holds the fully
- * expanded diameter, velocity, and reservoir-to-ambient temperature ratio; levels are dB per 1 Hz scaled to r = D_j.
+ * The jet's two mixing-noise components in flight, as peak level and peak frequency, and its shock-cell noise when
+ * `jet.machNumber` is above 1. `jet` holds the fully expanded diameter, velocity, and reservoir-to-ambient temperature
+ * ratio; mixing-noise levels are dB per 1 Hz scaled to r = D_j.
  */
 export function jetComponents(jet, { temperatureCelsius, flightMetresPerSecond = 0 }) {
   const sound = speedOfSound(temperatureCelsius);
@@ -60,7 +62,8 @@ export function jetComponents(jet, { temperatureCelsius, flightMetresPerSecond =
     fine: {
       decibels: fine.base + fine.temperature / ratio ** fine.temperatureExponent + 10 * fineExponent * acoustic + size,
       peakHz: JET.finePeakStrouhal * velocity / jet.diameterMetres
-    }
+    },
+    shock: shockComponent(jet, sound, flightMetresPerSecond)
   };
 }
 
@@ -79,7 +82,7 @@ export function flightConvectionDecibels(components, inletDegrees) {
 }
 
 /**
- * Power spectral densities, Pa²/Hz at 1 m from the nozzle, of each component toward `inletDegrees`
+ * Power spectral densities, Pa²/Hz at 1 m from the nozzle, of each component (mixing noise large and fine, shock-cell noise) toward `inletDegrees`
  * (0 ahead along the jet's inlet axis, 180 straight aft) at the given frequencies.
  */
 export function jetSpectra(components, inletDegrees, frequencies) {
@@ -94,5 +97,5 @@ export function jetSpectra(components, inletDegrees, frequencies) {
     large[index] = scale * 10 ** ((largeDecibels + largeSimilarityDecibels(frequency / components.large.peakHz)) / 10);
     fine[index] = scale * 10 ** ((fineDecibels + fineSimilarityDecibels(frequency / components.fine.peakHz)) / 10);
   });
-  return { large, fine };
+  return { large, fine, shock: shockSpectrum(components.shock, inletDegrees, frequencies) };
 }

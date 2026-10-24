@@ -80,13 +80,14 @@ export function engineOfClass(engineClass) {
   return { ...engineAtPower(type.defaultPower, engineClass), engines: type.engines };
 }
 
-/** Class A for an ideal nozzle: the fully expanded jet of a pressure ratio and total temperature. */
+/** Class A for an ideal nozzle: the fully expanded jet of a pressure ratio and total temperature, and its Mach number. */
 export function jetOfEngine({ pressureRatio, totalTemperatureKelvin, diameterMetres }, temperatureCelsius) {
   const exponent = (ENGINE.gasGamma - 1) / ENGINE.gasGamma;
   const expansion = Math.max(0, 1 - pressureRatio ** -exponent);
   return {
     diameterMetres,
     velocityMetresPerSecond: Math.sqrt(2 * ENGINE.gasHeatCapacityJoulesPerKilogramKelvin * totalTemperatureKelvin * expansion),
+    machNumber: Math.sqrt(2 / (ENGINE.gasGamma - 1) * expansion / (1 - expansion)),
     temperatureRatio: totalTemperatureKelvin / (temperatureCelsius + KELVIN_OFFSET)
   };
 }

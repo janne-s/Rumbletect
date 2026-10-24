@@ -107,7 +107,8 @@ export function nearListen({ trajectory, listener, jet, air, emissionSeconds: du
     const doppler = 1 / (1 - geometry.mach * geometry.cosine);
     const limit = SYNTHESIS.bandLimitShare * sampleRate / doppler;
     const path = pathGains({ frequencies, doppler, limit, geometry, source: trajectory.positionAt(centre / sampleRate), listener, air, sound, ground, scintillation: fluctuation?.gainsAt(centre / hop, frequencies) });
-    const { large, fine } = spectra;
+    const { large } = spectra;
+    const fine = spectra.fine.map((value, bin) => value + spectra.shock[bin]);
     const cutoff = components.large.peakHz / JET.packetCycles;
     const lowPass = frequencies.map(frequency => (frequency > 0 ? 1 / (1 + (frequency / cutoff) ** 2) : 0));
     const lowPassSum = lowPass.reduce((sum, value) => sum + value, 0) * binHz;

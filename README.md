@@ -370,6 +370,7 @@ B/C marks a part that combines the two.
 | Airliner fan broadband shape | Heidmann 1975 | B |
 | Airliner fan levels | fitted to the EASA ANP 2.3 noise-power-distance data | C |
 | Airframe noise | Fink 1977 as in ANOPP (Zorumski 1982) | B |
+| Shock-cell noise | Stone, Krejsa & Clark 2003, from the fully expanded Mach number; flight term limited to Mach 0.8 | B |
 | Crackle | simple-wave steepening of each grain, set by the jet's convection Mach number | C |
 | Rocket source | sound power from thrust (Mathews & Gee 2025), SATURN spectrum and directivity (Mathews 2025) | B |
 | Ascent, sizing, salvo | authored, not simulated | C |
@@ -397,7 +398,7 @@ B/C marks a part that combines the two.
 | Ear reflex | threshold, latency, low-frequency attenuation, adaptation | B/C |
 | Loudness | Stevens' power law on the level envelope | B/C |
 
-Not modelled: a supersonic jet's shock-cell noise and screech, afterburner combustion noise, and sonic booms, which Boomtect makes.
+Not modelled: screech, afterburner combustion noise, and sonic booms, which Boomtect makes.
 
 Rumbletect is a creative tool. Where published models exist it follows them,
 but a result is a plausible sound, not a reconstruction or a measurement.

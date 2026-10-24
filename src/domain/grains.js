@@ -370,10 +370,11 @@ export function jetSource(emitter, scene) {
       airframe: airframeAt(airframe, { speedMetresPerSecond: speed, temperatureCelsius: air.temperatureCelsius, deployed: Boolean(emitter.gearAndFlaps) })
     }),
     spectra: ({ streams: parts, airframe: frame }, inletDegrees, frequencies, azimuth) => {
-      const { large, fine } = jetSpectra(parts[0], inletDegrees, frequencies);
+      const { large, fine, shock } = jetSpectra(parts[0], inletDegrees, frequencies);
+      fine.forEach((value, index) => { fine[index] = value + shock[index]; });
       for (const stream of parts.slice(1)) {
         const other = jetSpectra(stream, inletDegrees, frequencies);
-        other.large.forEach((value, index) => { large[index] += value; fine[index] += other.fine[index]; });
+        other.large.forEach((value, index) => { large[index] += value; fine[index] += other.fine[index] + other.shock[index]; });
       }
       addTurbomachinery(fine, frequencies, turbo, inletDegrees);
       const [shaped, plain] = engines === 1 ? [large, fine] : [large.map(value => value * engines), fine.map(value => value * engines)];
