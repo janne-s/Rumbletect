@@ -1,6 +1,6 @@
 import { formationJets, jetPath, jetSource } from '../domain/grains.js';
 import { sourceLevels } from '../domain/source-levels.js';
-import { ascentPath, rocketSource } from '../domain/rocket.js';
+import { ascentPath, coastedPath, rocketSource } from '../domain/rocket.js';
 import { salvoRounds } from '../domain/salvo.js';
 import { ventPath, volcanoSource } from '../domain/volcano.js';
 import { cached, currentSurface } from '../shared/ui/geometry-cache.js';
@@ -23,6 +23,11 @@ export const cachedTracks = (emitter, scene) => (emitter.kind === 'volcano'
   : emitter.kind === 'rocket' || emitter.kind === 'salvo'
   ? rocketTracks(emitter, currentSurface())
   : cached(tracks, emitter, [scene.air, emitter.autoDuration ? scene.receivers.map(receiver => receiver.positionMetres) : null], () => formationJets(emitter).map(member => jetPath(member, scene))));
+
+const coastedTracks = new Map();
+
+/** A rocket's rounds with their unpowered flight after burnout, as another tect follows them. */
+export const cachedCoastedTracks = (emitter, scene) => cached(coastedTracks, emitter, [scene.air, surfaceId(currentSurface())], () => cachedTracks(emitter, scene).map(path => coastedPath(path, emitter, scene.air, currentSurface())));
 
 export function cachedSoundTracks(emitter, scene) {
   const paths = cachedTracks(emitter, scene);

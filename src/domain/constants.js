@@ -392,6 +392,11 @@ export const ROCKET = Object.freeze({
    */
   lateAccelerationFraction: .97,
   pathSeconds: .05,
+  /**
+   * After burnout a solid rocket's body flies on unpowered, for the path another tect follows: drag over m / C_D A = density × length
+   * / C_D, B for the Grad (46 kg burnt out in 2.87 m × 122 mm, 1 370 kg/m³), C_D 0.35 and the rest C; at most this long.
+   */
+  coast: Object.freeze({ burntDensityKilogramsPerCubicMetre: 1370, dragCoefficient: .35, seconds: 120 }),
   /** Echoes and scattering arrive after the direct sound; the ascent ends this much before the render's span would. */
   renderMarginSeconds: 40,
   /**

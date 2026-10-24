@@ -82,3 +82,18 @@ test("a rocket's length comes with its category, and a saved rocket without one 
   const kept = JSON.parse(serializeScene({ ...defaultScene('rocket'), emitters: [{ ...defaultSalvo(), lengthMetres: 3.2 }] }));
   assert.equal(readScene(kept).emitters[0].lengthMetres, 3.2);
 });
+
+test('a solid round flies on after burnout to about the Grad\'s range, and a liquid launcher\'s path ends at burnout', async () => {
+  const { coastedPath } = await import('../src/domain/rocket.js');
+  const air = defaultScene('rocket').air;
+  const round = salvoRounds(defaultSalvo())[0];
+  const path = coastedPath(ascentPath(round), round, air);
+  const last = path.seconds.length - 1;
+  assert.equal(path.burnoutSeconds - path.seconds[0], 2);
+  const range = Math.hypot(path.x[last] - path.x[0], path.y[last] - path.y[0]);
+  assert.ok(range > 15000 && range < 30000, `${range}`);
+  assert.ok(path.z[last] < 200 && path.seconds[last] - path.seconds[0] > 40);
+  const launcher = defaultRocket();
+  const ascent = ascentPath(launcher);
+  assert.equal(coastedPath(ascent, launcher, air), ascent);
+});

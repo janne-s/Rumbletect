@@ -1,6 +1,7 @@
 import { ROCKET, TRAJECTORY } from './constants.js';
 import { SATURN_DIRECTIVITY } from './saturn-directivity.js';
-import { airDensityKilogramsPerCubicMetre, speedOfSoundMetresPerSecond } from '../shared/domain/air.js';
+import { airDensityKilogramsPerCubicMetre, pressureAtHeightPa, speedOfSoundMetresPerSecond, temperatureAtHeightKelvin } from '../shared/domain/air.js';
+import { KELVIN_OFFSET, STANDARD_GRAVITY_METRES_PER_SECOND_SQUARED } from '../shared/domain/constants.js';
 import { FLAT_SURFACE } from '../shared/domain/terrain.js';
 
 const { spectrum: SPECTRUM, forward: FORWARD } = ROCKET;
@@ -111,6 +112,39 @@ export function categoryRocket(item, category) {
     engine: { ...item.engine, ...sized.engine, efficiencyPercent: category.efficiencyPercent },
     ascent: { ...item.ascent, ...sized.ascent, burnSeconds: category.burnSeconds, turnStartPercent, turnLengthPercent, ...category.flight }
   };
+}
+
+/**
+ * The ascent and, after burnout, a solid rocket's unpowered flight against gravity and drag until it falls back to its
+ * pad's height. Class B/C. A liquid launcher stages instead, so its path ends at burnout.
+ */
+export function coastedPath(path, emitter, air, surface = FLAT_SURFACE) {
+  if (emitter.propellant !== 'solid' || path.groundSeconds !== null || path.seconds.length < 2) return path;
+  const { burntDensityKilogramsPerCubicMetre, dragCoefficient, seconds } = ROCKET.coast;
+  const ballistic = burntDensityKilogramsPerCubicMetre * emitter.lengthMetres / dragCoefficient;
+  const density = z => airDensityKilogramsPerCubicMetre(pressureAtHeightPa(air, Math.max(0, z)), temperatureAtHeightKelvin(air, Math.max(0, z)) - KELVIN_OFFSET);
+  const rate = ([, , z, vx, vy, vz]) => {
+    const speed = Math.hypot(vx, vy, vz);
+    const pull = density(z) * speed / (2 * ballistic);
+    return [vx, vy, vz, -pull * vx, -pull * vy, -pull * vz - STANDARD_GRAVITY_METRES_PER_SECOND_SQUARED];
+  };
+  const add = (state, slope, scale) => state.map((value, index) => value + slope[index] * scale);
+  const last = path.seconds.length - 1;
+  const coasted = { ...path, seconds: [...path.seconds], x: [...path.x], y: [...path.y], z: [...path.z], vx: [...path.vx], vy: [...path.vy], vz: [...path.vz], speed: [...path.speed], burnoutSeconds: path.seconds[last] };
+  const h = path.step;
+  let state = [path.x[last], path.y[last], path.z[last], path.vx[last], path.vy[last], path.vz[last]];
+  for (let step = 1; step * h <= seconds; step += 1) {
+    const k1 = rate(state);
+    const k2 = rate(add(state, k1, h / 2));
+    const k3 = rate(add(state, k2, h / 2));
+    const k4 = rate(add(state, k3, h));
+    state = state.map((value, index) => value + h / 6 * (k1[index] + 2 * k2[index] + 2 * k3[index] + k4[index]));
+    if (state[5] < 0 && state[2] <= surface.heightAt(state[0], state[1])) break;
+    coasted.seconds.push(path.seconds[last] + step * h);
+    ['x', 'y', 'z', 'vx', 'vy', 'vz'].forEach((key, index) => coasted[key].push(state[index]));
+    coasted.speed.push(Math.hypot(state[3], state[4], state[5]));
+  }
+  return coasted;
 }
 
 /** A vehicle's length for a saved rocket's total thrust, between its categories' on log–log; none without an engine. Class C. */

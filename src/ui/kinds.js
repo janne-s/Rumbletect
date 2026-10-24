@@ -8,7 +8,7 @@ import { peakFrequencyHz, sizedRocket, totalThrustNewtons, vehicleOf } from '../
 import { newSeed } from '../shared/domain/random.js';
 import { formatMetres, formatMetresSpan } from '../shared/ui/canvas.js';
 import { checkboxField, numberField, pointFields, seedField, selectField, textField } from './fields.js';
-import { cachedLevels, cachedSoundTracks, cachedTracks } from './geometry-cache.js';
+import { cachedCoastedTracks, cachedLevels, cachedSoundTracks, cachedTracks } from './geometry-cache.js';
 import { formatAtKilometre, formatDecibels } from '../shared/ui/levels.js';
 import { macrosFor, rocketMacros, thrustLabel, volcanoMacros } from './macros.js';
 import { volcanoCategory, volcanoSourcePosition } from '../domain/volcano.js';
@@ -272,7 +272,12 @@ const KIND_PANELS_EXTENDED = {
     wavefrontSources,
     mergesSources: false,
     warnings: rocketWarnings,
-    followAs: (emitter, scene) => (cachedTracks(emitter, scene).some(path => supersonicIndex(path, scene.air) >= 0) ? { role: 'rocket', lengthMetres: emitter.lengthMetres } : null)
+    followAs: (emitter, scene) => {
+      if (!cachedTracks(emitter, scene).some(path => supersonicIndex(path, scene.air) >= 0)) return null;
+      const paths = cachedCoastedTracks(emitter, scene);
+      const burnSeconds = paths[0].burnoutSeconds === undefined ? null : paths[0].burnoutSeconds - paths[0].seconds[0];
+      return { role: 'rocket', lengthMetres: emitter.lengthMetres, ...(burnSeconds === null ? {} : { burnSeconds }), paths };
+    }
   }),
   volcano: VOLCANO_PANEL
 };
