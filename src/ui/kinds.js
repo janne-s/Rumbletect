@@ -6,7 +6,7 @@ import { RENDER, ROCKET } from '../domain/constants.js';
 import { heardCounts } from '../domain/rocket-grains.js';
 import { peakFrequencyHz, sizedRocket, totalThrustNewtons, vehicleOf } from '../domain/rocket.js';
 import { newSeed } from '../shared/domain/random.js';
-import { formatMetres } from '../shared/ui/canvas.js';
+import { formatMetres, formatMetresSpan } from '../shared/ui/canvas.js';
 import { checkboxField, numberField, pointFields, seedField, selectField, textField } from './fields.js';
 import { cachedLevels, cachedSoundTracks, cachedTracks } from './geometry-cache.js';
 import { formatAtKilometre, formatDecibels } from '../shared/ui/levels.js';
@@ -37,12 +37,18 @@ function flightSpeedLabel(emitter, scene) {
   return `${span} km/h (Mach ${emitter.mach.toFixed(2)})`;
 }
 
+function flightHeightLabel(emitter, scene) {
+  const [path] = cachedTracks(emitter, scene);
+  const [from, to] = [path.z[0], path.z.at(-1)];
+  return Math.abs(to - from) >= 10 ? formatMetresSpan(from, to) : formatMetres(emitter.startMetres.z);
+}
+
 function summary(emitter, scene) {
   const jet = jetOfEngine(emitter.engine, scene.air.temperatureCelsius);
   const aircraft = emitter.kind === 'formation' ? emitter.memberCount : 1;
   const { engines } = emitter.engine;
   if (emitter.follows) return `${ENGINE.classes[emitter.engineClass].label}, ${powerLabel(powerOfEngine(emitter.engine, emitter.engineClass), emitter.engineClass)}, on ${emitter.follows.app}'s ${emitter.follows.name} · ${flightSpeedLabel(emitter, scene)}`;
-  return `${aircraft > 1 ? `${aircraft} × ` : ''}${ENGINE.classes[emitter.engineClass].label}${engines > 1 ? `, ${engines} engines` : ''}, ${powerLabel(powerOfEngine(emitter.engine, emitter.engineClass), emitter.engineClass)}, exhaust ${Math.round(jet.velocityMetresPerSecond)} m/s · ${flightSpeedLabel(emitter, scene)} at ${formatMetres(emitter.startMetres.z)} for ${flownSeconds(emitter, scene)} s${emitter.gearAndFlaps ? ' · gear & flaps down' : ''}`;
+  return `${aircraft > 1 ? `${aircraft} × ` : ''}${ENGINE.classes[emitter.engineClass].label}${engines > 1 ? `, ${engines} engines` : ''}, ${powerLabel(powerOfEngine(emitter.engine, emitter.engineClass), emitter.engineClass)}, exhaust ${Math.round(jet.velocityMetresPerSecond)} m/s · ${flightSpeedLabel(emitter, scene)} at ${flightHeightLabel(emitter, scene)} for ${flownSeconds(emitter, scene)} s${emitter.gearAndFlaps ? ' · gear & flaps down' : ''}`;
 }
 
 const engineSection = (emitter, setEngine, jet) => ({
