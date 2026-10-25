@@ -428,6 +428,54 @@ The model's tuning values and limits are in `src/domain/constants.js`; the
 parameters a scene sets, with their defaults and ranges, in
 `src/domain/scene.js`.
 
+## Rendering from a script or an agent
+
+The model runs in Node without the browser, so a script or an AI agent can
+turn a request such as "a low fighter over a lake on a damp evening" into a
+sound. Node 20 or later, no installed packages:
+
+```sh
+node tools/render.mjs examples/low-fighter-over-lake.json out
+node tools/render.mjs my-scene.json out --ambix
+```
+
+The scene is a file saved from the app or a partial one written by hand:
+missing fields take their defaults and values out of range are brought into
+range, as when the app opens a file. The folder gets one WAV per microphone
+and the filled `scene.json`, which opens in the app for listening and further
+changes. A scene saved from the app over real terrain carries its heights and
+renders the same here. Without `--ambix` each file is the omni pressure; with
+it, the AmbiX channels of the scene's order. Files are 32-bit float at the
+app's export gain.
+
+The JSON on stdout tells an agent, which cannot listen, what came out: per
+microphone the length, the time within 40 dB of the peak, the peak in dB SPL,
+the A-weighted level and spectral centroid of the loudest second, and that
+second's octave shape in dB below its loudest band. The same scene and seed
+give the same sound.
+
+`examples/` holds three starting points: a low fighter over a lake, a distant
+airliner heard in a forest, and a rocket launch from ten kilometres. Begin
+from the nearest one and change what the request names. What each change
+does to the sound:
+
+| Change | Sound |
+|---|---|
+| Farther or higher source | quieter, darker, longer and smoother; air takes the highs first |
+| `engineClass` | `hobby`, `drone`: high whine; `fighter`: loud roar; `business` to `quad`: from a light hiss to a deep, buzzing drone |
+| Faster `mach` | shorter pass, stronger pitch drop |
+| `ground.type` `water` or `rigid` | strong reflection; a sweeping, phasing colour as the source passes |
+| `grass`, `soil`, `forestFloor`, `snow` | softer ground, the lows dip near it; `snow` the most muffled |
+| `ground.forest` | highs muffled on the way, a reverberant tail |
+| `ground.surroundings` | the long rumble the land around returns of a loud sound |
+| Microphone `z` near the ground | a deeper ground dip |
+| Humid air | highs carry farther |
+| Wind toward the microphone | louder; against it, a shadow at a distance |
+| `air.groundLayerMetres` above zero (its lapse is an inversion by default) | a calm night's inversion that carries sound far |
+| `seed` | another take of the same sound |
+
+Every parameter with its default and range is in `src/domain/scene.js`.
+
 ## Data
 
 Terrain heights: [Terrain Tiles](https://github.com/tilezen/joerd/blob/master/docs/attribution.md)

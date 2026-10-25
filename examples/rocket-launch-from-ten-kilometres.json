@@ -1,0 +1,12 @@
+{
+  "format": "rumbletect.scene",
+  "mode": "rocket",
+  "air": { "temperatureCelsius": 25, "relativeHumidityPercent": 75 },
+  "ground": { "type": "grass", "forest": false, "surroundings": true },
+  "emitters": [
+    { "kind": "rocket", "name": "Launch", "startMetres": { "x": 0, "y": 0, "z": 10 }, "headingDegrees": 90 }
+  ],
+  "receivers": [
+    { "name": "Viewing site", "type": "omni", "positionMetres": { "x": 0, "y": -10000, "z": 1.7 } }
+  ]
+}

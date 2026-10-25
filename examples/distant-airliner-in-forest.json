@@ -1,0 +1,12 @@
+{
+  "format": "rumbletect.scene",
+  "mode": "jet",
+  "air": { "temperatureCelsius": 18, "relativeHumidityPercent": 60 },
+  "ground": { "type": "forestFloor", "forest": true, "treeHeightMetres": 20, "surroundings": true },
+  "emitters": [
+    { "kind": "airliner", "name": "Airliner", "engineClass": "narrowbody", "startMetres": { "x": -8000, "y": 1500, "z": 2000 }, "headingDegrees": 90, "mach": 0.45, "durationSeconds": 100, "autoDuration": false }
+  ],
+  "receivers": [
+    { "name": "Forest", "type": "omni", "positionMetres": { "x": 0, "y": 0, "z": 1.7 } }
+  ]
+}

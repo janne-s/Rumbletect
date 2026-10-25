@@ -1,0 +1,12 @@
+{
+  "format": "rumbletect.scene",
+  "mode": "jet",
+  "air": { "temperatureCelsius": 8, "relativeHumidityPercent": 95 },
+  "ground": { "type": "water", "forest": false, "surroundings": true },
+  "emitters": [
+    { "kind": "jet", "name": "Fighter", "engineClass": "fighter", "startMetres": { "x": -3000, "y": 0, "z": 120 }, "headingDegrees": 90, "mach": 0.6, "autoDuration": true }
+  ],
+  "receivers": [
+    { "name": "Shore", "type": "omni", "positionMetres": { "x": 0, "y": 200, "z": 1.7 } }
+  ]
+}
