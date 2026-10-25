@@ -1,4 +1,4 @@
-import { AIRLINER_CLASSES, ENGINE_CLASSES, engineAtPower, engineOfClass, powerLabel, powerOfEngine } from '../domain/engine.js';
+import { AIRLINER_CLASSES, ENGINE_CLASSES, engineAtPower, powerLabel, powerOfEngine } from '../domain/engine.js';
 import { PARAMETERS } from '../domain/scene.js';
 import { ENGINE, ROCKET, VOLCANO } from '../domain/constants.js';
 import { volcanoCategory } from '../domain/volcano.js';
@@ -14,15 +14,16 @@ const power = {
   show: item => powerLabel(powerOfEngine(item.engine, item.engineClass), item.engineClass)
 };
 
-/** A class changes the engine only; where and how the aircraft flies stays. */
+/** A class changes the engine only, at the same power; where and how the aircraft flies stays. */
 const categoryOf = classes => ({
   label: 'Category',
   read: item => classes.indexOf(item.engineClass) / (classes.length - 1),
   write: (item, t) => {
     const engineClass = classes[Math.round(t * (classes.length - 1))];
     if (engineClass === item.engineClass) return;
+    const share = powerOfEngine(item.engine, item.engineClass);
     item.engineClass = engineClass;
-    item.engine = engineOfClass(engineClass);
+    item.engine = { ...engineAtPower(share, engineClass), engines: ENGINE.classes[engineClass].engines };
   },
   show: item => ENGINE.classes[item.engineClass].label
 });

@@ -61,7 +61,7 @@ test('OASPL at 100 D_j does not depend on the nozzle\'s size and lies near Khava
   close(oaspl(1), 107, 6, 'Khavaran & Bridges at 140°');
 });
 
-test('a jet flies straight, turns by its Turn on its radius from when its turn starts whatever its flight time, and its category leaves its flight as it was', async () => {
+test('a jet flies straight, turns by its Turn on its radius from when its turn starts whatever its flight time, and its category leaves its flight and power as they were', async () => {
   const { defaultJet, defaultScene, parseScene } = await import('../src/domain/scene.js');
   const { jetPath } = await import('../src/domain/grains.js');
   const { macrosFor } = await import('../src/ui/macros.js');
@@ -82,7 +82,10 @@ test('a jet flies straight, turns by its Turn on its radius from when its turn s
   assert.deepEqual(circling.turnSeconds, [0]);
   assert.ok(circling.x.every((x, index) => Math.abs(Math.hypot(x - jet.startMetres.x, circling.y[index] - jet.startMetres.y - 800) - 800) < 10));
   const item = structuredClone(scene.emitters[0]);
+  const power = () => macrosFor(item).find(macro => macro.label === 'Power').read(item);
+  const before = power();
   macrosFor(item).find(macro => macro.label === 'Category').write(item, 0);
   assert.equal(item.engineClass, 'hobby');
+  assert.ok(Math.abs(power() - before) < .01);
   assert.deepEqual([item.mach, item.startMetres, item.durationSeconds, item.turnDegrees], [jet.mach, jet.startMetres, jet.durationSeconds, jet.turnDegrees]);
 });
