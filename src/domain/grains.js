@@ -5,8 +5,8 @@ import { powerOfEngine, streamsOf } from './engine.js';
 import { addTurbomachinery, referencePower, turbomachineryAt } from './turbomachinery.js';
 import { jetComponents, jetSpectra, speedOfSound } from './jet.js';
 import { shapeWaveform, waveformShape } from './waveform.js';
-import { fft, nextPowerOfTwo } from '../shared/domain/fft.js';
-import { createRandom, normalDeviate } from '../shared/domain/random.js';
+import { fft, nextPowerOfTwo, realSpectrum } from '../shared/domain/fft.js';
+import { createRandom, normalDeviate, normalDeviates } from '../shared/domain/random.js';
 import { sourceTable } from '../shared/domain/source-table.js';
 import { flightPath, formationMembers } from '../shared/domain/trajectory.js';
 import { PARAMETERS } from './scene.js';
@@ -57,10 +57,14 @@ export function sampled(path, seconds) {
   return { position: { x: at(path.x), y: at(path.y), z: at(path.z) }, velocity: { x: at(path.vx), y: at(path.vy), z: at(path.vz) } };
 }
 
+/** Synthesis levels of `render.quality.synthesis`: exact; fast, equal up to rounding; fastest, with other noise of the same statistics. */
+const FAST = 1;
+const FASTEST = 2;
+
 /** The normal deviates of a frame of `size`, two per bin between DC and Nyquist. */
-function frameDeviates(seed, size = GRAIN) {
+function frameDeviates(seed, size = GRAIN, synthesis = 0) {
   const random = createRandom(seed);
-  return Float64Array.from({ length: size - 2 }, () => normalDeviate(random));
+  return synthesis >= FASTEST ? normalDeviates(random, size - 2) : Float64Array.from({ length: size - 2 }, () => normalDeviate(random));
 }
 
 function gaussianFrame(deviates, psd, sampleRate, size = GRAIN) {
@@ -75,6 +79,26 @@ function gaussianFrame(deviates, psd, sampleRate, size = GRAIN) {
   }
   fft(real, imaginary, true);
   return real;
+}
+
+/** Two Gaussian frames from one inverse FFT, the second carried in the imaginary part. */
+function gaussianPair(first, firstPsd, second, secondPsd, sampleRate, size = GRAIN) {
+  const real = new Float64Array(size);
+  const imaginary = new Float64Array(size);
+  for (let bin = 1; bin < size / 2; bin += 1) {
+    const a = Math.sqrt(size * sampleRate * firstPsd[bin] / 4);
+    const b = Math.sqrt(size * sampleRate * secondPsd[bin] / 4);
+    const aRe = a * first[2 * bin - 2];
+    const aIm = a * first[2 * bin - 1];
+    const bRe = b * second[2 * bin - 2];
+    const bIm = b * second[2 * bin - 1];
+    real[bin] = aRe - bIm;
+    imaginary[bin] = aIm + bRe;
+    real[size - bin] = aRe + bIm;
+    imaginary[size - bin] = bRe - aIm;
+  }
+  fft(real, imaginary, true);
+  return [real, imaginary];
 }
 
 const lowShare = frequency => 1 / (1 + (frequency / LOW_BAND.crossoverHz) ** 4);
@@ -195,6 +219,7 @@ export function pathGrains(emitter, scene, path, unbanded, band = 'full') {
     ...shockOf(source.crackle?.(grain.components))
   }]));
 
+  const { synthesis } = scene.render.quality;
   let noise = { index: -1 };
 
   /** A grain's paths follow one another in the render, so its deviates and its envelope, the same toward every departure, are kept for the next. */
@@ -206,9 +231,9 @@ export function pathGrains(emitter, scene, path, unbanded, band = 'full') {
     const lowPassSum = lowPass.reduce((sum, value) => sum + value, 0) * binHz;
     noise = {
       index,
-      plain: frameDeviates(seed(STREAMS.fine)),
-      shaped: frameDeviates(seed(STREAMS.large)),
-      envelope: gaussianFrame(frameDeviates(seed(STREAMS.envelope)), lowPass.map(value => value / lowPassSum), sampleRate)
+      plain: frameDeviates(seed(STREAMS.fine), GRAIN, synthesis),
+      shaped: frameDeviates(seed(STREAMS.large), GRAIN, synthesis),
+      envelope: gaussianFrame(frameDeviates(seed(STREAMS.envelope), GRAIN, synthesis), lowPass.map(value => value / lowPassSum), sampleRate)
     };
     return noise;
   }
@@ -224,8 +249,8 @@ export function pathGrains(emitter, scene, path, unbanded, band = 'full') {
     const inletDegrees = Math.acos(Math.max(-1, Math.min(1, axial))) * 180 / Math.PI;
     const { shaped: shapedPsd, plain } = source.spectra(grain.components, inletDegrees, frequencies, azimuthDegrees(grain.velocity, grain.speed, departure));
     const deviates = noiseOf(index);
-    const plainFrame = gaussianFrame(deviates.plain, plain, sampleRate);
-    const shapedFrame = gaussianFrame(deviates.shaped, shapedPsd, sampleRate);
+    const [plainFrame, shapedFrame] = synthesis >= FAST ? gaussianPair(deviates.plain, plain, deviates.shaped, shapedPsd, sampleRate)
+      : [gaussianFrame(deviates.plain, plain, sampleRate), gaussianFrame(deviates.shaped, shapedPsd, sampleRate)];
     const { envelope } = deviates;
     const rms = Math.sqrt(shapedPsd.reduce((sum, value) => sum + value, 0) * binHz);
     const shaped = shapeWaveform(shapedFrame, () => rms, envelope, source.shape);
@@ -233,17 +258,18 @@ export function pathGrains(emitter, scene, path, unbanded, band = 'full') {
     const mixed = Float64Array.from(shaped, (value, sample) => value + plainFrame[sample]);
     const combined = crackle ? steepen(mixed, crackle.index, crackle.hz, sampleRate) : mixed;
     const real = Float64Array.from(WINDOW, (window, sample) => window * combined[sample]);
-    const imaginary = new Float64Array(GRAIN);
-    fft(real, imaginary);
     const limit = SYNTHESIS.bandLimitShare * sampleRate * squeeze / binHz;
-    for (let bin = 0; bin <= GRAIN / 2; bin += 1) {
-      if (bin < limit) continue;
-      real[bin] = 0; imaginary[bin] = 0;
-      if (bin > 0 && bin < GRAIN / 2) { real[GRAIN - bin] = 0; imaginary[GRAIN - bin] = 0; }
+    if (synthesis < FAST || limit <= GRAIN / 2) {
+      const imaginary = new Float64Array(GRAIN);
+      fft(real, imaginary);
+      for (let bin = 0; bin <= GRAIN / 2; bin += 1) {
+        if (bin < limit) continue;
+        real[bin] = 0; imaginary[bin] = 0;
+        if (bin > 0 && bin < GRAIN / 2) { real[GRAIN - bin] = 0; imaginary[GRAIN - bin] = 0; }
+      }
+      fft(real, imaginary, true);
     }
-    fft(real, imaginary, true);
     const out = new Float64Array(plan.size);
-    const outImaginary = new Float64Array(plan.size);
     const gain = 1 / (Math.sqrt(squeeze) * grain.amplitude * sampleRate);
     const half = GRAIN * squeeze / 2;
     const [first, last] = [Math.max(0, Math.floor(grain.lead - half) - 2), Math.min(plan.size - 1, Math.ceil(grain.lead + half) + 2)];
@@ -253,6 +279,8 @@ export function pathGrains(emitter, scene, path, unbanded, band = 'full') {
       sum += out[sample];
     }
     removeMean(out, first, last, sum);
+    if (synthesis >= FAST) return realSpectrum(out);
+    const outImaginary = new Float64Array(plan.size);
     fft(out, outImaginary);
     return { re: out, im: outImaginary };
   }
@@ -312,7 +340,7 @@ function lowBandGrains(emitter, scene, path, source) {
     const inletDegrees = Math.acos(Math.max(-1, Math.min(1, axial))) * 180 / Math.PI;
     const { shaped, plain } = source.spectra(grain.components, inletDegrees, frequencies, azimuthDegrees(grain.velocity, grain.speed, departure));
     const psd = shaped.map((value, bin) => value + plain[bin]);
-    const frame = gaussianFrame(frameDeviates((emitter.seed ^ Math.imul(index + 1, 0x27d4eb2d) ^ STREAMS.low) >>> 0, size), psd, rate, size);
+    const frame = gaussianFrame(frameDeviates((emitter.seed ^ Math.imul(index + 1, 0x27d4eb2d) ^ STREAMS.low) >>> 0, size, scene.render.quality.synthesis), psd, rate, size);
     let mean = 0;
     for (let sample = 0; sample < size; sample += 1) { frame[sample] *= LOW_WINDOW[sample]; mean += frame[sample]; }
     removeMean(frame, 0, size - 1, mean);

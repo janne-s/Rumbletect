@@ -227,6 +227,7 @@ const VOLCANO_PANEL = Object.freeze({
   cone: () => null,
   wavefrontSources: (emitter, scene, placedPoint, candidates) => candidates.push({ point: volcanoSourcePosition(emitter, craterPosition(emitter, currentSurface())), emitted: emitter.startSeconds, group: `${emitter.id}:0` }),
   mergesSources: false,
+  grains: true,
   warnings: () => [],
   followAs: emitter => (emitter.follows ? null : { role: 'volcano', crater: { ...emitter.ventMetres }, startSeconds: emitter.startSeconds, category: emitter.category, paths: [] })
 });
@@ -251,6 +252,7 @@ const KIND_PANELS_EXTENDED = {
     cone: (path, now, profile) => machCone(path, now, profile, { profileAt: frontProfile, envelope: true }),
     wavefrontSources,
     mergesSources: false,
+    grains: true,
     warnings,
     followAs: (emitter, scene) => (!emitter.follows && isSupersonic(emitter, scene) ? { role: 'aircraft', size: emitter.engineClass === 'bomber' || ENGINE.classes[emitter.engineClass]?.civil ? 'bomber' : 'fighter' } : null)
   }),
@@ -273,6 +275,7 @@ const KIND_PANELS_EXTENDED = {
     cone: (path, now, profile, emitter, scene, member) => machCone(cachedSoundTracks(emitter, scene)[member], now, profile, { profileAt: frontProfile, envelope: true }),
     wavefrontSources,
     mergesSources: false,
+    grains: true,
     warnings: rocketWarnings,
     followAs: (emitter, scene) => {
       if (!cachedTracks(emitter, scene).some(path => supersonicIndex(path, scene.air) >= 0)) return null;

@@ -50,7 +50,16 @@ export const REFERENCE_CASES = Object.freeze(Object.entries(EMITTERS).flatMap(([
   { name: `${name}-terrain`, group: GROUP_OF[name], mode, pipeline: 'parts', scene: () => terrainScene(mode, emitter(overTerrain), options) }
 ]).concat(['jet', 'rocket', 'volcano'].map(mode => ({
   name: `${mode}-preview`, group: mode, mode, pipeline: 'parts', scene: () => previewScene(flatScene(mode, EMITTERS[mode][1](EMITTERS[mode][2][0])))
-}))));
+})), [
+  { name: 'jet-flat-fast', group: 'jet', mode: 'jet', pipeline: 'whole', scene: () => withQuality(flatScene('jet', EMITTERS.jet[1](8)), { synthesis: 1 }) },
+  { name: 'rocket-flat-fastest', group: 'rocket', mode: 'rocket', pipeline: 'whole', scene: () => withQuality(flatScene('rocket', EMITTERS.rocket[1](12)), { synthesis: 2 }) },
+  { name: 'volcano-terrain-coarse', group: 'volcano', mode: 'volcano', pipeline: 'parts', scene: () => withQuality(terrainScene('volcano', EMITTERS.volcano[1](5)), { synthesis: 2, coarseEchoes: true }) }
+]));
+
+function withQuality(scene, quality) {
+  scene.render.quality = { ...scene.render.quality, ...quality };
+  return scene;
+}
 
 function renderWhole(scene) {
   const prepared = prepareScene(scene);

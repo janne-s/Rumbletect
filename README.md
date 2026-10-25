@@ -132,7 +132,8 @@ active place and terrain travel with you when switching modes.
 - **Space** — Runs the main Render / Play / Stop action outside controls and
   dialogs.
 - **Render** and **Play** — The button renders the scene when it has changed,
-  then plays what the listening microphones hear.
+  then plays what the listening microphones hear. While a render runs, it
+  stops it (the square beside the spinner).
 - **Pause** — The button on the pressure plot holds playback where it is; Play
   goes on from there, Stop starts over.
 - **Scrubbing** — Press either plot or the small scene timeline to move playback
@@ -150,7 +151,10 @@ active place and terrain travel with you when switching modes.
   render computes, kept with the scene: the cutoff level, the highest
   frequency, the echo detail (the echo cells' size), a scattered echo's
   arrivals, a coarse forest (on a coarse frequency grid), and shared scatter (a
-  frame's scattered echoes spread in a few groups), with the cost against the
+  frame's scattered echoes spread in a few groups), the synthesis of grains
+  (exact; fast, the same up to rounding; fastest, other noise of the same
+  statistics), and coarse echoes (a grain's echoes leaving within 10° share
+  one spectrum), with the cost against the
   full computation and an estimate of its time from the last render; the
   preview; and the threads this device renders on.
 - **Preview** (turtle, beside Play or in the mobile view switches) — Renders a
