@@ -1,0 +1,20 @@
+{
+  "commit": "a643bec",
+  "cases": {
+    "jet-flat": "e16b4941f05588c24a4876ee872ae2ef21061b3160be6c3beb3c4cf552f46cc8",
+    "jet-terrain": "2e5339dfcda14c8ed82015bce45b74442b3e577ac6390590c5ee9441773c5850",
+    "airliner-flat": "3df69aecadcc6b30a9fe96110ccf70286c98ee58a6d03e4cd8a3b092601b2d56",
+    "airliner-terrain": "985ca70eb147d33b8830316016a32559c118a13decd984dcb00b18ce12a9081c",
+    "formation-flat": "f49b5c22a6ba52570ad3be9b4796d8e53792652a952ba2df4f051bfdbb62c2ff",
+    "formation-terrain": "61a7c69d787f66e002fecdc644a3a8a289e2d2276ed6b57f130c7ba3beef840b",
+    "rocket-flat": "c00f7a68709a238e490ec996c31881a42dd983e6d82456644849153f0b4ee7e0",
+    "rocket-terrain": "056ce297cb3ea76458e66c8dedd51e9518e53c21c83d31a3b55d81a9f2f54087",
+    "salvo-flat": "a2fac49c7bd3539b84ef38b4db065a2c7a6e1763e0bab426542cbed382611d6d",
+    "salvo-terrain": "fb5c619aa1a4c3e314a71dd50e60e5f71716acc9cd1dcc44ce4041b9f338ce87",
+    "volcano-flat": "d346dc99d353418da6f04c94d4c171ced8e501fdb5be17b626a1262b5b18d9af",
+    "volcano-terrain": "35f6519b2c94b59de3ca8d15a6edc0c6993dc5f1ed75e79e8e8c30ab264c950a",
+    "jet-preview": "d910a07028a4029f0b09c7f3efb534a20c4593f2acda34fe2002033971a01b57",
+    "rocket-preview": "6511195301c9df1da2ff2071860b7539588b131da7e3c09ef7ed5b31e42fd27f",
+    "volcano-preview": "5a9e15c62a410ad0eeaa65acb32ce905fa3fd151d739d9c0596b39c0c52e6009"
+  }
+}

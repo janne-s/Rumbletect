@@ -1,0 +1,12 @@
+import { GROUND } from '../src/shared/domain/constants.js';
+import { DEFAULT_PLACE, TERRAIN_DEFAULTS } from '../src/shared/domain/scene.js';
+import { buildPatch, patchRange, rangePatches } from '../src/shared/domain/terrain.js';
+
+/** Adopted from Boomtect `App/test/terrain-fixture.js` at b8b844a. */
+export function syntheticTerrain(height, { cells = 100, extentMetres = 4000, ...settings } = {}) {
+  const half = extentMetres / 2;
+  const perSide = Math.ceil(half / (GROUND.terrain.patchCells * extentMetres / cells));
+  const cellMetres = half / (perSide * GROUND.terrain.patchCells);
+  const patches = rangePatches(patchRange({ west: -half, east: half, south: -half, north: half }, cellMetres)).map(({ column, row }) => buildPatch(column, row, cellMetres, height));
+  return { ...TERRAIN_DEFAULTS, ...settings, names: [], latitude: DEFAULT_PLACE.latitude, longitude: DEFAULT_PLACE.longitude, cellMetres, datumMetres: height(0, 0), patches };
+}
