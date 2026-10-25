@@ -8,6 +8,8 @@ import { defaultAirliner, defaultFormation, defaultJet, defaultRocket, defaultSa
 import { defaultReceiver } from '../src/shared/domain/scene.js';
 import { syntheticTerrain } from './terrain-fixture.js';
 
+const forestedScene = mode => { const base = defaultScene(mode); return { ...base, ground: { ...base.ground, forest: true } }; };
+
 // Adopted from Boomtect `App/test/reference-scenes.js` at b8b844a; short versions of each kind's default.
 const flight = seconds => ({ startMetres: { x: -900, y: 0, z: 300 }, durationSeconds: seconds });
 const ascent = seconds => ({ ...defaultRocket().ascent, burnSeconds: seconds, throttleDownSeconds: seconds / 3, throttleUpSeconds: 2 * seconds / 3 });
@@ -27,10 +29,10 @@ const hill = (x, y) => 120 + 80 * Math.exp(-((x - 700) ** 2 + (y - 300) ** 2) / 
 
 const GROUP_OF = Object.freeze({ jet: 'jet', airliner: 'aircraft', formation: 'aircraft', rocket: 'rocket', salvo: 'rocket', volcano: 'volcano' });
 
-const flatScene = (mode, emitter) => parseScene({ ...defaultScene(mode), emitters: [emitter] });
+const flatScene = (mode, emitter) => parseScene({ ...forestedScene(mode), emitters: [emitter] });
 
 function terrainScene(mode, emitter, { rich = false } = {}) {
-  const base = defaultScene(mode);
+  const base = forestedScene(mode);
   const second = { ...defaultReceiver('receiver-2', 'Mic 2'), positionMetres: { ...base.receivers[0].positionMetres, x: base.receivers[0].positionMetres.x - 600, y: base.receivers[0].positionMetres.y + 900 }, headingDegrees: 120 };
   return parseScene({
     ...base,
