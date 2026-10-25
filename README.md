@@ -2,8 +2,8 @@
 
 Rumbletect designs the continuous sound of jets, airliners, rockets, and
 volcanic eruptions from their physics. Plan a flight or an ascent in 3D over
-real terrain, set the engine's power, place microphones, and hear the roar, the
-rumble from behind, the ground's comb, and the air's swirl. Listen in mono, as
+real terrain, set the engine's power, place microphones, and hear the roar
+trailing the aircraft, the ground's comb, and the air's swirl. Listen in mono, as
 a spaced stereo pair, or binaurally on headphones, and export WAV or
 Ambisonics. Made for sound design, built on physics.
 
