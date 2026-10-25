@@ -1245,6 +1245,12 @@ export function earliestArrival(paths) {
   return earliest;
 }
 
+export function latestArrival(paths) {
+  let latest = -Infinity;
+  for (let index = 0; index < paths.count; index += 1) latest = Math.max(latest, paths.seconds[index]);
+  return latest;
+}
+
 export function renderReceiverRange(preparedEmitters, receiver, scene, { fromSeconds = -Infinity, toSeconds = Infinity, onProgress = null, paths: traced = null, extents = null, earliestSeconds = null } = {}) {
   const sampleRate = scene.render.sampleRate;
   const profile = soundSpeedProfile(scene.air);
