@@ -403,7 +403,7 @@ B/C marks a part that combines the two.
 | Ground reflection, partly coherent | ground roughness of 5 cm (Rayleigh) and turbulence (Clifford & Lataitis) | B/C |
 | Scintillation | fitted to recordings | C |
 | Forest, under the canopy | ISO 9613-2 foliage attenuation, up to 200 m | B |
-| Forest reverberation | seeded diffuse tail at the microphone, octave times around 1.5 s at 1 kHz (Koli, Finland) | B/C |
+| Forest reverberation | seeded diffuse tail at the microphone with an early and a late slope per octave, fitted to eight measured forest responses (Koli, Finland), driven by each path's way under the canopy | B/C |
 | Surroundings | seeded diffuse tail at the microphone over level ground, fitted to recorded booms | C |
 | Distance loss below 100 % | creative easing of spreading | C |
 | Ambisonics | spherical harmonics, AmbiX | A |
