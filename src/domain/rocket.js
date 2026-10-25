@@ -283,6 +283,20 @@ function spectralTable(frequencies, diameter, velocity, stretch) {
   return { power, location, directivity };
 }
 
+const SHARED_TABLES = 8;
+const sharedTables = [];
+const sameValues = (a, b) => a.length === b.length && a.every((value, index) => value === b[index]);
+
+/** One table for every round of a salvo that shares its nozzle and frequency grid. */
+function sharedSpectralTable(frequencies, diameter, velocity, stretch) {
+  const found = sharedTables.find(entry => entry.diameter === diameter && entry.velocity === velocity && entry.stretch === stretch && sameValues(entry.frequencies, frequencies));
+  if (found) return found.table;
+  const table = spectralTable(frequencies, diameter, velocity, stretch);
+  sharedTables.unshift({ frequencies: Array.from(frequencies), diameter, velocity, stretch, table });
+  sharedTables.length = Math.min(sharedTables.length, SHARED_TABLES);
+  return table;
+}
+
 /**
  * The rocket's source along its ascent for `pathGrains`: power from thrust (B), SATURN's spectrum and directivity (B),
  * the ignition opening the spectrum upward (C), and frequencies still at the pad radiating without directivity (C).
@@ -297,7 +311,7 @@ export function rocketSource(emitter, scene, path) {
   const ignitionSeconds = ignitionSecondsOf(vehicle);
   const tables = new WeakMap();
   const tableFor = frequencies => {
-    if (!tables.has(frequencies)) tables.set(frequencies, spectralTable(frequencies, diameter, velocity, SPECTRUM.peakStrouhal / vehicle.peakStrouhal));
+    if (!tables.has(frequencies)) tables.set(frequencies, sharedSpectralTable(frequencies, diameter, velocity, SPECTRUM.peakStrouhal / vehicle.peakStrouhal));
     return tables.get(frequencies);
   };
   const sampleIndex = seconds => Math.min(path.seconds.length - 1, Math.max(0, Math.round((seconds - path.seconds[0]) / path.step)));

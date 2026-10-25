@@ -57,13 +57,19 @@ export function sampled(path, seconds) {
   return { position: { x: at(path.x), y: at(path.y), z: at(path.z) }, velocity: { x: at(path.vx), y: at(path.vy), z: at(path.vz) } };
 }
 
-function gaussianFrame(random, psd, sampleRate, size = GRAIN) {
+/** The normal deviates of a frame of `size`, two per bin between DC and Nyquist. */
+function frameDeviates(seed, size = GRAIN) {
+  const random = createRandom(seed);
+  return Float64Array.from({ length: size - 2 }, () => normalDeviate(random));
+}
+
+function gaussianFrame(deviates, psd, sampleRate, size = GRAIN) {
   const real = new Float64Array(size);
   const imaginary = new Float64Array(size);
   for (let bin = 1; bin < size / 2; bin += 1) {
     const scale = Math.sqrt(size * sampleRate * psd[bin] / 4);
-    real[bin] = scale * normalDeviate(random);
-    imaginary[bin] = scale * normalDeviate(random);
+    real[bin] = scale * deviates[2 * bin - 2];
+    imaginary[bin] = scale * deviates[2 * bin - 1];
     real[size - bin] = real[bin];
     imaginary[size - bin] = -imaginary[bin];
   }
@@ -77,11 +83,13 @@ const lowShare = frequency => 1 / (1 + (frequency / LOW_BAND.crossoverHz) ** 4);
 function banded(source, band) {
   if (band === 'full') return source;
   const share = band === 'low' ? lowShare : frequency => 1 - lowShare(frequency);
+  const weightsOf = new WeakMap();
   return {
     ...source,
     spectra(components, inletDegrees, frequencies) {
       const { shaped, plain } = source.spectra(components, inletDegrees, frequencies);
-      const weights = frequencies.map(share);
+      if (!weightsOf.has(frequencies)) weightsOf.set(frequencies, frequencies.map(share));
+      const weights = weightsOf.get(frequencies);
       return { shaped: shaped.map((value, index) => value * weights[index]), plain: plain.map((value, index) => value * weights[index]) };
     }
   };
@@ -187,6 +195,24 @@ export function pathGrains(emitter, scene, path, unbanded, band = 'full') {
     ...shockOf(source.crackle?.(grain.components))
   }]));
 
+  let noise = { index: -1 };
+
+  /** A grain's paths follow one another in the render, so its deviates and its envelope, the same toward every departure, are kept for the next. */
+  function noiseOf(index) {
+    if (noise.index === index) return noise;
+    const seed = salt => (emitter.seed ^ Math.imul(index + 1, 0x27d4eb2d) ^ salt) >>> 0;
+    const cutoff = source.packetHz(grains[index].components);
+    const lowPass = frequencies.map(frequency => (frequency > 0 ? 1 / (1 + (frequency / cutoff) ** 2) : 0));
+    const lowPassSum = lowPass.reduce((sum, value) => sum + value, 0) * binHz;
+    noise = {
+      index,
+      plain: frameDeviates(seed(STREAMS.fine)),
+      shaped: frameDeviates(seed(STREAMS.large)),
+      envelope: gaussianFrame(frameDeviates(seed(STREAMS.envelope)), lowPass.map(value => value / lowPassSum), sampleRate)
+    };
+    return noise;
+  }
+
   function emission(index, departure, plan) {
     const grain = grains[index];
     const cosine = grain.speed > 0 ? (grain.velocity.x * departure.x + grain.velocity.y * departure.y + grain.velocity.z * departure.z) / grain.speed : 1;
@@ -197,13 +223,10 @@ export function pathGrains(emitter, scene, path, unbanded, band = 'full') {
     const axial = grain.axis ? grain.axis.x * departure.x + grain.axis.y * departure.y + grain.axis.z * departure.z : cosine;
     const inletDegrees = Math.acos(Math.max(-1, Math.min(1, axial))) * 180 / Math.PI;
     const { shaped: shapedPsd, plain } = source.spectra(grain.components, inletDegrees, frequencies, azimuthDegrees(grain.velocity, grain.speed, departure));
-    const cutoff = source.packetHz(grain.components);
-    const lowPass = frequencies.map(frequency => (frequency > 0 ? 1 / (1 + (frequency / cutoff) ** 2) : 0));
-    const lowPassSum = lowPass.reduce((sum, value) => sum + value, 0) * binHz;
-    const stream = (psd, salt) => gaussianFrame(createRandom((emitter.seed ^ Math.imul(index + 1, 0x27d4eb2d) ^ salt) >>> 0), psd, sampleRate);
-    const plainFrame = stream(plain, STREAMS.fine);
-    const shapedFrame = stream(shapedPsd, STREAMS.large);
-    const envelope = stream(lowPass.map(value => value / lowPassSum), STREAMS.envelope);
+    const deviates = noiseOf(index);
+    const plainFrame = gaussianFrame(deviates.plain, plain, sampleRate);
+    const shapedFrame = gaussianFrame(deviates.shaped, shapedPsd, sampleRate);
+    const { envelope } = deviates;
     const rms = Math.sqrt(shapedPsd.reduce((sum, value) => sum + value, 0) * binHz);
     const shaped = shapeWaveform(shapedFrame, () => rms, envelope, source.shape);
     const crackle = source.crackle?.(grain.components);
@@ -289,7 +312,7 @@ function lowBandGrains(emitter, scene, path, source) {
     const inletDegrees = Math.acos(Math.max(-1, Math.min(1, axial))) * 180 / Math.PI;
     const { shaped, plain } = source.spectra(grain.components, inletDegrees, frequencies, azimuthDegrees(grain.velocity, grain.speed, departure));
     const psd = shaped.map((value, bin) => value + plain[bin]);
-    const frame = gaussianFrame(createRandom((emitter.seed ^ Math.imul(index + 1, 0x27d4eb2d) ^ STREAMS.low) >>> 0), psd, rate, size);
+    const frame = gaussianFrame(frameDeviates((emitter.seed ^ Math.imul(index + 1, 0x27d4eb2d) ^ STREAMS.low) >>> 0, size), psd, rate, size);
     let mean = 0;
     for (let sample = 0; sample < size; sample += 1) { frame[sample] *= LOW_WINDOW[sample]; mean += frame[sample]; }
     removeMean(frame, 0, size - 1, mean);

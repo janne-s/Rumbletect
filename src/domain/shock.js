@@ -30,13 +30,16 @@ export function shockDirectivityDecibels(shock, inletDegrees) {
 }
 
 /** Table VII's third-octave level re the unscaled overall level, at log S and an inlet angle, interpolated between its columns. */
-export function shockSpectrumDecibels(logStrouhal, inletDegrees) {
+export const shockSpectrumDecibels = (logStrouhal, inletDegrees) => betweenColumns(columnsAt(inletDegrees), logStrouhal);
+
+function columnsAt(inletDegrees) {
   const columns = SHOCK_NOISE.spectrum;
   const position = Math.min(columns.length - 1, Math.max(0, inletDegrees / 10));
   const lower = Math.min(columns.length - 2, Math.floor(position));
-  const share = position - lower;
-  return (1 - share) * columnDecibels(columns[lower], logStrouhal) + share * columnDecibels(columns[lower + 1], logStrouhal);
+  return { below: columns[lower], above: columns[lower + 1], share: position - lower };
 }
+
+const betweenColumns = ({ below, above, share }, logStrouhal) => (1 - share) * columnDecibels(below, logStrouhal) + share * columnDecibels(above, logStrouhal);
 
 function columnDecibels(column, logStrouhal) {
   const knots = SHOCK_NOISE.spectrumLogStrouhal;
@@ -49,20 +52,24 @@ function columnDecibels(column, logStrouhal) {
 }
 
 /** Stone's eq. 15 at the source's own frequency: the grain or near listen applies the Doppler shift. */
-export function shockStrouhal(shock, frequencyHz, inletDegrees) {
-  const { convectiveMach: mach } = shock;
-  const convection = Math.sqrt((1 + mach * Math.cos(inletDegrees * DEGREES)) ** 2 + SHOCK_NOISE.convectionSpread * mach * mach);
-  return frequencyHz * shock.beta * shock.diameterMetres / (SHOCK_NOISE.convectionShare * shock.velocityMetresPerSecond) * convection;
+export const shockStrouhal = (shock, frequencyHz, inletDegrees) => strouhalWith(shock, frequencyHz, shockConvection(shock, inletDegrees));
+
+function shockConvection({ convectiveMach: mach }, inletDegrees) {
+  return Math.sqrt((1 + mach * Math.cos(inletDegrees * DEGREES)) ** 2 + SHOCK_NOISE.convectionSpread * mach * mach);
 }
+
+const strouhalWith = (shock, frequencyHz, convection) => frequencyHz * shock.beta * shock.diameterMetres / (SHOCK_NOISE.convectionShare * shock.velocityMetresPerSecond) * convection;
 
 /** Power spectral density, Pa²/Hz at 1 m from the nozzle, toward `inletDegrees`; each third-octave level spread over its band. */
 export function shockSpectrum(shock, inletDegrees, frequencies) {
   const psd = new Float64Array(frequencies.length);
   if (!shock) return psd;
   const level = shock.decibels + shockDirectivityDecibels(shock, inletDegrees);
+  const columns = columnsAt(inletDegrees);
+  const convection = shockConvection(shock, inletDegrees);
   frequencies.forEach((frequency, index) => {
     if (frequency <= 0) return;
-    const band = level + shockSpectrumDecibels(Math.log10(shockStrouhal(shock, frequency, inletDegrees)), inletDegrees);
+    const band = level + betweenColumns(columns, Math.log10(strouhalWith(shock, frequency, convection)));
     psd[index] = REFERENCE_SOUND_PRESSURE_PA ** 2 * 10 ** (band / 10) / (THIRD_OCTAVE_SHARE * frequency);
   });
   return psd;
