@@ -1,8 +1,9 @@
 import { GROUND, RENDER, RENDER_COST, VIEW } from '../domain/constants.js';
 import { GROUND_LABELS, GROUND_TYPES } from '../domain/ground.js';
+import { diffuseTailBytes } from '../domain/forest.js';
 import { newSeed, randomId } from '../domain/random.js';
 import { frontProfile, PATH_DIRECT, PATH_SCATTER, PATH_SHADOW, pathProfile, soundSpeedProfile, travelSeconds, wavefront } from '../domain/refraction.js';
-import { addTails, arrivalTable, assemblePaths, earliestArrival, echoesActive, finishSum, frameExtents, pathRange, hasTails, joinResponses, partitionSeconds, previewScene, echoFreeShare, receiverResult, resultDifference, sumSegments, tailSamples, tailStretches } from '../domain/render.js';
+import { addTails, arrivalTable, assemblePaths, earliestArrival, echoesActive, finishSum, frameExtents, pathRange, hasTails, joinResponses, partitionSeconds, previewScene, echoFreeShare, queueTails, receiverResult, resultDifference, sumSegments, tailSamples, tailStretches } from '../domain/render.js';
 import { defaultReceiver, headingToward, placeLabel, TERRAIN_DEFAULTS } from '../domain/scene.js';
 import { AMBISONIC_CONVENTION, availableItems, exportDownload, exportFiles, exportPlan, exportSizes, fileStem, itemFiles } from './export-package.js';
 import { soundHandoff } from '../domain/sound-handoff.js';
@@ -896,26 +897,29 @@ export function startFrame(tect) {
       return;
     }
     const lengths = sums.map((sum, index) => (responses[index] ? sum.channels[0].length - tailSamples(responses[index]) : 0));
-    const total = lengths.reduce((a, b) => a + b, 0);
+    const stretch = RENDER.tailStretchSeconds * scene.render.sampleRate;
     const jobs = lengths.flatMap((length, index) => (length > 0
-      ? tailStretches(length, Math.max(1, Math.round(info.workerCount * length / total)), tailSamples(responses[index])).map(([from, to]) => ({ index, from, to }))
+      ? tailStretches(length, Math.ceil(length / stretch), tailSamples(responses[index])).map(([from, to]) => ({ index, from, to }))
       : []));
     const finish = () => finishRender(scene, arrivals, sums, parts, { sources: info.sources, workers: info.workerCount, milliseconds: performance.now() - info.started, variant: info.variant });
     if (!jobs.length) { finish(); return; }
-    let remaining = jobs.length;
+    const largest = Math.max(...jobs.map(({ index, from, to }) => diffuseTailBytes(to - from, responses[index], sums[index].channels.length, Boolean(sums[index].send))));
+    const concurrent = Math.max(1, Math.min(info.workerCount, jobs.length, Math.floor(RENDER.tailBytesBudget / largest)));
+    let added = 0;
     operation('render', 'Adding tails', { share: 0 });
-    jobs.forEach(({ index, from, to }) => {
+    queueTails(jobs.length, concurrent, (position, finished) => {
+      const { index, from, to } = jobs[position];
       const pressure = sums[index].channels[0].slice(from, to);
       const send = sums[index].send?.slice(from, to) ?? null;
       spawnWorker(revision, { type: 'tails', pressure, send, responses: responses[index], channels: sums[index].channels.length }, {
-        onResult: data => {
+        onResult: data => finished(() => {
           addTails(sums[index], from, data.tails);
-          remaining -= 1;
-          operation('render', 'Adding tails', { share: 1 - remaining / jobs.length });
-          if (remaining === 0) finish();
-        }
+          added += 1;
+          operation('render', 'Adding tails', { share: added / jobs.length });
+        })
       }, [pressure.buffer, ...(send ? [send.buffer] : [])]);
-    });
+    }, finish);
+    releaseWorkers(state.workers.filter(entry => !entry.job));
   }
 
   function finishRender(scene, arrivals, sums, parts, info) {
