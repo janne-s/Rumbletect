@@ -103,7 +103,7 @@ test('a jet and a rocket show their path together after the device, with Turn, i
   const { defaultRocket } = await import('../src/domain/scene.js');
   const { rocketMacros } = await import('../src/ui/macros.js');
   assert.deepEqual(macrosFor(defaultAirliner()).map(macro => macro.label), ['Category', 'Power', 'Height', 'Climb', 'Heading', 'Mach', 'Acceleration', 'Turn', 'Turn starts', 'Turn radius', 'Flight time']);
-  assert.deepEqual(rocketMacros(defaultRocket()).map(macro => macro.label), ['Category', 'Size', 'Heading', 'Launch angle', 'Turn', 'Turn starts', 'Turn length', 'Top speed', 'Burn time']);
+  assert.deepEqual(rocketMacros(defaultRocket()).map(macro => macro.label), ['Category', 'Size', 'Propellant', 'Heading', 'Launch angle', 'Turn', 'Turn starts', 'Turn length', 'Top speed', 'Burn time']);
   const rocket = defaultRocket();
   rocketMacros(rocket).find(macro => macro.label === 'Turn length').write(rocket, 0);
   assert.equal(rocket.ascent.turnLengthPercent, 1);

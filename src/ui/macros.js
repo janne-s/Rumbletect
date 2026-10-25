@@ -1,5 +1,5 @@
 import { AIRLINER_CLASSES, ENGINE_CLASSES, engineAtPower, powerLabel, powerOfEngine } from '../domain/engine.js';
-import { PARAMETERS } from '../domain/scene.js';
+import { PARAMETERS, PROPELLANTS } from '../domain/scene.js';
 import { ENGINE, ROCKET, VOLCANO } from '../domain/constants.js';
 import { volcanoCategory } from '../domain/volcano.js';
 import { categoryEngine, nearestCategory, sizedRocket, typicalLengthMetres } from '../domain/rocket.js';
@@ -184,6 +184,20 @@ const rocketSize = {
   entry: { unit: 'kN', get: item => totalOf(item) / 1000, set: (item, value) => resize(item, value * 1000) }
 };
 
+/** A propellant changes the nozzle at the same total thrust, as in the details. */
+const rocketPropellant = {
+  label: 'Propellant',
+  steps: PROPELLANTS.length - 1,
+  read: item => PROPELLANTS.indexOf(item.propellant) / (PROPELLANTS.length - 1),
+  write: (item, t) => {
+    const propellant = PROPELLANTS[Math.round(t * (PROPELLANTS.length - 1))];
+    if (propellant === item.propellant) return;
+    item.propellant = propellant;
+    item.engine = { ...item.engine, ...sizedRocket(totalOf(item), item.engine.engines, propellant).engine };
+  },
+  show: item => ROCKET.propellants[item.propellant].label
+};
+
 export const thrustLabel = newtons => (newtons >= 1e6 ? `${+(newtons / 1e6).toPrecision(3)} MN` : newtons >= 1e3 ? `${+(newtons / 1e3).toPrecision(3)} kN` : `${+newtons.toPrecision(3)} N`);
 
 const setAscent = (item, key, value) => { item.ascent = { ...item.ascent, [key]: value }; };
@@ -260,7 +274,7 @@ const salvoDuration = {
 };
 
 export function rocketMacros(emitter, { onset: withOnset = false } = {}) {
-  const list = [...(emitter.kind === 'salvo' ? [salvoRounds, salvoDuration] : []), rocketCategory, rocketSize, flightHeading, rocketLaunch, rocketTurn, rocketTurnStart, rocketTurnLength, rocketBurnout, rocketBurnTime];
+  const list = [...(emitter.kind === 'salvo' ? [salvoRounds, salvoDuration] : []), rocketCategory, rocketSize, rocketPropellant, flightHeading, rocketLaunch, rocketTurn, rocketTurnStart, rocketTurnLength, rocketBurnout, rocketBurnTime];
   return withOnset ? [...list, onset] : list;
 }
 

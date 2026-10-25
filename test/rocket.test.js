@@ -198,3 +198,13 @@ test('a rocket\'s burn time is a quick control, from a second to the longest bur
   burn.entry.set(item, 12.5);
   assert.equal(item.ascent.burnSeconds, 12.5);
 });
+
+test('a rocket\'s propellant is a quick control that keeps its total thrust', () => {
+  const rocket = defaultRocket();
+  const propellant = rocketMacros(rocket).find(macro => macro.label === 'Propellant');
+  const before = rocket.engine.engines * rocket.engine.thrustKilonewtons;
+  propellant.write(rocket, 1);
+  assert.equal(rocket.propellant, 'hydrogen');
+  assert.ok(Math.abs(rocket.engine.engines * rocket.engine.thrustKilonewtons / before - 1) < .02);
+  assert.equal(propellant.show(rocket), ROCKET.propellants.hydrogen.label);
+});
