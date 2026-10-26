@@ -435,8 +435,8 @@ parameters a scene sets, with their defaults and ranges, in
 ## Sounds from words
 
 Ask Claude for a sound in words, such as "a low fighter over a lake on a damp
-evening" or "an airliner landing at Helsinki airport, heard from the runway's
-end". Claude places the source and the microphone from your description,
+evening" or "an airliner landing at Heathrow, heard from the end of the
+runway". Claude places the source and the microphone from your description,
 renders the sound on your machine, checks it by measurement, and hands over the
 WAV files and the scene to open in the app. There are no servers to set up.
 
