@@ -200,6 +200,7 @@ export function pathGrains(emitter, scene, path, unbanded, band = 'full') {
   const grains = [];
   for (let index = 0; index * hopSeconds <= duration; index += 1) {
     const centre = path.seconds[0] + index * hopSeconds;
+    if (index === 0) { grains.push({ heard: false }); continue; }
     const { position, velocity } = sampled(path, centre);
     const speed = Math.hypot(velocity.x, velocity.y, velocity.z);
     const components = source.components({ seconds: centre, position, velocity, speed });
@@ -311,6 +312,7 @@ function lowBandGrains(emitter, scene, path, source) {
   const grains = [];
   for (let index = 0; index * grainSeconds / 2 <= duration; index += 1) {
     const centre = path.seconds[0] + index * grainSeconds / 2;
+    if (index === 0) { grains.push({ heard: false }); continue; }
     const { position, velocity } = sampled(path, centre);
     const speed = Math.hypot(velocity.x, velocity.y, velocity.z);
     const components = source.components({ seconds: centre, position, velocity, speed });
