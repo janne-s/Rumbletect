@@ -22,6 +22,8 @@ Rumbletect is a creative sound tool, not a measurement: levels are uncalibrated 
 
 ## Notes
 
+- **A real place:** put its GPS coordinates in `place` and `"terrain": { "enabled": true }` in the scene, and the render loads the terrain. Ask for coordinates rather than sending an address or a home to a search service unasked. README "Place and terrain".
+- **Boom and engine together** (a supersonic jet, a rocket launch with its booms): follow README "Boomtect and Rumbletect in one scene" with Boomtect cloned beside this repository, and hand over the mix and each part.
 - The file starts at the first arriving sound, so a pass is earlier in the file than in the scene's time.
 - **A collection whose levels compare** (a series growing louder, takes to cut together): each file is otherwise scaled to its own peak, which hides the differences. Render the loudest scene first, then set `"render": { "levelMode": "fixed", "fullScalePa": <its fullScalePa> }` in every scene. Run several renders at once; each uses one core.
 - The same scene and seed give the same sound; a new `seed` gives another take.
