@@ -450,8 +450,8 @@ app's export gain.
 
 The JSON on stdout tells an agent, which cannot listen, what came out: per
 microphone the length, the time within 40 dB of the peak, the peak in dB SPL,
-the A-weighted level and spectral centroid of the loudest second, and that
-second's octave shape in dB below its loudest band. The same scene and seed
+the loudest A-weighted level (fast), and the spectral centroid and octave
+shape of the loudest second in dB below its loudest band. The same scene and seed
 give the same sound.
 
 `examples/` holds three starting points: a low fighter over a lake, a distant
