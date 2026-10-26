@@ -52,7 +52,8 @@ active place and terrain travel with you when switching modes.
 - **Height, climb, heading, Mach, acceleration** — Where it flies and how
   fast, speeding up or slowing down along the flight. Mach is relative to the
   speed of sound at the flight's height, as in Boomtect, so a linked jet flies
-  the same path in both.- **Turn, turn starts, turn radius** — Flies straight, then turns by the set
+  the same path in both.
+- **Turn, turn starts, turn radius** — Flies straight, then turns by the set
   angle on the set radius from the set second, up to five full circles; a
   long turn circles until the flight ends. Rings on the path mark the turn.
 - **Flight time** — How long it flies. Setting it ends an automatic flight
