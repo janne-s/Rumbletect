@@ -23,6 +23,7 @@ Rumbletect is a creative sound tool, not a measurement: levels are uncalibrated 
 ## Notes
 
 - The file starts at the first arriving sound, so a pass is earlier in the file than in the scene's time.
+- **A collection whose levels compare** (a series growing louder, takes to cut together): each file is otherwise scaled to its own peak, which hides the differences. Render the loudest scene first, then set `"render": { "levelMode": "fixed", "fullScalePa": <its fullScalePa> }` in every scene. Run several renders at once; each uses one core.
 - The same scene and seed give the same sound; a new `seed` gives another take.
 - Over water or rigid ground a passing source sweeps through a phasing comb; that is the reflection, not a fault.
 - For booms, blasts, and thunder use Boomtect, which has the same command.
