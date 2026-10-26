@@ -3,12 +3,12 @@ import { ENGINE, JET, JET_FLIGHT, LOW_BAND, PROPAGATION, SHOCK_FORMATION, SYNTHE
 import { addAirframe, airframeAt } from './airframe.js';
 import { powerOfEngine, streamsOf } from './engine.js';
 import { addTurbomachinery, referencePower, turbomachineryAt } from './turbomachinery.js';
-import { jetComponents, jetSpectra, speedOfSound } from './jet.js';
+import { jetComponents, jetSpectra } from './jet.js';
 import { shapeWaveform, waveformShape } from './waveform.js';
 import { fft, nextPowerOfTwo, realSpectrum } from '../shared/domain/fft.js';
 import { createRandom, normalDeviate, normalDeviates } from '../shared/domain/random.js';
 import { sourceTable } from '../shared/domain/source-table.js';
-import { flightPath, formationMembers } from '../shared/domain/trajectory.js';
+import { flightPath, formationMembers, soundSpeedAt } from '../shared/domain/trajectory.js';
 import { PARAMETERS } from './scene.js';
 
 const GRAIN = PROPAGATION.grainSamples;
@@ -23,12 +23,12 @@ const withTurn = ({ arcSeconds, ...path }) => ({ ...path, turnSeconds: arcSecond
 const cut = (path, kept) => Object.fromEntries(Object.entries(path).map(([key, values]) => [key, Array.isArray(values) && key !== 'arcSeconds' ? values.slice(0, kept) : values]));
 
 /**
- * The jet's flight in still air of the ground's temperature, as the near listen flew it. With `autoDuration` it
+ * The jet's flight, its Mach relative to the sound speed at its height as in Boomtect. With `autoDuration` it
  * flies on until every microphone is `JET_FLIGHT.hearingDecibels` below its closest approach by spreading.
  */
 export function jetPath(emitter, scene) {
   if (emitter.paths) return followedPath(emitter.paths[0]);
-  const air = { ...scene.air, refraction: false };
+  const { air } = scene;
   const flight = { ...emitter, turnDegreesPerSecond: 0, arc: arcOf(emitter) };
   if (!emitter.autoDuration) return withTurn(flightPath(flight, air));
   const heard = heardFlight(flightPath({ ...emitter, turnDegreesPerSecond: 0, durationSeconds: PARAMETERS.flightSeconds.maximum }, air), scene);
@@ -192,7 +192,6 @@ export function pathGrains(emitter, scene, path, unbanded, band = 'full') {
   const source = banded(unbanded, band);
   const { air } = scene;
   const sampleRate = scene.render.sampleRate;
-  const sound = speedOfSound(air.temperatureCelsius);
   const grainSeconds = GRAIN / sampleRate;
   const hopSeconds = grainSeconds / 2;
   const duration = (path.seconds.length - 1) * path.step;
@@ -210,9 +209,9 @@ export function pathGrains(emitter, scene, path, unbanded, band = 'full') {
     let sum = 0;
     for (const part of [side.shaped, side.plain]) for (let bin = 0; bin < part.length; bin += 1) sum += part[bin];
     const power = sum * binHz;
-    grains.push({ centre, position: source.place?.(components, position, axis) ?? position, velocity, speed, axis, components, amplitude: Math.sqrt(power), heard: power > 0 });
+    grains.push({ centre, position: source.place?.(components, position, axis) ?? position, velocity, speed, sound: soundSpeedAt(scene.air, position.z), axis, components, amplitude: Math.sqrt(power), heard: power > 0 });
   }
-  for (const grain of grains) if (grain.heard) grain.lead = leadSamples(GRAIN, grain.speed / sound);
+  for (const grain of grains) if (grain.heard) grain.lead = leadSamples(GRAIN, grain.speed / grain.sound);
   const rows = grains.flatMap((grain, index) => (!grain.heard ? [] : [{
     positionMetres: grain.position, direction: null, elementMetres: 0, emissionSeconds: grain.centre - grain.lead / sampleRate, amplitudePaMetres: grain.amplitude,
     pulse: 'grain', noiseSeed: index, durationSeconds: grainSeconds, decay: 0, spanSeconds: 2 * grain.lead / sampleRate, linearRadiusMetres: 0,
@@ -241,7 +240,7 @@ export function pathGrains(emitter, scene, path, unbanded, band = 'full') {
   function emission(index, departure, plan) {
     const grain = grains[index];
     const cosine = grain.speed > 0 ? (grain.velocity.x * departure.x + grain.velocity.y * departure.y + grain.velocity.z * departure.z) / grain.speed : 1;
-    const mach = grain.speed / sound;
+    const mach = grain.speed / grain.sound;
     const signed = 1 - mach * cosine;
     const compression = Math.sign(signed || 1) * Math.max(JET_FLIGHT.smallestCompression, Math.abs(signed));
     const squeeze = Math.abs(compression);
@@ -302,7 +301,6 @@ const LOW_WINDOW = Float64Array.from({ length: LOW_BAND.internalSamples }, (_, i
  */
 function lowBandGrains(emitter, scene, path, source) {
   const sampleRate = scene.render.sampleRate;
-  const sound = speedOfSound(scene.air.temperatureCelsius);
   const size = LOW_BAND.internalSamples;
   const grainSamples = nextPowerOfTwo(Math.round(LOW_BAND.grainSeconds * sampleRate));
   const grainSeconds = grainSamples / sampleRate;
@@ -322,9 +320,9 @@ function lowBandGrains(emitter, scene, path, source) {
     let sum = 0;
     for (const part of [side.shaped, side.plain]) for (let bin = 1; bin < part.length; bin += 1) sum += part[bin];
     const power = sum * binHz;
-    grains.push({ centre, position: source.place?.(components, position, axis) ?? position, velocity, speed, axis, components, amplitude: Math.sqrt(power), heard: power > 0 });
+    grains.push({ centre, position: source.place?.(components, position, axis) ?? position, velocity, speed, sound: soundSpeedAt(scene.air, position.z), axis, components, amplitude: Math.sqrt(power), heard: power > 0 });
   }
-  for (const grain of grains) if (grain.heard) grain.lead = leadSamples(grainSamples, grain.speed / sound) / sampleRate;
+  for (const grain of grains) if (grain.heard) grain.lead = leadSamples(grainSamples, grain.speed / grain.sound) / sampleRate;
   const rows = grains.flatMap((grain, index) => (!grain.heard ? [] : [{
     positionMetres: grain.position, direction: null, elementMetres: 0, emissionSeconds: grain.centre - grain.lead, amplitudePaMetres: grain.amplitude,
     pulse: 'grain', noiseSeed: index, durationSeconds: grainSeconds, decay: 0, spanSeconds: 2 * grain.lead, linearRadiusMetres: 0
@@ -333,7 +331,7 @@ function lowBandGrains(emitter, scene, path, source) {
   function emission(index, departure, plan) {
     const grain = grains[index];
     const cosine = grain.speed > 0 ? (grain.velocity.x * departure.x + grain.velocity.y * departure.y + grain.velocity.z * departure.z) / grain.speed : 1;
-    const signed = 1 - grain.speed / sound * cosine;
+    const signed = 1 - grain.speed / grain.sound * cosine;
     const compression = Math.sign(signed || 1) * Math.max(JET_FLIGHT.smallestCompression, Math.abs(signed));
     const squeeze = Math.abs(compression);
     const axial = grain.axis ? grain.axis.x * departure.x + grain.axis.y * departure.y + grain.axis.z * departure.z : cosine;
