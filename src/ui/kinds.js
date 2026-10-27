@@ -137,7 +137,6 @@ function rocketDetails(emitter, { updateEmitter }) {
     item.engine = { ...item.engine, ...sizedRocket(totalThrustNewtons(item), item.engine.engines, propellant).engine };
   });
   const section = (title, build) => ({ title, build });
-  const vehicle = vehicleOf(emitter);
   return [
     section('Placement', container => {
       textField(container, { label: 'Name', value: emitter.name, onCommit: set('name') });
@@ -153,10 +152,26 @@ function rocketDetails(emitter, { updateEmitter }) {
     section('Set by category', container => {
       numberField(container, { key: 'lengthMetres', value: emitter.lengthMetres, onCommit: set('lengthMetres') });
       selectField(container, { label: 'Propellant', value: emitter.propellant, options: PROPELLANTS.map(key => [key, ROCKET.propellants[key].label]), reliability: 'B', onCommit: choose });
-      ['engines', 'thrustKilonewtons', 'exitVelocityMetresPerSecond', 'exitDiameterMetres', 'efficiencyPercent'].forEach(key => numberField(container, { key, value: emitter.engine[key], onCommit: setIn('engine', key) }));
+      const engineKeys = ['engines', 'thrustKilonewtons', 'exitVelocityMetresPerSecond', 'exitDiameterMetres', 'efficiencyPercent'];
+      engineKeys.forEach(key => numberField(container, { key, value: emitter.engine[key], onCommit: setIn('engine', key) }));
+      const draft = { ...emitter, engine: { ...emitter.engine } };
       const note = document.createElement('p');
       note.className = 'field-note';
-      note.textContent = `${thrustLabel(totalThrustNewtons(emitter))} in all · plume ${vehicle.effectiveDiameterMetres < 1 ? `${Math.round(vehicle.effectiveDiameterMetres * 100)} cm` : `${vehicle.effectiveDiameterMetres.toFixed(2)} m`} across · peak ${peakFrequencyHz(vehicle) < 100 ? peakFrequencyHz(vehicle).toFixed(1) : Math.round(peakFrequencyHz(vehicle))} Hz`;
+      const showNote = () => {
+        const vehicle = vehicleOf(draft);
+        note.textContent = `${thrustLabel(totalThrustNewtons(draft))} in all · plume ${vehicle.effectiveDiameterMetres < 1 ? `${Math.round(vehicle.effectiveDiameterMetres * 100)} cm` : `${vehicle.effectiveDiameterMetres.toFixed(2)} m`} across · peak ${peakFrequencyHz(vehicle) < 100 ? peakFrequencyHz(vehicle).toFixed(1) : Math.round(peakFrequencyHz(vehicle))} Hz`;
+      };
+      const preview = ({ target }) => {
+        const key = target.dataset.key;
+        if (!engineKeys.includes(key)) return;
+        const value = Number(target.value);
+        const parameter = PARAMETERS[key];
+        if (target.value === '' || !Number.isFinite(value) || value < parameter.minimum || value > parameter.maximum || (parameter.integer && !Number.isInteger(value))) return;
+        draft.engine[key] = value;
+        showNote();
+      };
+      for (const event of ['input', 'change', 'focusout']) container.addEventListener(event, preview);
+      showNote();
       container.append(note);
       checkboxField(container, { label: 'Water on the pad', value: emitter.ascent.water, reliability: 'B', onCommit: setIn('ascent', 'water') });
     }),
