@@ -133,6 +133,8 @@ active place and terrain travel with you when switching modes.
 
 ## Listening
 
+- **Actions** — On narrow screens, ⋯ beside GitHub holds Open, Save, Export,
+  and the linked tect's controls. Its dot shows the connection state.
 - **Space** — Runs the main Render / Play / Stop action outside controls and
   dialogs.
 - **Render** and **Play** — The button renders the scene when it has changed,

@@ -1,6 +1,6 @@
 export * from '../shared/domain/constants.js';
 
-export const APP_VERSION = '0.1.0';
+export const APP_VERSION = '0.1.1';
 
 export const MODEL_VERSION = '0.2.0';
 
