@@ -7,7 +7,7 @@ trailing the aircraft, the ground's comb, and the air's swirl. Listen in mono, a
 a spaced stereo pair, or binaurally on headphones, and export WAV or
 Ambisonics. Made for sound design, built on physics.
 
-Or ask Claude for a sound in words: see [Sounds from words](#sounds-from-words).
+Or ask an AI assistant for a sound in words: see [Sounds from words](#sounds-from-words).
 
 See it live: [**https://janne-s.github.io/Rumbletect/**](https://janne-s.github.io/Rumbletect/)
 
