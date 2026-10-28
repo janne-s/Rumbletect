@@ -67,7 +67,7 @@ test('rocket envelope origins follow the acoustic plume positions used by its gr
   rocket.ascent = { ...rocket.ascent, burnSeconds: 8, burnoutMetresPerSecond: 64 };
   rocket.launchDegrees = 45;
   const [path] = cachedSoundTracks(rocket, scene);
-  const { rows } = rocketGrains(rocket, scene);
+  const rows = rocketGrains(rocket, scene).rows.filter(row => row.pulse === 'grain');
   assert.ok(rows.length > 0);
   for (const row of rows) {
     const position = (row.emissionSeconds + row.durationSeconds - path.seconds[0]) / path.step;

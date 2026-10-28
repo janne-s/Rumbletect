@@ -1,9 +1,10 @@
 import { RENDER, ROCKET } from './constants.js';
 import { mergedGrains, pathGrains } from './grains.js';
-import { ascentPath, rocketSource } from './rocket.js';
+import { ascentPath, ignitionPulse, rocketSource } from './rocket.js';
 import { salvoRounds } from './salvo.js';
 import { waveformShape } from './waveform.js';
 import { speedOfSoundMetresPerSecond } from '../shared/domain/air.js';
+import { sourceTable } from '../shared/domain/source-table.js';
 import { terrainSurface } from '../shared/domain/terrain.js';
 
 const ROCKET_SHAPE = waveformShape({ skewness: ROCKET.skewness, kurtosis: ROCKET.kurtosis });
@@ -38,5 +39,12 @@ export function heardAscents(emitter, scene) {
   return rounds.flatMap((round, index) => (counts[index] > 1 ? [{ round, path: kept(paths[index], counts[index]) }] : []));
 }
 
-/** The salvo's rounds as one emitter. */
-export const rocketGrains = (emitter, scene, band = 'full') => mergedGrains(heardAscents(emitter, scene).map(({ round, path }) => pathGrains(round, scene, path, { ...rocketSource(round, scene, path), shape: ROCKET_SHAPE }, band)));
+/** The salvo's rounds as one emitter, each with its ignition pulse above the low band. */
+export function rocketGrains(emitter, scene, band = 'full') {
+  const ascents = heardAscents(emitter, scene);
+  const grains = mergedGrains(ascents.map(({ round, path }) => pathGrains(round, scene, path, { ...rocketSource(round, scene, path), shape: ROCKET_SHAPE }, band)));
+  const pulses = band === 'low' ? [] : ascents.map(({ round }) => ignitionPulse(round, scene)).filter(Boolean);
+  if (!pulses.length) return grains;
+  const rows = [...grains.rows, ...pulses];
+  return { ...grains, sources: sourceTable(rows), rows };
+}

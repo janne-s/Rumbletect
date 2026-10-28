@@ -372,14 +372,28 @@ export const ROCKET = Object.freeze({
   /** Class B: liquid engines are held down until running, SpaceX's T0 3 s after ignition (Hart et al. 2025); solid motors lift off at ignition. */
   holdSeconds: 3,
   /**
-   * Class C: the spectrum opens from low to high frequencies over about 1.2 s at a super-heavy's ignition (owner's
-   * Starship recordings 4 and 7, 74.4 MN, engines started in turn); smaller rockets as the cube root of thrust, a
-   * 100 kN motor in about 0.13 s, never under 0.05 s.
+   * Class C: the spectrum opens from low to high frequencies as a cluster's engines start in turn, this long for each
+   * engine after the first: Starship's 33 in about 1.2 s (owner's recordings 4 and 7), five Merlins' main rise in
+   * 0.15 s (recording 3); a single motor reaches full level within 5 ms (recordings 2 and 10).
    */
-  ignitionSeconds: 1.2,
-  ignitionReferenceNewtons: 74.4e6,
-  shortestIgnitionSeconds: .05,
+  ignitionSecondsPerEngine: .0375,
+  shortestIgnitionSeconds: .005,
   ignitionCornerHz: Object.freeze([10, 20000]),
+  /**
+   * Decision 19, the ignition pulse at the pad: a Friedlander shape (B, Ryan et al. 1981: a positive pulse and a
+   * negative after-phase), its peak a share of the steady burn's omnidirectional RMS at the same distance (C: Falcon 9
+   * 120–126 dB at 0.75 km, Kellison et al. 2026, rendered 123 dB with the ground's doubling; a solid motor about 3 in
+   * recording 10 and 10 at Artemis-I's 146 dB at 1.8 km), its positive phase per metre of plume width (C: Falcon 9's
+   * 2–3 Hz peak; the Shuttle's 6 Hz for solids).
+   */
+  ignitionPulse: Object.freeze({
+    peakPerSteady: Object.freeze({ solid: 4, liquid: .33 }),
+    secondsPerMetre: Object.freeze({ solid: .0058, liquid: .025 }),
+    shortestSeconds: .0005,
+    decay: 1,
+    linearPressureShare: .04,
+    offDecibels: -60
+  }),
   /** Class C: frequencies whose source has not yet left the flame deflector (Mathews 2025, plume emergence) radiate without directivity, this much weaker. */
   padLossDecibels: 6,
   /** Class B: water deluge reduces launch noise by 3–5 dB (Gee, Lubert & James 2024), applied to the pad phase. */

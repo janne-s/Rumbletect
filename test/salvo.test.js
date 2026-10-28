@@ -55,13 +55,15 @@ test('a salvo\'s grains are every round\'s, and each grain is synthesised by its
   const heard = heardAscents(scene.emitters[0], scene);
   assert.equal(heard.length, 40);
   const single = heard.map(({ round }) => rocketGrains(round, scene));
+  const grainRows = grains => grains.rows.filter(row => row.pulse === 'grain');
   assert.equal(salvo.rows.length, single.reduce((sum, item) => sum + item.rows.length, 0));
-  assert.equal(new Set(salvo.rows.map(row => row.noiseSeed)).size, salvo.rows.length);
+  assert.equal(salvo.rows.filter(row => row.pulse === 'friedlander').length, 40);
+  assert.equal(new Set(grainRows(salvo).map(row => row.noiseSeed)).size, grainRows(salvo).length);
   const plan = { size: 8192 };
   const departure = { x: 0, y: -1, z: 0 };
   const last = single.at(-1);
-  const lastRow = salvo.rows.length - last.rows.length + 3;
-  assert.deepEqual(salvo.emission(salvo.rows[lastRow].noiseSeed, departure, plan).re, last.emission(last.rows[3].noiseSeed, departure, plan).re);
+  const lastRow = grainRows(salvo).length - grainRows(last).length + 3;
+  assert.deepEqual(salvo.emission(grainRows(salvo)[lastRow].noiseSeed, departure, plan).re, last.emission(grainRows(last)[3].noiseSeed, departure, plan).re);
 });
 
 test('an Artillery round burns out at a Grad\'s 690 m/s and flies straight off its tube', () => {

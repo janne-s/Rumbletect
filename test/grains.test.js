@@ -88,7 +88,7 @@ test('a fast receding grain, stretched by 1 + M, stays whole inside its frame in
   const receding = { x: -Math.sin(Math.PI / 2) * Math.cos(radians), y: 0, z: -Math.sin(radians) };
   for (const band of ['high', 'low']) {
     const grains = rocketGrains(rocket, scene, band);
-    const row = grains.rows.at(-1);
+    const row = grains.rows.filter(item => item.pulse === 'grain').at(-1);
     const size = 2 * nextPowerOfTwo(Math.ceil(row.spanSeconds * sampleRate));
     const { re, im } = grains.emission(row.noiseSeed, receding, { size });
     const real = new Float64Array(size);

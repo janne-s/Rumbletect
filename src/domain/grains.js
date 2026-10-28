@@ -183,7 +183,8 @@ function azimuthDegrees(velocity, speed, departure) {
  * a path's departure. `source.components(state)` gives a grain's source state or null when it is silent;
  * `source.spectra(components, inletDegrees, frequencies, azimuthDegrees)` its shaped and plain PSDs at 1 m, inlet 0
  * ahead along its axis, azimuth round its flight from straight below; `source.packetHz(components)` the corner of its intermittency; `source.axis` and `source.place` optionally
- * its axis and emission point when they differ from its flight. Its Doppler shift and −10 log|1 − M cos ψ|
+ * its axis and emission point when they differ from its flight; with `source.ignites` the first grain is heard from the
+ * path's start on, so the sound starts at once. Its Doppler shift and −10 log|1 − M cos ψ|
  * (Stone et al. 2003, eq. 2) come with the grain, so they count once. Ahead of a supersonic grain's Mach cone the
  * factor is negative and the grain arrives reversed.
  */
@@ -200,17 +201,19 @@ export function pathGrains(emitter, scene, path, unbanded, band = 'full') {
   const grains = [];
   for (let index = 0; index * hopSeconds <= duration; index += 1) {
     const centre = path.seconds[0] + index * hopSeconds;
-    if (index === 0) { grains.push({ heard: false }); continue; }
-    const { position, velocity } = sampled(path, centre);
+    const ignition = index === 0 && Boolean(source.ignites);
+    if (index === 0 && !ignition) { grains.push({ heard: false }); continue; }
+    const at = ignition ? centre + hopSeconds / 2 : centre;
+    const { position, velocity } = sampled(path, at);
     const speed = Math.hypot(velocity.x, velocity.y, velocity.z);
-    const components = source.components({ seconds: centre, position, velocity, speed });
+    const components = source.components({ seconds: at, position, velocity, speed });
     if (!components) { grains.push({ heard: false }); continue; }
     const axis = source.axis?.(components, velocity, speed) ?? null;
     const side = source.spectra(components, 90, frequencies);
     let sum = 0;
     for (const part of [side.shaped, side.plain]) for (let bin = 0; bin < part.length; bin += 1) sum += part[bin];
     const power = sum * binHz;
-    grains.push({ centre, position: source.place?.(components, position, axis) ?? position, velocity, speed, sound: soundSpeedAt(scene.air, position.z), axis, components, amplitude: Math.sqrt(power), heard: power > 0 });
+    grains.push({ centre, position: source.place?.(components, position, axis) ?? position, velocity, speed, sound: soundSpeedAt(scene.air, position.z), axis, components, amplitude: Math.sqrt(power), heard: power > 0, ignition });
   }
   for (const grain of grains) if (grain.heard) grain.lead = leadSamples(GRAIN, grain.speed / grain.sound);
   const rows = grains.flatMap((grain, index) => (!grain.heard ? [] : [{
@@ -257,7 +260,7 @@ export function pathGrains(emitter, scene, path, unbanded, band = 'full') {
     const crackle = source.crackle?.(grain.components);
     const mixed = Float64Array.from(shaped, (value, sample) => value + plainFrame[sample]);
     const combined = crackle ? steepen(mixed, crackle.index, crackle.hz, sampleRate) : mixed;
-    const real = Float64Array.from(WINDOW, (window, sample) => window * combined[sample]);
+    const real = Float64Array.from(WINDOW, (window, sample) => (grain.ignition && sample < GRAIN / 2 ? 0 : window * combined[sample]));
     const limit = SYNTHESIS.bandLimitShare * sampleRate * squeeze / binHz;
     if (synthesis < FAST || limit <= GRAIN / 2) {
       const imaginary = new Float64Array(GRAIN);
@@ -272,7 +275,7 @@ export function pathGrains(emitter, scene, path, unbanded, band = 'full') {
     const out = new Float64Array(plan.size);
     const gain = 1 / (Math.sqrt(squeeze) * grain.amplitude * sampleRate);
     const half = GRAIN * squeeze / 2;
-    const [first, last] = [Math.max(0, Math.floor(grain.lead - half) - 2), Math.min(plan.size - 1, Math.ceil(grain.lead + half) + 2)];
+    const [first, last] = [grain.ignition ? Math.floor(grain.lead) : Math.max(0, Math.floor(grain.lead - half) - 2), Math.min(plan.size - 1, Math.ceil(grain.lead + half) + 2)];
     let sum = 0;
     for (let sample = first; sample <= last; sample += 1) {
       out[sample] = gain * catmullRom(real, GRAIN / 2 + (sample - grain.lead) / compression);

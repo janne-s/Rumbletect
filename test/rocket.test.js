@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { ascentPath, categoryRocket, directivityDecibels, nearestCategory, normalizedPowerDecibels, sizedRocket, sourceLocationMetres, speedShare } from '../src/domain/rocket.js';
+import { ascentPath, categoryRocket, directivityDecibels, ignitionPulse, ignitionSecondsOf, nearestCategory, normalizedPowerDecibels, sizedRocket, sourceLocationMetres, speedShare, vehicleOf } from '../src/domain/rocket.js';
+import { rocketGrains } from '../src/domain/rocket-grains.js';
 import { rocketMacros } from '../src/ui/macros.js';
 import { ROCKET } from '../src/domain/constants.js';
 import { defaultRocket, defaultScene, parseScene, readScene } from '../src/domain/scene.js';
@@ -207,4 +208,35 @@ test('a rocket\'s propellant is a quick control that keeps its total thrust', ()
   assert.equal(rocket.propellant, 'hydrogen');
   assert.ok(Math.abs(rocket.engine.engines * rocket.engine.thrustKilonewtons / before - 1) < .02);
   assert.equal(propellant.show(rocket), ROCKET.propellants.hydrogen.label);
+});
+
+test('a single motor starts within 5 ms, a cluster as its engines start in turn, Starship\'s 33 in about 1.2 s', () => {
+  const category = label => categoryRocket(defaultRocket(), ROCKET.categories.find(item => item.label === label));
+  assert.equal(ignitionSecondsOf(vehicleOf(category('Artillery'))), .005);
+  assert.ok(Math.abs(ignitionSecondsOf(vehicleOf(category('Super-heavy'))) - 1.2) < .01);
+});
+
+test('the ignition pulse is a Friedlander pulse at the pad, set by its decibels and off at the lowest', () => {
+  const scene = defaultScene('rocket');
+  const category = label => categoryRocket(defaultRocket(), ROCKET.categories.find(item => item.label === label));
+  const grad = ignitionPulse(category('Artillery'), scene);
+  const falcon = ignitionPulse(category('Medium launcher'), scene);
+  assert.equal(grad.pulse, 'friedlander');
+  assert.deepEqual(grad.positionMetres, category('Artillery').startMetres);
+  assert.ok(grad.durationSeconds < .002, `${grad.durationSeconds} s`);
+  const peakHz = falcon.decay / (2 * Math.PI * falcon.durationSeconds);
+  assert.ok(peakHz > 2 && peakHz < 3.5, `${peakHz} Hz`);
+  const louder = ignitionPulse({ ...category('Artillery'), ignitionPulseDecibels: 6 }, scene);
+  assert.ok(Math.abs(louder.amplitudePaMetres / grad.amplitudePaMetres - 10 ** (6 / 20)) < 1e-9);
+  assert.equal(ignitionPulse({ ...category('Artillery'), ignitionPulseDecibels: ROCKET.ignitionPulse.offDecibels }, scene), null);
+});
+
+test('a rocket\'s first grain is heard from its ignition on, and a saved rocket without a pulse level takes 0 dB', () => {
+  const base = defaultScene('rocket');
+  const rocket = categoryRocket(defaultRocket(), ROCKET.categories.find(item => item.label === 'Artillery'));
+  const scene = parseScene({ ...base, emitters: [rocket] });
+  const [first] = rocketGrains(rocket, scene).rows.filter(row => row.pulse === 'grain');
+  assert.ok(Math.abs(first.emissionSeconds + first.durationSeconds - rocket.startSeconds) < 1e-9);
+  const { ignitionPulseDecibels, ...saved } = rocket;
+  assert.equal(readScene({ ...base, emitters: [saved] }).emitters[0].ignitionPulseDecibels, 0);
 });

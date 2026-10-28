@@ -2,6 +2,7 @@ import { ROCKET, TRAJECTORY } from './constants.js';
 import { SATURN_DIRECTIVITY } from './saturn-directivity.js';
 import { airDensityKilogramsPerCubicMetre, pressureAtHeightPa, speedOfSoundMetresPerSecond, temperatureAtHeightKelvin } from '../shared/domain/air.js';
 import { KELVIN_OFFSET, STANDARD_GRAVITY_METRES_PER_SECOND_SQUARED } from '../shared/domain/constants.js';
+import { friedlanderSpanSeconds } from '../shared/domain/pulses.js';
 import { FLAT_SURFACE } from '../shared/domain/terrain.js';
 
 const { spectrum: SPECTRUM, forward: FORWARD } = ROCKET;
@@ -183,7 +184,25 @@ export function vehicleOf(emitter) {
 /** Class B: Mathews & Gee 2025 eq. 8, the overall sound power of the plume in watts at a share of full thrust. */
 export const soundPowerWatts = (vehicle, throttle = 1) => .5 * vehicle.efficiency * vehicle.totalThrustNewtons * throttle * vehicle.exitVelocityMetresPerSecond;
 
-export const ignitionSecondsOf = vehicle => Math.max(ROCKET.shortestIgnitionSeconds, ROCKET.ignitionSeconds * Math.cbrt(Math.min(1, vehicle.totalThrustNewtons / ROCKET.ignitionReferenceNewtons)));
+export const ignitionSecondsOf = vehicle => ROCKET.shortestIgnitionSeconds + ROCKET.ignitionSecondsPerEngine * (vehicle.engines - 1);
+
+/** Decision 19: the ignition pulse at the pad, or null when it is off. */
+export function ignitionPulse(emitter, scene) {
+  const { ignitionPulse: pulse } = ROCKET;
+  if (emitter.ignitionPulseDecibels <= pulse.offDecibels) return null;
+  const vehicle = vehicleOf(emitter);
+  const { air } = scene;
+  const impedance = airDensityKilogramsPerCubicMetre(air.pressureKpa * 1000, air.temperatureCelsius) * speedOfSoundMetresPerSecond(air.temperatureCelsius);
+  const fuel = emitter.propellant === 'solid' ? 'solid' : 'liquid';
+  const steadyPaMetres = Math.sqrt(impedance * soundPowerWatts(vehicle) / (4 * Math.PI));
+  const amplitudePaMetres = pulse.peakPerSteady[fuel] * steadyPaMetres * 10 ** (emitter.ignitionPulseDecibels / 20);
+  const durationSeconds = Math.max(pulse.shortestSeconds, pulse.secondsPerMetre[fuel] * vehicle.effectiveDiameterMetres);
+  return {
+    positionMetres: emitter.startMetres, direction: null, elementMetres: 0, emissionSeconds: emitter.startSeconds, amplitudePaMetres,
+    pulse: 'friedlander', durationSeconds, decay: pulse.decay, spanSeconds: friedlanderSpanSeconds(durationSeconds, pulse.decay),
+    linearRadiusMetres: amplitudePaMetres / (pulse.linearPressureShare * air.pressureKpa * 1000)
+  };
+}
 
 export const peakFrequencyHz = vehicle => vehicle.peakStrouhal * vehicle.exitVelocityMetresPerSecond / vehicle.effectiveDiameterMetres;
 
@@ -351,6 +370,7 @@ export function rocketSource(emitter, scene, path) {
       }
       return { shaped, plain };
     },
+    ignites: true,
     packetHz: () => peakFrequencyHz(vehicle) / ROCKET.packetCycles,
     crackle: () => ({ index: ROCKET.crackleIndex, hz: peakFrequencyHz(vehicle), share: ROCKET.shockShare })
   };
