@@ -1,5 +1,5 @@
 {
-  "commit": "e80246d",
+  "commit": "6ac217d",
   "cases": {
     "jet-flat": "9d2a370007087de2f33decaada10eca7ef4f31ca60eb387bc7c031a21e69a9a6",
     "jet-terrain": "28859baeae4800136a26ae48344ed2440addd5876301d19fded9442acf168299",
@@ -7,17 +7,17 @@
     "airliner-terrain": "e114e403afd54654638ca3bead5da252cf03c8b2ff44a2ddb78eedfb82494686",
     "formation-flat": "4c5f3f5b9a718f62048066ca87ce862734cf026553610e48f0a9a2162876a483",
     "formation-terrain": "8225b7b0edcb56df83071d93a32a161045cf9f4d829a12e5ef1d36607dee4fa3",
-    "rocket-flat": "b3ae25777c8c4519e24343ac6a2029caf629242b8fd1b5245a9099abc458056b",
-    "rocket-terrain": "fed85fd9f2a9454324c8179964dedaefd2a4a60947401ce4dd403c1deb151114",
-    "salvo-flat": "c6be6b30853fdc386dba64315cb5b4e55778053342f12010684e15f7dc65a0da",
-    "salvo-terrain": "ccab475c2e57bbdf407a1e13a34f0b3a311ed8f510065b8c9bee3000bdc3a58e",
+    "rocket-flat": "7180a7fc4e286ff5af55480674e929359b1b85a8b9a057c501f4f501c2c12b2d",
+    "rocket-terrain": "93ef63c3a0435b388f27adea23f9ec599b35a66be7d25a52431825af0a28e0d9",
+    "salvo-flat": "daf1f2f94fb60ecc23c0c08138e902c417976374d65294959a2ceb5c66d2825d",
+    "salvo-terrain": "74498d42afb9cfcbf84bb62a366ddc7faf807f544a286436f00cb3f4d95412f4",
     "volcano-flat": "911be235baf2c4aff53ad6e53bf7817eb5364dbd089151fe958dbf3acbbc3e9c",
     "volcano-terrain": "97f15a312d5eece6ed0746cb93f7e4d053156af378092494b3da7b314c58ebea",
     "jet-preview": "e810ea986fd8a99a88d11c66eeb03ff13c440b2d107c97c04e3bd28e6cf8e6cc",
-    "rocket-preview": "acaeb7195d3fdf45cb6b47579736d18594418022a752867e75657c6bee3f6265",
+    "rocket-preview": "45718209e412a421b7ae5c0a26c302db0a24aece775028fb655e57cf68397a08",
     "volcano-preview": "d3cc601f9f95a4fc426c8313dfdd79e42b1600724925a84259cb471798eea28f",
     "jet-flat-fast": "684292495c9508a845ce638823719dc8cfb15f744b7b26bde6e59328b5bb3890",
-    "rocket-flat-fastest": "f7afaa2fff22c83a6f32b333398a30569ee3375fdf1710b3be47e7137e2ddc43",
+    "rocket-flat-fastest": "313e0b1ee851a3147802fbf20dc545978b6ae343edefc69f6f65e9b262747f09",
     "volcano-terrain-coarse": "f0f5ab75f141c6c025a56452a0b62bd134b2c1771fc7317291b9ef45bb630c77"
   }
 }
