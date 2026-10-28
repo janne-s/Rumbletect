@@ -206,7 +206,7 @@ export function pathGrains(emitter, scene, path, unbanded, band = 'full') {
     const at = ignition ? centre + hopSeconds / 2 : centre;
     const { position, velocity } = sampled(path, at);
     const speed = Math.hypot(velocity.x, velocity.y, velocity.z);
-    const components = source.components({ seconds: at, position, velocity, speed });
+    const components = source.components({ seconds: at, position, velocity, speed, ignition });
     if (!components) { grains.push({ heard: false }); continue; }
     const axis = source.axis?.(components, velocity, speed) ?? null;
     const side = source.spectra(components, 90, frequencies);

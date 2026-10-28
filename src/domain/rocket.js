@@ -186,6 +186,13 @@ export const soundPowerWatts = (vehicle, throttle = 1) => .5 * vehicle.efficienc
 
 export const ignitionSecondsOf = vehicle => ROCKET.shortestIgnitionSeconds + ROCKET.ignitionSecondsPerEngine * (vehicle.engines - 1);
 
+/** Decision 19: the first grain's power over the burn's, its excess shared among the engines; 1 when the burst is off. */
+export function ignitionBurstGain(emitter) {
+  const { ignitionBurst: burst } = ROCKET;
+  if (emitter.ignitionBurstDecibels <= burst.offDecibels) return 1;
+  return 1 + (10 ** (burst.decibels / 10) - 1) * 10 ** (emitter.ignitionBurstDecibels / 10) / emitter.engine.engines;
+}
+
 /** Decision 19: the ignition pulse at the pad, or null when it is off. */
 export function ignitionPulse(emitter, scene) {
   const { ignitionPulse: pulse } = ROCKET;
@@ -328,6 +335,7 @@ export function rocketSource(emitter, scene, path) {
   const velocity = vehicle.exitVelocityMetresPerSecond;
   const padHeight = emitter.startMetres.z;
   const ignitionSeconds = ignitionSecondsOf(vehicle);
+  const burst = ignitionBurstGain(emitter);
   const tables = new WeakMap();
   const tableFor = frequencies => {
     if (!tables.has(frequencies)) tables.set(frequencies, sharedSpectralTable(frequencies, diameter, velocity, SPECTRUM.peakStrouhal / vehicle.peakStrouhal));
@@ -335,13 +343,13 @@ export function rocketSource(emitter, scene, path) {
   };
   const sampleIndex = seconds => Math.min(path.seconds.length - 1, Math.max(0, Math.round((seconds - path.seconds[0]) / path.step)));
   return {
-    components({ seconds, position }) {
+    components({ seconds, position, ignition: first }) {
       const since = seconds - emitter.startSeconds;
       if (since < 0) return null;
       const ignition = Math.min(1, since / ignitionSeconds);
       const [low, high] = ROCKET.ignitionCornerHz;
       return {
-        watts: soundPowerWatts(vehicle, path.throttle[sampleIndex(seconds)]) * ignition,
+        watts: soundPowerWatts(vehicle, path.throttle[sampleIndex(seconds)]) * ignition * (first ? burst : 1),
         cornerHz: low * (high / low) ** ignition,
         climbMetres: position.z - padHeight,
         water: emitter.ascent.water

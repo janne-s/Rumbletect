@@ -105,14 +105,15 @@ active place and terrain travel with you when switching modes.
 - **Details** — The flight, and what the category sets: propellant (a faster
   exhaust sounds higher; liquid engines are held on the pad for three
   seconds), engine count, thrust, exhaust velocity, nozzle diameter, acoustic
-  efficiency, water on the pad, and the ignition pulse's level.
+  efficiency, water on the pad, and the ignition's pulse and burst.
 - **Source** — Sound power from thrust and exhaust velocity, with the
   spectrum and directivity of BYU's SATURN model. A single nozzle peaks about
   an octave higher than a cluster. Low frequencies radiate toward the plume
   and start once the plume has left the pad. The plume crackles.
 - **Ignition** — A single motor starts at once and a cluster as its engines
-  start in turn. Ignition sends a pressure pulse from the pad: a sharp bang
-  from a small solid motor, a low thump from a launcher.
+  start in turn. Its first 40 ms burst out louder than the burn, and it sends
+  a pressure pulse from the pad: a sharp crack from a small solid motor, a
+  low thump from a launcher.
 
 ## Volcano
 

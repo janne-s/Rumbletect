@@ -175,6 +175,7 @@ function rocketDetails(emitter, { updateEmitter }) {
       container.append(note);
       checkboxField(container, { label: 'Water on the pad', value: emitter.ascent.water, reliability: 'B', onCommit: setIn('ascent', 'water') });
       numberField(container, { key: 'ignitionPulseDecibels', value: emitter.ignitionPulseDecibels, onCommit: set('ignitionPulseDecibels') });
+      numberField(container, { key: 'ignitionBurstDecibels', value: emitter.ignitionBurstDecibels, onCommit: set('ignitionBurstDecibels') });
     }),
     ...(emitter.kind === 'salvo' ? [section('Salvo', container => SALVO_LAYOUT.forEach(key => numberField(container, { key, value: emitter[key], onCommit: set(key) })))] : [])
   ];

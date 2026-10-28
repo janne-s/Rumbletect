@@ -394,6 +394,13 @@ export const ROCKET = Object.freeze({
     linearPressureShare: .04,
     offDecibels: -60
   }),
+  /**
+   * Decision 19, the ignition burst, class C: the first grain, heard from ignition and fading into the burn over about
+   * 40 ms, this much louder. Fitted to recording 10 (a solid motor, its first 50 ms +3.5 dB over the next second; rendered
+   * +3.1…+5.3 dB at 75 m over three seeds) and recording 2 (one Merlin, +13 dB for 30 ms, clipped);
+   * a cluster's excess divided among its engines, which start in turn (recording 3).
+   */
+  ignitionBurst: Object.freeze({ decibels: 13.5, offDecibels: -60 }),
   /** Class C: frequencies whose source has not yet left the flame deflector (Mathews 2025, plume emergence) radiate without directivity, this much weaker. */
   padLossDecibels: 6,
   /** Class B: water deluge reduces launch noise by 3–5 dB (Gee, Lubert & James 2024), applied to the pad phase. */

@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { ascentPath, categoryRocket, directivityDecibels, ignitionPulse, ignitionSecondsOf, nearestCategory, normalizedPowerDecibels, sizedRocket, sourceLocationMetres, speedShare, vehicleOf } from '../src/domain/rocket.js';
+import { ascentPath, categoryRocket, directivityDecibels, ignitionBurstGain, ignitionPulse, ignitionSecondsOf, nearestCategory, normalizedPowerDecibels, sizedRocket, sourceLocationMetres, speedShare, vehicleOf } from '../src/domain/rocket.js';
 import { rocketGrains } from '../src/domain/rocket-grains.js';
 import { rocketMacros } from '../src/ui/macros.js';
 import { ROCKET } from '../src/domain/constants.js';
@@ -239,4 +239,18 @@ test('a rocket\'s first grain is heard from its ignition on, and a saved rocket 
   assert.ok(Math.abs(first.emissionSeconds + first.durationSeconds - rocket.startSeconds) < 1e-9);
   const { ignitionPulseDecibels, ...saved } = rocket;
   assert.equal(readScene({ ...base, emitters: [saved] }).emitters[0].ignitionPulseDecibels, 0);
+});
+
+test('the ignition burst raises the first grain, shares its excess among a cluster\'s engines, and is off at the lowest', () => {
+  const category = label => categoryRocket(defaultRocket(), ROCKET.categories.find(item => item.label === label));
+  const grad = category('Artillery');
+  assert.ok(Math.abs(10 * Math.log10(ignitionBurstGain(grad)) - ROCKET.ignitionBurst.decibels) < 1e-9);
+  const starship = category('Super-heavy');
+  assert.ok(Math.abs(ignitionBurstGain(starship) - 1 - (ignitionBurstGain(grad) - 1) / starship.engine.engines) < 1e-9);
+  assert.equal(ignitionBurstGain({ ...grad, ignitionBurstDecibels: ROCKET.ignitionBurst.offDecibels }), 1);
+  const base = defaultScene('rocket');
+  const scene = parseScene({ ...base, emitters: [grad] });
+  const quiet = parseScene({ ...base, emitters: [{ ...grad, ignitionBurstDecibels: ROCKET.ignitionBurst.offDecibels }] });
+  const firstGrain = item => rocketGrains(item.emitters[0], item).rows.find(row => row.pulse === 'grain');
+  assert.ok(Math.abs(firstGrain(scene).amplitudePaMetres / firstGrain(quiet).amplitudePaMetres - Math.sqrt(ignitionBurstGain(grad))) < 1e-9);
 });

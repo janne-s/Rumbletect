@@ -39,6 +39,7 @@ const RUMBLETECT_PARAMETERS = Object.freeze({
   throttlePercent: { minimum: 30, maximum: 100, unit: '%', label: 'Throttle', reliability: 'C' },
   launchDegrees: { minimum: 5, maximum: 90, unit: '°', label: 'Launch angle', reliability: null },
   ignitionPulseDecibels: { minimum: -60, maximum: 20, unit: 'dB', label: 'Ignition pulse', reliability: 'C' },
+  ignitionBurstDecibels: { minimum: -60, maximum: 20, unit: 'dB', label: 'Ignition burst', reliability: 'C' },
   lengthMetres: { minimum: .1, maximum: 200, unit: 'm', label: 'Length', reliability: 'B' },
   memberCount: { minimum: 2, maximum: 24, unit: '', label: 'Aircraft', reliability: null, integer: true },
   lateralSpacingMetres: { minimum: 0, maximum: 2000, unit: 'm', label: 'Lateral spacing', reliability: null },
@@ -110,6 +111,7 @@ export function defaultRocket(id = 'rocket-1', name = 'Rocket', seed = 20261017)
     startMetres: { x: 0, y: 0, z: 10 },
     headingDegrees: 90,
     ignitionPulseDecibels: 0,
+    ignitionBurstDecibels: 0,
     engine: {},
     ascent: { ...ROCKET.defaultAscent }
   }, medium);
@@ -156,7 +158,7 @@ function readRocket(value, { check, point, numbers, choice }, path, fallbackProp
   return {
     propellant: choice(value.propellant, PROPELLANTS, fallbackPropellant, `${path}.propellant`),
     startMetres: point(value.startMetres, `${path}.startMetres`),
-    ...numbers(value, ['startSeconds', 'headingDegrees', 'launchDegrees', 'lengthMetres', 'ignitionPulseDecibels'], path),
+    ...numbers(value, ['startSeconds', 'headingDegrees', 'launchDegrees', 'lengthMetres', 'ignitionPulseDecibels', 'ignitionBurstDecibels'], path),
     engine: numbers(value.engine, ROCKET_ENGINE_NUMBERS, `${path}.engine`),
     ascent: { ...numbers(value.ascent, ROCKET_ASCENT_NUMBERS, `${path}.ascent`), water: value.ascent.water }
   };
