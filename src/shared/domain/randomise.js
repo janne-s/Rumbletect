@@ -11,7 +11,7 @@ export const rolled = (position, random, amount) => clamp01(position + amount * 
 /** Rolls each unlocked control of `item` in order, so that a control that depends on an earlier one sees the new value. */
 export function randomiseControls(item, controls, { random, amount, locked = () => false }) {
   for (const control of controls) {
-    if (control.randomised === false || locked(control)) continue;
+    if (locked(control)) continue;
     if (control.dual) {
       const [low, high] = control.read(item).map(position => rolled(position, random, amount));
       control.write(item, Math.min(low, high), Math.max(low, high));

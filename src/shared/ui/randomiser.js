@@ -27,8 +27,8 @@ export function createRandomiser({ state, commit, controlsOf, upperWind, savePre
   const rolls = [];
   const preferences = () => state.preferences;
   const amount = () => preferences().randomAmount ?? RANDOMISE.defaultAmount;
-  const locks = () => preferences().randomLocks ?? [];
-  const locked = section => control => locks().includes(lockKey(section, control));
+  const locks = () => preferences().randomLockStates ?? {};
+  const locked = section => control => locks()[lockKey(section, control)] ?? Boolean(control.lockedByDefault);
   const ownRolls = () => rolls.filter(roll => roll.mode === state.scene.mode);
   const rolled = target => ownRolls().some(roll => roll.parts.has(target));
 
@@ -74,21 +74,20 @@ export function createRandomiser({ state, commit, controlsOf, upperWind, savePre
   function diceButtons(target) {
     const holder = document.createElement('span');
     holder.className = 'dice-buttons';
-    holder.append(iconButton('icon-button dice-button', 'fa-dice', 'Randomise', () => roll([target])));
+    holder.append(iconButton('icon-button dice-button', 'fa-dice-five', 'Randomise', () => roll([target])));
     if (rolled(target)) holder.append(iconButton('icon-button dice-button', 'fa-arrow-rotate-left', 'Previous roll', () => back(target)));
     return holder;
   }
 
   function toggleLock(section, control) {
-    const key = lockKey(section, control);
-    preferences().randomLocks = locks().includes(key) ? locks().filter(item => item !== key) : [...locks(), key];
+    preferences().randomLockStates = { ...locks(), [lockKey(section, control)]: !locked(section)(control) };
     savePreferences();
     refreshPanel();
   }
 
-  /** In lock mode a lock stands before the label of each control a roll can change. */
+  /** In lock mode a lock stands before each control's label; where and when an emitter is start locked. */
   function lockCell(label, section, control) {
-    if (!preferences().showLocks || control.randomised === false) return label;
+    if (!preferences().showLocks) return label;
     const on = locked(section)(control);
     const cell = document.createElement('span');
     cell.className = 'lockable';
@@ -128,7 +127,7 @@ export function createRandomiser({ state, commit, controlsOf, upperWind, savePre
       const locksItem = action('Locks', 'fa-lock', () => { preferences().showLocks = !preferences().showLocks; savePreferences(); refreshPanel(); });
       locksItem.setAttribute('aria-pressed', String(Boolean(preferences().showLocks)));
       node.replaceChildren(
-        action('Randomise all', 'fa-dice', () => roll(allTargets())),
+        action('Randomise all', 'fa-dice-five', () => roll(allTargets())),
         action('Previous roll', 'fa-arrow-rotate-left', () => back(), !ownRolls().length),
         document.createElement('hr'),
         amountRow,

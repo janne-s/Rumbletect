@@ -110,6 +110,16 @@ function wavefrontSources(emitter, scene, placedPoint, candidates) {
   cachedSoundTracks(emitter, scene).forEach((path, member) => path.seconds.forEach((emitted, index) => candidates.push({ point: { x: path.x[index], y: path.y[index], z: path.z[index] }, emitted, group: `${emitter.id}:${member}` })));
 }
 
+/** A jet that starts faster than its exhaust is silent until it slows below it; where it then is tells why the sound comes late. */
+function silentStart(path, jetMetresPerSecond, receivers, at) {
+  const heard = path.speed.findIndex(speed => speed < jetMetresPerSecond);
+  if (heard < 0) return `No jet noise: faster than its ${Math.round(jetMetresPerSecond)} m/s exhaust all the way`;
+  const point = { x: path.x[heard], y: path.y[heard], z: path.z[heard] };
+  const distance = receiver => Math.hypot(point.x - receiver.positionMetres.x, point.y - receiver.positionMetres.y, point.z - receiver.positionMetres.z);
+  const nearest = receivers.reduce((best, receiver) => (!best || distance(receiver) < distance(best) ? receiver : best), null);
+  return `No jet noise until ${at(heard)}${nearest ? `, ${formatMetres(distance(nearest))} from ${nearest.name}` : ''}`;
+}
+
 function warnings(emitter, scene) {
   const [path] = cachedTracks(emitter, scene);
   const sound = speedOfSound(scene.air.temperatureCelsius);
@@ -119,7 +129,8 @@ function warnings(emitter, scene) {
   const outrun = path.speed.findIndex(speed => speed >= jet);
   return [
     ...(supersonic >= 0 ? [`Passes the speed of sound at ${at(supersonic)}; Boomtect makes its boom`] : []),
-    ...(outrun >= 0 ? [`No jet noise above Mach ${(jet / sound).toFixed(1)} at this power`] : [])
+    ...(outrun > 0 ? [`No jet noise above Mach ${(jet / sound).toFixed(1)} at this power`] : []),
+    ...(outrun === 0 ? [silentStart(path, jet, scene.receivers, at)] : [])
   ];
 }
 
