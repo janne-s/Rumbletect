@@ -35,7 +35,7 @@ import { attachSplitters } from './splitters.js';
 import { attachTimelineSeek } from './timeline.js';
 import { createRenderMarker, renderLoadText, unfinishedRenderText } from './render-marker.js';
 import { createFrontStyle } from './front-style.js';
-import { outerSpheres, sampleEnvelopeSources } from './wavefront-envelope.js';
+import { outerSpheres, sampleEnvelopeSources, spreadPick } from './wavefront-envelope.js';
 import { formatMicrophoneLevels } from './levels.js';
 import { createActionMenu } from './action-menu.js';
 
@@ -2111,6 +2111,7 @@ export function startFrame(tect) {
     const wavefronts = wavefrontsShown() ? { profile, spheres, total: frontStyle.levelDependent ? wavefrontCandidates(state.scene).length : spheres.length, shadowShare: frontStyle.shadowShare } : null;
     const flights = new Map();
     let cones = [];
+    let members = 0;
     for (const emitter of state.scene.emitters) {
       if (!emitter.enabled) continue;
       const paths = kinds[emitter.kind].tracks(emitter, state.scene);
@@ -2125,16 +2126,18 @@ export function startFrame(tect) {
       }));
       if (!state.preferences.cone) continue;
       const amplitudes = coneAmplitudes(emitter);
+      const first = members;
+      members += paths.length;
       paths.forEach((path, member) => {
         const cone = kinds[emitter.kind].cone(path, now, profile, emitter, state.scene, member);
         if (!cone) return;
         const { amplitude, frequencyHz } = amplitudes.get(`${emitter.id}:${member}`) ?? { amplitude: 0, frequencyHz: 1000 };
         const strengths = cone.radii.map(radius => frontStyle.strength(amplitude, radius, frequencyHz, state.scene.air));
         const strength = Math.max(...strengths);
-        if (strength > 0) cones.push({ ...cone, strengths, strength });
+        if (strength > 0) cones.push({ ...cone, strengths, strength, place: first + member });
       });
     }
-    cones = cones.sort((a, b) => b.strength - a.strength).slice(0, VIEW.cone.bodies);
+    cones = frontStyle.levelDependent ? cones.sort((a, b) => b.strength - a.strength).slice(0, VIEW.cone.bodies) : spreadPick(cones, VIEW.cone.bodies, cone => cone.place, members);
     return { seconds: now, strokes, receivers, sound, wavefronts, flights, cones };
   }
 
