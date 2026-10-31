@@ -354,6 +354,15 @@ export function startFrame(tect) {
     return true;
   }
 
+  /** A name changes no sound, so the render stands. */
+  function rename(change) {
+    if (!applyScene(change)) return;
+    refreshPanel();
+    drawInfo();
+    redrawViews();
+    drawResults();
+  }
+
   function commit(change) {
     if (!applyScene(change)) return;
     scheduleTerrainCoverage();
@@ -1164,6 +1173,8 @@ export function startFrame(tect) {
   const emitterSummary = emitter => kinds[emitter.kind].summary(emitter, state.scene);
   const emitterWarnings = emitter => kinds[emitter.kind].warnings?.(emitter, state.scene) ?? [];
 
+  const findIn = (items, id) => items.find(item => item.id === id);
+  const renameEmitter = (id, name) => rename(scene => { findIn(scene.emitters, id).name = name; });
   const updateEmitter = (id, change) => commit(scene => change(scene.emitters.find(emitter => emitter.id === id)));
   const updateReceiver = (id, change) => commit(scene => change(scene.receivers.find(receiver => receiver.id === id)));
 
@@ -1387,7 +1398,7 @@ export function startFrame(tect) {
       checked: emitter.enabled, title: 'Enabled',
       onCheck: on => updateEmitter(emitter.id, item => { item.enabled = on; }),
       onToggle: () => { state.selection = selected ? { type: null, id: null } : { type: 'emitter', id: emitter.id }; refreshPanel(); }
-    }, cardName(emitter.name, selected, name => updateEmitter(emitter.id, item => { item.name = name; })), element('span', 'kind', emitterKindLabel(emitter)), remove);
+    }, cardName(emitter.name, selected, name => renameEmitter(emitter.id, name)), element('span', 'kind', emitterKindLabel(emitter)), remove);
     if (selected) {
       const summary = element('p', 'card-summary', emitterSummary(emitter));
       liveFields.summary = item => { summary.textContent = emitterSummary(item); };
@@ -1413,7 +1424,10 @@ export function startFrame(tect) {
         source.enabled = false;
         return { ...structuredClone(source), id: uniqueId(source.kind, next.emitters), name: `${source.name} variant`.slice(0, 64), ...(seeded ? { seed: newSeed() } : {}), enabled: true };
       }), { disabled: scene.emitters.length >= RENDER.maximumEmitters, title: seeded ? 'Copy with a new seed; the original is switched off' : 'Copy to change; the original is switched off' }));
-      actions.append(...[presets.button(emitter.id)].filter(Boolean), randomiser.diceButtons(emitter.id));
+      const tools = randomiser.diceButtons(emitter.id);
+      const bookmark = presets.button(emitter.id);
+      if (bookmark) tools.prepend(bookmark);
+      actions.append(tools);
       card.append(actions);
     }
     container.append(card);
@@ -1481,10 +1495,10 @@ export function startFrame(tect) {
       checked: receiver.listen, title: 'Listen',
       onCheck: on => commitListening(next => { next.receivers.find(item => item.id === receiver.id).listen = on; }),
       onToggle: () => { select(selected ? { type: null, id: null } : { type: 'receiver', id: receiver.id }); refreshPanel(); }
-    }, cardName(receiver.name, selected, name => updateReceiver(receiver.id, item => { item.name = name; })), element('span', 'kind', `${RECEIVER_TYPE_LABELS[receiver.type]} · ${formatMetres(receiver.positionMetres.z)}`), remove);
+    }, cardName(receiver.name, selected, name => rename(scene => { findIn(scene.receivers, receiver.id).name = name; })), element('span', 'kind', `${RECEIVER_TYPE_LABELS[receiver.type]} · ${formatMetres(receiver.positionMetres.z)}`), remove);
     if (selected) {
       const fields = element('div', 'fields');
-      textField(fields, { label: 'Name', value: receiver.name, onCommit: value => updateReceiver(receiver.id, item => { item.name = value; }) });
+      textField(fields, { label: 'Name', value: receiver.name, onCommit: value => rename(scene => { findIn(scene.receivers, receiver.id).name = value; }) });
       selectField(fields, {
         label: 'Type', value: receiver.type, options: Object.entries(RECEIVER_TYPE_LABELS),
         onCommit: value => {
@@ -1538,7 +1552,7 @@ export function startFrame(tect) {
     $('details-title').textContent = kind === emitter.name ? emitter.name : `${emitter.name} · ${kind}`;
     const body = $('details-body');
     const scroll = body.scrollTop;
-    body.replaceChildren(...kinds[emitter.kind].details(emitter, { updateEmitter, scene: state.scene }).map(({ title, build }) => {
+    body.replaceChildren(...kinds[emitter.kind].details(emitter, { updateEmitter, renameEmitter, scene: state.scene }).map(({ title, build }) => {
       const group = element('section', 'details-section');
       group.append(element('h3', '', title));
       const fields = element('div', 'fields');
@@ -1857,7 +1871,9 @@ export function startFrame(tect) {
       const label = environment.querySelector(`[data-key="${control.key}"]`)?.labels?.[0];
       if (label) randomiser.lockCell(label, ENVIRONMENT, control);
     }
-    $('environment-tools').replaceChildren(presets.button(ENVIRONMENT_PRESETS), randomiser.diceButtons(ENVIRONMENT));
+    const environmentTools = randomiser.diceButtons(ENVIRONMENT);
+    environmentTools.prepend(presets.button(ENVIRONMENT_PRESETS));
+    $('environment-tools').replaceChildren(environmentTools);
 
     const terrainFields = $('terrain-fields');
     terrainFields.replaceChildren();

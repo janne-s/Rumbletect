@@ -732,9 +732,12 @@ button.macro-value:hover {
   align-items: center;
   gap: 2px;
 }
+.card-actions .dice-buttons {
+  margin-left: 4px;
+}
 .card-actions .dice-button,
 .card-actions .dice-button:hover:not(:disabled) {
-  width: 28px;
+  width: 22px;
   height: auto;
   margin: 0;
   background: none;

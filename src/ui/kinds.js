@@ -64,7 +64,7 @@ const engineSection = (emitter, setEngine, jet) => ({
   }
 });
 
-function details(emitter, { updateEmitter, scene }) {
+function details(emitter, { updateEmitter, renameEmitter, scene }) {
   const set = key => value => updateEmitter(emitter.id, item => { item[key] = value; });
   const setEngine = key => value => updateEmitter(emitter.id, item => { item.engine = { ...item.engine, [key]: value }; });
   const section = (title, build) => ({ title, build });
@@ -73,7 +73,7 @@ function details(emitter, { updateEmitter, scene }) {
   if (emitter.follows) {
     return [
       section('Placement', container => {
-        textField(container, { label: 'Name', value: emitter.name, onCommit: set('name') });
+        textField(container, { label: 'Name', value: emitter.name, onCommit: name => renameEmitter(emitter.id, name) });
         seedField(container, { value: emitter.seed, onCommit: set('seed'), onNew: () => set('seed')(newSeed()) });
       }),
       engineSection(emitter, setEngine, jet)
@@ -81,7 +81,7 @@ function details(emitter, { updateEmitter, scene }) {
   }
   return [
     section('Placement', container => {
-      textField(container, { label: 'Name', value: emitter.name, onCommit: set('name') });
+      textField(container, { label: 'Name', value: emitter.name, onCommit: name => renameEmitter(emitter.id, name) });
       seedField(container, { value: emitter.seed, onCommit: set('seed'), onNew: () => set('seed')(newSeed()) });
       numberField(container, { key: 'startSeconds', value: emitter.startSeconds, onCommit: set('startSeconds') });
       pointFields(container, { label: 'Start', point: emitter.startMetres, onCommit: set('startMetres') });
@@ -121,7 +121,7 @@ function rocketSummary(emitter) {
   return `${ROCKET.propellants[emitter.propellant].label}, ${engines}, ${thrustLabel(totalThrustNewtons(emitter))} · burns ${emitter.ascent.burnSeconds} s to ${kilometresPerHour(emitter.ascent.burnoutMetresPerSecond)} km/h${salvo}`;
 }
 
-function rocketDetails(emitter, { updateEmitter }) {
+function rocketDetails(emitter, { updateEmitter, renameEmitter }) {
   const set = key => value => updateEmitter(emitter.id, item => { item[key] = value; });
   const setIn = (group, key) => value => updateEmitter(emitter.id, item => { item[group] = { ...item[group], [key]: value }; });
   const choose = propellant => updateEmitter(emitter.id, item => {
@@ -131,7 +131,7 @@ function rocketDetails(emitter, { updateEmitter }) {
   const section = (title, build) => ({ title, build });
   return [
     section('Placement', container => {
-      textField(container, { label: 'Name', value: emitter.name, onCommit: set('name') });
+      textField(container, { label: 'Name', value: emitter.name, onCommit: name => renameEmitter(emitter.id, name) });
       seedField(container, { value: emitter.seed, onCommit: set('seed'), onNew: () => set('seed')(newSeed()) });
       numberField(container, { key: 'startSeconds', label: 'Ignition', value: emitter.startSeconds, onCommit: set('startSeconds') });
       pointFields(container, { label: 'Nozzles on the pad', point: emitter.startMetres, onCommit: set('startMetres') });
@@ -198,13 +198,13 @@ function volcanoSummary(emitter) {
   return `${volcanoCategory(emitter.category).label}, jet ${formatMetres(ventDiameterMetres)} wide at ${Math.round(ventVelocityMetresPerSecond)} m/s · peak ${peak < 10 ? peak.toFixed(1) : Math.round(peak)} Hz · ${emitter.eruption.eruptionSeconds} s${emitter.follows ? `, at ${emitter.follows.app}'s ${emitter.follows.name}` : ''}`;
 }
 
-function volcanoDetails(emitter, { updateEmitter }) {
+function volcanoDetails(emitter, { updateEmitter, renameEmitter }) {
   const set = key => value => updateEmitter(emitter.id, item => { item[key] = value; });
   const setIn = (group, key) => value => updateEmitter(emitter.id, item => { item[group] = { ...item[group], [key]: value }; });
   const section = (title, build) => ({ title, build });
   return [
     section('Placement', container => {
-      textField(container, { label: 'Name', value: emitter.name, onCommit: set('name') });
+      textField(container, { label: 'Name', value: emitter.name, onCommit: name => renameEmitter(emitter.id, name) });
       seedField(container, { value: emitter.seed, onCommit: set('seed'), onNew: () => set('seed')(newSeed()) });
       if (emitter.follows) return;
       numberField(container, { key: 'startSeconds', value: emitter.startSeconds, onCommit: set('startSeconds') });
