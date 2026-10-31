@@ -26,6 +26,8 @@ import { createOrientationBall } from './orientation-ball.js';
 import { createMobileLayout } from './mobile.js';
 import { createSettings } from './settings.js';
 import { createRandomiser, ENVIRONMENT } from './randomiser.js';
+import { createPresets } from './presets.js';
+import { ENVIRONMENT_PRESETS } from '../domain/presets.js';
 import { ENVIRONMENT_CONTROLS } from '../domain/randomise.js';
 import { createPlayer, renderComposition } from './player.js';
 import { drawArrivals, drawWaveform, plotSeconds } from './plots.js';
@@ -1172,6 +1174,7 @@ export function startFrame(tect) {
     upperWind: scene => Boolean(MODE_SETTINGS[scene.mode].upperWind)
   });
   randomiser.menu($('randomise'));
+  const presets = createPresets({ tect: prefix, storageKey: `${prefix}-presets`, state, commit, readScene, kinds, download });
 
   function preview(change) {
     change(state.scene);
@@ -1375,7 +1378,7 @@ export function startFrame(tect) {
         source.enabled = false;
         return { ...structuredClone(source), id: uniqueId(source.kind, next.emitters), name: `${source.name} variant`.slice(0, 64), ...(seeded ? { seed: newSeed() } : {}), enabled: true };
       }), { disabled: scene.emitters.length >= RENDER.maximumEmitters, title: seeded ? 'Copy with a new seed; the original is switched off' : 'Copy to change; the original is switched off' }));
-      actions.append(randomiser.diceButtons(emitter.id));
+      actions.append(...[presets.button(emitter.id)].filter(Boolean), randomiser.diceButtons(emitter.id));
       card.append(actions);
     }
     container.append(card);
@@ -1819,7 +1822,7 @@ export function startFrame(tect) {
       const label = environment.querySelector(`[data-key="${control.key}"]`)?.labels?.[0];
       if (label) randomiser.lockCell(label, ENVIRONMENT, control);
     }
-    $('environment-tools').replaceChildren(randomiser.diceButtons(ENVIRONMENT));
+    $('environment-tools').replaceChildren(presets.button(ENVIRONMENT_PRESETS), randomiser.diceButtons(ENVIRONMENT));
 
     const terrainFields = $('terrain-fields');
     terrainFields.replaceChildren();

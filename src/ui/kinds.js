@@ -217,8 +217,50 @@ function volcanoDetails(emitter, { updateEmitter }) {
 
 export const isSupersonic = (emitter, scene) => supersonicIndex(cachedTracks(emitter, scene)[0], scene.air) >= 0;
 
+const isRecord = value => value !== null && typeof value === 'object' && !Array.isArray(value);
+
+/** Copies the keys a preset has; a group is merged, so a preset short of a field leaves the emitter's own. */
+function given(item, values, keys) {
+  for (const key of keys) {
+    if (!(key in values)) continue;
+    item[key] = isRecord(item[key]) && isRecord(values[key]) ? { ...item[key], ...values[key] } : values[key];
+  }
+}
+
+/** A preset is the device only: what flies, not where, when, or how it flies (decision 18). */
+const jetPreset = section => Object.freeze({
+  section,
+  take: emitter => ({ engineClass: emitter.engineClass, engine: emitter.engine }),
+  give: (emitter, values) => given(emitter, values, ['engineClass', 'engine'])
+});
+
+const ROCKET_DEVICE = Object.freeze(['propellant', 'engine', 'lengthMetres', 'ignitionPulseDecibels', 'ignitionBurstDecibels']);
+const SALVO_LAYOUT_KEYS = Object.freeze(Object.keys(ROCKET.salvoLayout));
+
+/** A rocket's device goes between a rocket and a salvo; a launcher's layout only from salvo to salvo. */
+const rocketPreset = Object.freeze({
+  section: 'rocket',
+  take: emitter => ({
+    ...Object.fromEntries(ROCKET_DEVICE.map(key => [key, emitter[key]])),
+    water: emitter.ascent.water,
+    ...(emitter.kind === 'salvo' ? Object.fromEntries(SALVO_LAYOUT_KEYS.map(key => [key, emitter[key]])) : {})
+  }),
+  give: (emitter, values) => {
+    given(emitter, values, ROCKET_DEVICE);
+    if (typeof values.water === 'boolean') emitter.ascent = { ...emitter.ascent, water: values.water };
+    if (emitter.kind === 'salvo') given(emitter, values, SALVO_LAYOUT_KEYS);
+  }
+});
+
+const volcanoPreset = Object.freeze({
+  section: 'volcano',
+  take: emitter => ({ category: emitter.category, jet: emitter.jet, eruption: emitter.eruption }),
+  give: (emitter, values) => given(emitter, values, ['category', 'jet', 'eruption'])
+});
+
 const VOLCANO_PANEL = Object.freeze({
   label: () => 'Volcano',
+  preset: volcanoPreset,
   summary: volcanoSummary,
   macros: volcanoMacros,
   details: volcanoDetails,
@@ -244,6 +286,7 @@ const VOLCANO_PANEL = Object.freeze({
 const KIND_PANELS_EXTENDED = {
   jet: Object.freeze({
     label: () => 'Jet',
+    preset: jetPreset('jet'),
     summary,
     macros: macrosFor,
     details,
@@ -267,6 +310,7 @@ const KIND_PANELS_EXTENDED = {
   }),
   rocket: Object.freeze({
     label: () => 'Rocket',
+    preset: rocketPreset,
     summary: rocketSummary,
     macros: rocketMacros,
     details: rocketDetails,
@@ -297,7 +341,7 @@ const KIND_PANELS_EXTENDED = {
 };
 
 KIND_PANELS_EXTENDED.formation = Object.freeze({ ...KIND_PANELS_EXTENDED.jet, label: () => 'Formation', macros: macrosFor });
-KIND_PANELS_EXTENDED.airliner = Object.freeze({ ...KIND_PANELS_EXTENDED.jet, label: () => 'Airliner', macros: macrosFor });
+KIND_PANELS_EXTENDED.airliner = Object.freeze({ ...KIND_PANELS_EXTENDED.jet, label: () => 'Airliner', preset: jetPreset('airliner'), macros: macrosFor });
 KIND_PANELS_EXTENDED.salvo = Object.freeze({ ...KIND_PANELS_EXTENDED.rocket, label: () => 'Salvo', macros: rocketMacros });
 
 export const KIND_PANELS = Object.freeze(KIND_PANELS_EXTENDED);
