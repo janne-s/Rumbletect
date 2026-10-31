@@ -30,8 +30,11 @@ export function fineSimilarityDecibels(ratio) {
   return 9.9 + 14.91126 * l;
 }
 
-/** Class B: Stone, Krejsa & Clark 2003, eq. 2a, the velocity split evenly between relative and absolute. */
-export const effectiveVelocity = (jetVelocity, flightVelocity) => jetVelocity * Math.sqrt(Math.max(0, 1 - flightVelocity / jetVelocity));
+/**
+ * Class B: Stone, Krejsa & Clark 2003, eq. 2a, the velocity split evenly between relative and absolute. Class C past
+ * the jet's own speed, where the shear reverses: its size stands in, so an aircraft faster than its exhaust is not silent.
+ */
+export const effectiveVelocity = (jetVelocity, flightVelocity) => jetVelocity * Math.sqrt(Math.abs(1 - flightVelocity / jetVelocity));
 
 const convection = (mach, cosine) => (1 + mach * cosine) ** 2 + JET_FLIGHT.convectionSpread * mach * mach;
 

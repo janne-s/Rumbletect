@@ -32,9 +32,9 @@ test('each column\'s third octaves add up to the table\'s overall level', () => 
   }
 });
 
-test('a fully expanded subsonic jet, or one its flight outruns, makes no shock noise', () => {
+test('a fully expanded subsonic jet makes no shock noise, and an underexpanded one keeps it when its flight outruns it', () => {
   assert.equal(shockComponent({ machNumber: .95, diameterMetres: 1, velocityMetresPerSecond: 500 }, sound), null);
-  assert.equal(shockComponent({ machNumber: 1.5, diameterMetres: 1, velocityMetresPerSecond: 500 }, sound, 500), null);
+  assert.ok(shockComponent({ machNumber: 1.5, diameterMetres: 1, velocityMetresPerSecond: 500 }, sound, 700).decibels > 0);
   assert.equal(jetComponents({ diameterMetres: .9, velocityMetresPerSecond: 650, temperatureRatio: 2.6 }, { temperatureCelsius: 15 }).shock, null);
   for (const key of Object.keys(ENGINE.classes).filter(key => ENGINE.classes[key].civil)) {
     for (const jet of streamsOf(engineAtPower(1, key), key, 15)) assert.ok(jet.machNumber < 1, key);

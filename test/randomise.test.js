@@ -24,12 +24,3 @@ test('a full roll of every kind\'s quick controls is a valid scene and with its 
   }
 });
 
-test('a jet that starts faster than its exhaust says when and how far away its noise begins', () => {
-  const scene = defaultScene('jet');
-  const jet = { ...scene.emitters[0], mach: 2.38, accelerationMetresPerSecondSquared: -12, engine: { ...scene.emitters[0].engine, pressureRatio: 2.206, totalTemperatureKelvin: 632 } };
-  scene.emitters = [jet];
-  const [warning] = KIND_PANELS.jet.warnings(jet, scene).filter(text => text.startsWith('No jet noise'));
-  assert.match(warning, /^No jet noise until \d+\.\d s, [\d.]+ k?m from Mic 1$/);
-  const steady = { ...jet, accelerationMetresPerSecondSquared: 0 };
-  assert.ok(KIND_PANELS.jet.warnings(steady, scene).some(text => /^No jet noise: faster than its \d+ m\/s exhaust all the way$/.test(text)));
-});

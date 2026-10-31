@@ -9,7 +9,7 @@ const DEGREES = Math.PI / 180;
  * turbulence passing the shocks, so it ends with the mixing noise where the flight outruns the jet.
  */
 export function shockComponent({ machNumber, diameterMetres, velocityMetresPerSecond }, sound, flightMetresPerSecond = 0) {
-  if (!(machNumber > 1) || flightMetresPerSecond >= velocityMetresPerSecond) return null;
+  if (!(machNumber > 1)) return null;
   const beta = Math.sqrt(machNumber * machNumber - 1);
   const area = Math.PI * diameterMetres * diameterMetres / 4;
   return {
