@@ -45,7 +45,7 @@ export function startFrame(tect) {
     onsetName, preferences: tectPreferences = {}, toggles: tectToggles = {}, prepareScene, linkModes = {}, follower = null
   } = tect;
   const { MODES, PARAMETERS, defaultScene, parseScene, readScene, sceneInMode, serializeScene } = tect.scene;
-  const { actionField, checkboxField, numberField, pointFields, selectField, textField } = tect.fields;
+  const { actionField, checkboxField, numberField, pointFields, selectField } = tect.fields;
   const frontStyle = createFrontStyle(tect.propagationStyle);
 
   for (const [mode, { label, button: icon }] of Object.entries(MODE_SETTINGS)) {
@@ -1498,7 +1498,6 @@ export function startFrame(tect) {
     }, cardName(receiver.name, selected, name => rename(scene => { findIn(scene.receivers, receiver.id).name = name; })), element('span', 'kind', `${RECEIVER_TYPE_LABELS[receiver.type]} · ${formatMetres(receiver.positionMetres.z)}`), remove);
     if (selected) {
       const fields = element('div', 'fields');
-      textField(fields, { label: 'Name', value: receiver.name, onCommit: value => rename(scene => { findIn(scene.receivers, receiver.id).name = value; }) });
       selectField(fields, {
         label: 'Type', value: receiver.type, options: Object.entries(RECEIVER_TYPE_LABELS),
         onCommit: value => {
