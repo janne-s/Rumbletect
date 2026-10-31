@@ -1,6 +1,7 @@
-import { emptyLibrary, ENVIRONMENT_PRESETS, environmentValues, mergedLibraries, presetName, presetsIn, readLibrary, withEnvironment, withoutPreset, withPreset } from '../domain/presets.js';
+import { emptyLibrary, ENVIRONMENT_PRESETS, environmentValues, flightSection, mergedLibraries, presetName, presetsIn, readLibrary, withEnvironment, withoutPreset, withPreset } from '../domain/presets.js';
 
 const EMITTER_TAB = 'emitter';
+const PARTS = Object.freeze([['device', 'Device'], ['flight', 'Flight'], ['both', 'Both']]);
 
 function node(tag, className, text) {
   const element = document.createElement(tag);
@@ -39,13 +40,14 @@ export function createPresets({ tect, storageKey, state, commit, readScene, kind
   const emitterOf = (scene, id) => scene.emitters.find(item => item.id === id);
   const presetOf = emitter => (emitter ? kinds[emitter.kind].preset ?? null : null);
 
-  /** Each emitter section once, named after the first kind that gives it, in the order the tect lists its kinds. */
+  /** Each device section and then each flight section once, named after the first kind that gives it, in the tect's order of kinds. */
   const emitterSections = [];
-  for (const [kind, panel] of Object.entries(kinds)) {
-    if (panel.preset && !emitterSections.some(([section]) => section === panel.preset.section)) emitterSections.push([panel.preset.section, panel.label({ kind })]);
-  }
+  const addSection = (section, label) => { if (!emitterSections.some(([known]) => known === section)) emitterSections.push([section, label]); };
+  for (const [kind, panel] of Object.entries(kinds)) if (panel.preset) addSection(panel.preset.section, panel.label({ kind }));
+  for (const [kind, panel] of Object.entries(kinds)) if (panel.preset?.flightSection) addSection(flightSection(panel.preset.flightSection), `${panel.label({ kind })} flight`);
 
   let tab = EMITTER_TAB;
+  let parts = 'device';
   let emitterId = null;
   let message = '';
   let confirming = null;
@@ -57,20 +59,46 @@ export function createPresets({ tect, storageKey, state, commit, readScene, kind
     return state.selection.type === 'emitter' ? emitterOf(state.scene, state.selection.id) ?? null : null;
   }
 
+  /** A follower's path comes from the tect it follows, so it has no flight of its own to save or load. */
+  const flies = (emitter, preset) => Boolean(preset?.takeFlight && !emitter.follows);
+
   function slot() {
     if (tab === ENVIRONMENT_PRESETS) {
-      return { section: ENVIRONMENT_PRESETS, take: environmentValues, give: withEnvironment, pick: (from, into) => { into.air = from.air; into.ground = from.ground; } };
+      return {
+        section: ENVIRONMENT_PRESETS,
+        take: scene => ({ values: environmentValues(scene) }),
+        give: (scene, { values }) => withEnvironment(scene, values),
+        pick: (from, into) => { into.air = from.air; into.ground = from.ground; }
+      };
     }
     const emitter = currentEmitter();
     const preset = presetOf(emitter);
     if (!preset) return null;
     const id = emitter.id;
+    const own = scene => emitterOf(scene, id);
     return {
-      section: preset.section,
-      take: scene => structuredClone(preset.take(emitterOf(scene, id))),
-      give: (scene, values) => { preset.give(emitterOf(scene, id), values); return scene; },
-      pick: (from, into) => { const index = into.emitters.findIndex(item => item.id === id); into.emitters[index] = emitterOf(from, id); }
+      section: parts === 'flight' ? flightSection(preset.flightSection) : preset.section,
+      deviceSection: preset.section,
+      flightSection: flies(emitter, preset) ? flightSection(preset.flightSection) : null,
+      take: scene => structuredClone({
+        ...(parts !== 'flight' ? { values: preset.take(own(scene)) } : {}),
+        ...(parts !== 'device' ? { flight: preset.takeFlight(own(scene)) } : {})
+      }),
+      give: (scene, { values, flight }) => {
+        if (values) preset.give(own(scene), values);
+        if (flight) preset.giveFlight(own(scene), flight);
+        return scene;
+      },
+      pick: (from, into) => { const index = into.emitters.findIndex(item => item.id === id); into.emitters[index] = own(from); }
     };
+  }
+
+  /** A device preset loads into its own kind's section, a flight into its flight section, and both only where both fit. */
+  function loadable(preset, section) {
+    const current = slot();
+    if (!current || tab === ENVIRONMENT_PRESETS) return Boolean(current);
+    if (section === current.flightSection) return true;
+    return section === current.deviceSection && (!preset.flight || Boolean(current.flightSection));
   }
 
   const dialog = document.body.appendChild(Object.assign(node('dialog', 'presets-dialog'), { tabIndex: -1 }));
@@ -78,11 +106,11 @@ export function createPresets({ tect, storageKey, state, commit, readScene, kind
   const fileInput = Object.assign(node('input'), { type: 'file', accept: 'application/json,.json', hidden: true });
 
   /** A preset's values are read as an opened scene's are, so a library from another version still loads. */
-  function apply(values) {
+  function apply(preset) {
     const { give, pick } = slot();
     let read;
     try {
-      read = readScene(give(structuredClone(state.scene), structuredClone(values)));
+      read = readScene(give(structuredClone(state.scene), structuredClone({ values: preset.values, flight: preset.flight })));
     } catch (error) {
       message = error.message;
       render();
@@ -92,10 +120,11 @@ export function createPresets({ tect, storageKey, state, commit, readScene, kind
     commit(scene => pick(read, scene));
   }
 
-  function presetRow(preset, section, loadable) {
+  function presetRow(preset, section) {
     const row = node('li');
-    const loadButton = textButton(preset.name, () => apply(preset.values), 'preset-load');
-    loadButton.disabled = !loadable;
+    const loadButton = textButton(preset.name, () => apply(preset), 'preset-load');
+    loadButton.disabled = !loadable(preset, section);
+    if (preset.values && preset.flight) loadButton.append(node('span', 'preset-part', 'Both'));
     const deleting = confirming === `${section}\n${preset.name}`;
     let remove;
     if (deleting) {
@@ -112,7 +141,25 @@ export function createPresets({ tect, storageKey, state, commit, readScene, kind
     return row;
   }
 
-  function saveRow(section) {
+  /** One save row under the list: the name, and for an emitter that flies, whether its device, its flight, or both. */
+  function saveRow() {
+    const current = slot();
+    const holder = node('div', 'preset-save-area');
+    if (tab === EMITTER_TAB && presetOf(currentEmitter())?.takeFlight) {
+      if (!current.flightSection) parts = 'device';
+      const choice = node('div', 'preset-parts');
+      choice.setAttribute('role', 'radiogroup');
+      choice.setAttribute('aria-label', 'Save');
+      for (const [key, label] of PARTS) {
+        const option = textButton(label, () => { parts = key; render(); }, 'preset-part-choice');
+        option.setAttribute('role', 'radio');
+        option.setAttribute('aria-checked', String(parts === key));
+        option.disabled = key !== 'device' && !current.flightSection;
+        choice.append(option);
+      }
+      holder.append(choice);
+    }
+    const section = slot().section;
     const row = node('div', 'preset-save');
     const nameInput = Object.assign(node('input'), { type: 'text', maxLength: 64, id: 'preset-name' });
     nameInput.setAttribute('aria-label', 'Preset name');
@@ -120,8 +167,7 @@ export function createPresets({ tect, storageKey, state, commit, readScene, kind
     const saveButton = textButton('Save', () => {
       const name = presetName(nameInput.value);
       if (!name) return;
-      const { take } = slot();
-      store(withPreset(load(), { section, name, values: take(state.scene) }));
+      store(withPreset(load(), { section, name, ...slot().take(state.scene) }));
       message = '';
       render();
     });
@@ -134,7 +180,8 @@ export function createPresets({ tect, storageKey, state, commit, readScene, kind
     nameInput.addEventListener('keydown', event => { if (event.key === 'Enter') { event.preventDefault(); saveButton.click(); } });
     sync();
     row.append(nameInput, saveButton);
-    return row;
+    holder.append(row);
+    return holder;
   }
 
   function tabButton(key, label) {
@@ -144,30 +191,31 @@ export function createPresets({ tect, storageKey, state, commit, readScene, kind
     return button;
   }
 
-  /** The emitter's own kind first and loadable, the other kinds dimmed below it, so the whole library shows. */
+  /** The emitter's own device and flight sections first and loadable, the other kinds dimmed below, so the whole library shows. */
   function emitterBody(body) {
     const emitter = currentEmitter();
-    const own = presetOf(emitter)?.section ?? null;
+    const current = emitter ? slot() : null;
+    const own = current ? [current.deviceSection, current.flightSection].filter(Boolean) : [];
     if (emitter) body.append(node('p', 'preset-target', emitter.name));
     const library = load();
-    const sections = [...emitterSections].sort(([a], [b]) => (b === own) - (a === own));
+    const sections = [...emitterSections].sort(([a], [b]) => (own.includes(a) ? own.indexOf(a) : own.length) - (own.includes(b) ? own.indexOf(b) : own.length));
     for (const [section, label] of sections) {
       const presets = presetsIn(library, section);
-      if (section !== own && !presets.length) continue;
-      const group = node('section', section === own ? 'preset-group' : 'preset-group other');
+      if (!presets.length) continue;
+      const group = node('section', own.includes(section) ? 'preset-group' : 'preset-group other');
       group.append(node('h3', '', label));
       const list = node('ul', 'preset-list');
-      presets.forEach(preset => list.append(presetRow(preset, section, section === own)));
+      presets.forEach(preset => list.append(presetRow(preset, section)));
       group.append(list);
-      if (section === own) group.append(saveRow(section));
       body.append(group);
     }
+    if (current) body.append(saveRow());
   }
 
   function environmentBody(body) {
     const list = node('ul', 'preset-list');
-    presetsIn(load(), ENVIRONMENT_PRESETS).forEach(preset => list.append(presetRow(preset, ENVIRONMENT_PRESETS, true)));
-    body.append(list, saveRow(ENVIRONMENT_PRESETS));
+    presetsIn(load(), ENVIRONMENT_PRESETS).forEach(preset => list.append(presetRow(preset, ENVIRONMENT_PRESETS)));
+    body.append(list, saveRow());
   }
 
   function render() {
@@ -207,6 +255,7 @@ export function createPresets({ tect, storageKey, state, commit, readScene, kind
   function open(next) {
     tab = next === ENVIRONMENT_PRESETS ? ENVIRONMENT_PRESETS : EMITTER_TAB;
     emitterId = next === ENVIRONMENT_PRESETS ? null : next;
+    parts = 'device';
     message = '';
     confirming = null;
     render();

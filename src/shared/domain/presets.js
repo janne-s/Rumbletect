@@ -9,18 +9,22 @@ export const emptyLibrary = tect => ({ kind: `${tect}.presets`, version: VERSION
 
 export const presetName = text => String(text).trim().slice(0, NAME_LENGTH);
 
+/** A flight preset of an emitter is listed apart from its devices, under its kind's flight section. */
+export const flightSection = section => `${section}-flight`;
+
 /**
- * Every library goes through here, from the browser or a file: a preset without a name, a section or values is
- * dropped, and of two with one name in a section the later is kept. A library of another kind is refused whole.
+ * Every library goes through here, from the browser or a file. `values` holds a device or the air and ground, and
+ * `flight` an emitter's path; a preset without a name, a section, or either of them is dropped, and of two with one
+ * name in a section the later is kept. A library of another kind is refused whole.
  */
 export function readLibrary(value, tect) {
   if (!isRecord(value) || value.kind !== `${tect}.presets` || !Array.isArray(value.presets)) throw new Error(`This is not a ${tect[0].toUpperCase()}${tect.slice(1)} preset library.`);
   const presets = [];
   for (const item of value.presets) {
-    if (!isRecord(item) || typeof item.section !== 'string' || !isRecord(item.values)) continue;
+    if (!isRecord(item) || typeof item.section !== 'string' || !(isRecord(item.values) || isRecord(item.flight))) continue;
     const name = presetName(item.name ?? '');
     if (!name) continue;
-    const preset = { section: item.section, name, values: item.values };
+    const preset = { section: item.section, name, ...(isRecord(item.values) ? { values: item.values } : {}), ...(isRecord(item.flight) ? { flight: item.flight } : {}) };
     const index = presets.findIndex(other => sameSlot(other, preset));
     if (index >= 0) presets.splice(index, 1);
     presets.push(preset);

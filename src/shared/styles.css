@@ -858,6 +858,30 @@ button.macro-value:hover {
 .preset-delete {
   color: var(--accent);
 }
+.preset-save-area {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.preset-parts {
+  display: flex;
+  gap: 2px;
+}
+.preset-part-choice {
+  flex: 1;
+  background: var(--line);
+  color: var(--muted);
+}
+.preset-part-choice[aria-checked="true"] {
+  background: var(--raised);
+  color: var(--ink);
+  box-shadow: inset 0 -2px 0 var(--accent);
+}
+.preset-part {
+  margin-left: 8px;
+  color: var(--faint);
+  font-size: 11px;
+}
 .preset-save {
   display: flex;
   gap: 8px;

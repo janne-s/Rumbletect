@@ -227,11 +227,21 @@ function given(item, values, keys) {
   }
 }
 
-/** A preset is the device only: what flies, not where, when, or how it flies (decision 18). */
+const pick = (emitter, keys) => Object.fromEntries(keys.filter(key => key in emitter).map(key => [key, emitter[key]]));
+
+/** A flight is where, when, and how the emitter flies, its place included, so a pass is the same past the microphones. */
+const JET_FLIGHT = Object.freeze(['startMetres', 'startSeconds', 'headingDegrees', 'climbDegrees', 'mach', 'accelerationMetresPerSecondSquared', 'turnDegrees', 'turnStartSeconds', 'turnRadiusMetres', 'durationSeconds', 'autoDuration']);
+const KIND_FLIGHT = Object.freeze({ airliner: ['gearAndFlaps'], formation: ['memberCount', 'lateralSpacingMetres', 'trailSpacingMetres', 'verticalSpacingMetres'] });
+const jetFlightKeys = emitter => [...JET_FLIGHT, ...(KIND_FLIGHT[emitter.kind] ?? [])];
+
+/** A device preset is what flies (decision 18); a flight preset is its path, and a jet's path fits every kind of jet. */
 const jetPreset = section => Object.freeze({
   section,
   take: emitter => ({ engineClass: emitter.engineClass, engine: emitter.engine }),
-  give: (emitter, values) => given(emitter, values, ['engineClass', 'engine'])
+  give: (emitter, values) => given(emitter, values, ['engineClass', 'engine']),
+  flightSection: 'jet',
+  takeFlight: emitter => pick(emitter, jetFlightKeys(emitter)),
+  giveFlight: (emitter, values) => given(emitter, values, jetFlightKeys(emitter))
 });
 
 const ROCKET_DEVICE = Object.freeze(['propellant', 'engine', 'lengthMetres', 'ignitionPulseDecibels', 'ignitionBurstDecibels']);
@@ -249,13 +259,19 @@ const rocketPreset = Object.freeze({
     given(emitter, values, ROCKET_DEVICE);
     if (typeof values.water === 'boolean') emitter.ascent = { ...emitter.ascent, water: values.water };
     if (emitter.kind === 'salvo') given(emitter, values, SALVO_LAYOUT_KEYS);
-  }
+  },
+  flightSection: 'rocket',
+  takeFlight: emitter => ({ ...pick(emitter, ['startMetres', 'startSeconds', 'headingDegrees', 'launchDegrees']), ascent: Object.fromEntries(ROCKET_ASCENT_NUMBERS.map(key => [key, emitter.ascent[key]])) }),
+  giveFlight: (emitter, values) => given(emitter, values, ['startMetres', 'startSeconds', 'headingDegrees', 'launchDegrees', 'ascent'])
 });
 
 const volcanoPreset = Object.freeze({
   section: 'volcano',
   take: emitter => ({ category: emitter.category, jet: emitter.jet, eruption: emitter.eruption }),
-  give: (emitter, values) => given(emitter, values, ['category', 'jet', 'eruption'])
+  give: (emitter, values) => given(emitter, values, ['category', 'jet', 'eruption']),
+  flightSection: 'volcano',
+  takeFlight: emitter => pick(emitter, ['ventMetres', 'startSeconds']),
+  giveFlight: (emitter, values) => given(emitter, values, ['ventMetres', 'startSeconds'])
 });
 
 const VOLCANO_PANEL = Object.freeze({

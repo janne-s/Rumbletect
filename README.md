@@ -44,10 +44,11 @@ active place and terrain travel with you when switching modes.
   bar rolls every enabled emitter and the air at once, sets how far a roll
   moves from the present values, and shows locks that keep a control as it is.
 - **Presets** — The bookmark beside a dice opens one presets window, on its
-  Emitter or its Air and ground tab, that saves the emitter's device, or the
-  air and ground with their switches, under a name and loads it back; other
-  kinds' presets show dimmed. A device leaves the emitter's flight, place,
-  and name as they are. A rocket's
+  Emitter or its Air and ground tab, that saves under a name and loads back
+  the emitter's device, its flight from where it starts, or both, or the air
+  and ground with their switches; other kinds' presets show dimmed. A device
+  leaves the emitter's flight and a flight its device; the name stays. A
+  jet's flight fits every kind of jet. A rocket's
   device loads into a salvo and back. Presets stay in the browser through an
   app reset, and Export library and Import library keep them in one file.
 - **Selection** — Dashed lines lead from a selected microphone or emitter to its
