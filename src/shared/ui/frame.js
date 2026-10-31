@@ -1316,6 +1316,41 @@ export function startFrame(tect) {
     container.append(labelCell, input, value);
   }
 
+  /** An open card's name is renamed in place; a closed card's name opens it as the rest of its header does. */
+  function cardName(name, selected, onRename) {
+    const label = element('span', 'name', name);
+    if (!selected) return label;
+    label.classList.add('renamable');
+    label.title = 'Rename';
+    label.addEventListener('click', event => {
+      event.stopPropagation();
+      const field = element('input', 'card-name');
+      field.type = 'text';
+      field.maxLength = 64;
+      field.value = name;
+      field.setAttribute('aria-label', 'Name');
+      let done = false;
+      const finish = apply => {
+        if (done) return;
+        done = true;
+        const next = field.value.trim();
+        if (apply && next && next !== name) onRename(next);
+        else field.replaceWith(label);
+      };
+      field.addEventListener('click', inner => inner.stopPropagation());
+      field.addEventListener('keydown', inner => {
+        inner.stopPropagation();
+        if (inner.key === 'Enter') { inner.preventDefault(); finish(true); }
+        if (inner.key === 'Escape') { inner.preventDefault(); finish(false); }
+      });
+      field.addEventListener('blur', () => finish(true));
+      label.replaceWith(field);
+      field.focus();
+      field.select();
+    });
+    return label;
+  }
+
   function cardNode(selected, { checked, title, onCheck, onToggle }, ...parts) {
     const node = element('div', 'card');
     node.setAttribute('aria-selected', String(selected));
@@ -1352,7 +1387,7 @@ export function startFrame(tect) {
       checked: emitter.enabled, title: 'Enabled',
       onCheck: on => updateEmitter(emitter.id, item => { item.enabled = on; }),
       onToggle: () => { state.selection = selected ? { type: null, id: null } : { type: 'emitter', id: emitter.id }; refreshPanel(); }
-    }, element('span', 'name', emitter.name), element('span', 'kind', emitterKindLabel(emitter)), remove);
+    }, cardName(emitter.name, selected, name => updateEmitter(emitter.id, item => { item.name = name; })), element('span', 'kind', emitterKindLabel(emitter)), remove);
     if (selected) {
       const summary = element('p', 'card-summary', emitterSummary(emitter));
       liveFields.summary = item => { summary.textContent = emitterSummary(item); };
@@ -1446,7 +1481,7 @@ export function startFrame(tect) {
       checked: receiver.listen, title: 'Listen',
       onCheck: on => commitListening(next => { next.receivers.find(item => item.id === receiver.id).listen = on; }),
       onToggle: () => { select(selected ? { type: null, id: null } : { type: 'receiver', id: receiver.id }); refreshPanel(); }
-    }, element('span', 'name', receiver.name), element('span', 'kind', `${RECEIVER_TYPE_LABELS[receiver.type]} · ${formatMetres(receiver.positionMetres.z)}`), remove);
+    }, cardName(receiver.name, selected, name => updateReceiver(receiver.id, item => { item.name = name; })), element('span', 'kind', `${RECEIVER_TYPE_LABELS[receiver.type]} · ${formatMetres(receiver.positionMetres.z)}`), remove);
     if (selected) {
       const fields = element('div', 'fields');
       textField(fields, { label: 'Name', value: receiver.name, onCommit: value => updateReceiver(receiver.id, item => { item.name = value; }) });
