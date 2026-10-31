@@ -3,6 +3,7 @@ import { grazingRange, inShadow, pathProfile, soundSpeedProfile } from '../domai
 import { meanPlaneFrame } from '../domain/terrain-propagation.js';
 import { fitCanvas, formatMetres, niceStep, palette } from './canvas.js';
 import { currentSurface, useTerrain } from './geometry-cache.js';
+import { wheelGesture } from './wheel.js';
 
 const OUTLINE_STEPS = 48;
 const OUTLINE_DIRECTIONS = Object.freeze(Array.from({ length: OUTLINE_STEPS }, (_, step) => {
@@ -103,7 +104,7 @@ function handles(scene, box, kinds, tools) {
 }
 
 export function createCubeView(canvas, options) {
-  const { onSelect, onMove, onCommit, onView, onViewChange, focus, kinds, contours = () => false, names = () => false, map = () => false, mapTiles: loadMapTiles = () => [], ghosts = () => [], onGhost = null } = options;
+  const { onSelect, onMove, onCommit, onView, onViewChange, focus, kinds, contours = () => false, names = () => false, map = () => false, mapTiles: loadMapTiles = () => [], ghosts = () => [], onGhost = null, scrollPans = () => false } = options;
   let scene = null;
   let selection = null;
   let view = { ...VIEW.box.defaultView };
@@ -1352,12 +1353,9 @@ export function createCubeView(canvas, options) {
   canvas.addEventListener('wheel', event => {
     event.preventDefault();
     const { x, y } = localPoint(event);
-    const scale = event.deltaMode === 1 ? VIEW.box.wheelLinePixels : 1;
-    const deltaX = event.deltaX * scale;
-    const deltaY = event.deltaY * scale;
-    const mouseWheel = event.deltaMode === 1 || (event.deltaX === 0 && Math.abs(event.deltaY) >= 40 && Number.isInteger(event.deltaY));
-    if (event.ctrlKey || mouseWheel) zoomAt(Math.exp(-deltaY * VIEW.box.zoomPerPixel * (event.ctrlKey ? 2 : 1)), x, y);
-    else panBy(-deltaX, -deltaY);
+    const { zoomPixels, panX, panY } = wheelGesture(event, scrollPans());
+    if (zoomPixels === undefined) panBy(-panX, -panY);
+    else zoomAt(Math.exp(-zoomPixels * VIEW.box.zoomPerPixel), x, y);
     onView(view);
   }, { passive: false });
   let gestureScale = 1;

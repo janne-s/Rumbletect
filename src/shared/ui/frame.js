@@ -110,7 +110,7 @@ export function startFrame(tect) {
   }
 
   const preferences = {
-    realDelay: true, wavefronts: Object.fromEntries(MODES.map(mode => [mode, true])), contours: true, names: false, map: false, ...tectPreferences, autoRender: true, preview: false, mode: MODES[0],
+    realDelay: true, wavefronts: Object.fromEntries(MODES.map(mode => [mode, true])), contours: true, names: false, map: false, scrollPans: false, ...tectPreferences, autoRender: true, preview: false, mode: MODES[0],
     terrainDraft: { cellMetres: 30 }, cubeViews: {},
     panelWidth: 340, resultsHeight: 220,
     ...(storage.read(PREFERENCES_STORAGE_KEY) ?? {})
@@ -295,7 +295,8 @@ export function startFrame(tect) {
     mapTiles: area => mapLayer.tiles(state.scene.place, area),
     ghosts: () => (link.partner() ? linked.emitters : []),
     onGhost: ghost => link.send('select', { id: ghost.id }),
-    clouds: () => state.preferences.clouds
+    clouds: () => state.preferences.clouds,
+    scrollPans: () => state.preferences.scrollPans
   })];
 
   function groundAnchored(handle, item) {
@@ -568,6 +569,12 @@ export function startFrame(tect) {
     showResults();
   }
 
+  function linkIcon(name) {
+    const icon = element('i', `fa-solid ${name}`);
+    icon.setAttribute('aria-hidden', 'true');
+    return icon;
+  }
+
   function drawLink() {
     const holder = $('link-buttons');
     const partner = link.partner();
@@ -575,7 +582,12 @@ export function startFrame(tect) {
       const item = element('button', partner === name ? 'link-button linked' : 'link-button');
       item.type = 'button';
       const waiting = link.offering() === name;
-      item.textContent = partner === name ? (linked.error ? `${name} · not matched` : name) : waiting ? `Linking ${name}…` : link.present(name) ? `Link ${name}` : `Open ${name}`;
+      item.textContent = partner === name && linked.error ? `${name} · not matched` : name;
+      if (partner !== name) {
+        item.prepend(waiting ? element('span', 'link-dot updating') : linkIcon(link.present(name) ? 'fa-link' : 'fa-arrow-up-right-from-square'));
+        item.title = waiting ? `Linking ${name}…` : link.present(name) ? `Link ${name}` : `Open ${name}`;
+        item.setAttribute('aria-label', item.title);
+      }
       if (partner === name) {
         item.prepend(element('span', linked.error ? 'link-dot error' : linked.updating ? 'link-dot updating' : 'link-dot'));
         item.title = linked.error ?? (linked.updating ? `${name} is updating its sound` : `Linked with ${name}`);
@@ -1661,7 +1673,7 @@ export function startFrame(tect) {
     checkboxField(container, { label: 'Contours', value: state.preferences.contours, onCommit: value => { state.preferences.contours = value; savePreferences(); redrawViews(); } });
   }
 
-  const placeMap = createPlaceMap($('place-map'), $('place-overlay'), { onChange: showPlaceCoordinates });
+  const placeMap = createPlaceMap($('place-map'), $('place-overlay'), { onChange: showPlaceCoordinates, scrollPans: () => state.preferences.scrollPans });
   let placeShown = '';
 
   function showPlaceCoordinates({ latitude, longitude }) {
@@ -2756,6 +2768,11 @@ export function startFrame(tect) {
       after: () => redrawViews()
     },
     ...Object.fromEntries(Object.keys(tectToggles).map(id => [id, { read: () => state.preferences[id], write: on => { state.preferences[id] = on; }, after: () => redrawViews() }])),
+    'scroll-pans': {
+      read: () => state.preferences.scrollPans,
+      write: on => { state.preferences.scrollPans = on; },
+      after: () => syncScrollIcon()
+    },
     names: {
       read: () => state.preferences.names,
       write: on => { state.preferences.names = on; },
@@ -2775,6 +2792,15 @@ export function startFrame(tect) {
       }
     }
   });
+
+  function syncScrollIcon() {
+    const pans = Boolean(state.preferences.scrollPans);
+    const button = $('scroll-pans');
+    button.title = pans ? 'Scrolling pans' : 'Scrolling zooms';
+    button.setAttribute('aria-label', button.title);
+    button.querySelector('i').className = `fa-solid ${pans ? 'fa-hand' : 'fa-computer-mouse'}`;
+  }
+  syncScrollIcon();
 
   function syncToggles() {
     for (const [id, { read }] of Object.entries(TOGGLES)) $(id).setAttribute('aria-pressed', String(Boolean(read())));

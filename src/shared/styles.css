@@ -314,6 +314,11 @@ figcaption {
   display: inline-flex;
   align-items: center;
   gap: 6px;
+  white-space: nowrap;
+}
+.link-button .fa-solid {
+  font-size: 11px;
+  color: var(--faint);
 }
 .link-dot {
   width: 7px;
@@ -783,6 +788,11 @@ button.macro-value:hover {
 }
 .view-tools .icon-toggle {
   background: color-mix(in srgb, var(--raised) 80%, transparent);
+}
+@media not (any-pointer: fine) {
+  .scroll-pans {
+    display: none;
+  }
 }
 .attribution {
   display: flex;

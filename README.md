@@ -34,8 +34,9 @@ active place and terrain travel with you when switching modes.
 - **Points and shadows** — Drag a point to move it horizontally, or its shadow
   on the floor or a wall to move it in that plane. A flight's second point sets
   its heading.
-- **View** — Drag empty space to turn, pinch or wheel to zoom, two fingers,
-  Shift-drag, or the right button to pan, double-click to reset.
+- **View** — Drag empty space to turn, pinch or scroll to zoom, Shift-scroll,
+  Shift-drag, or the right button to pan, double-click to reset. The mouse
+  button in the view turns into a hand and lets two-finger scrolling pan.
 - **Selection** — Dashed lines lead from a selected microphone or emitter to its
   shadows on the floor and walls. A click on empty space clears it.
 - **Shadow boundary** — The line on the ground beyond which refraction lifts the
@@ -333,9 +334,9 @@ that moves.
 
 ## Boomtect
 
-**Open Boomtect** opens [Boomtect](https://github.com/janne-s/Boomtect) in its own
-window and links the two windows. When Boomtect is already open, the button
-reads **Link Boomtect**. Boomtect makes sonic booms, blasts, thunder, and
+**Boomtect** in the bar opens [Boomtect](https://github.com/janne-s/Boomtect) in its own
+window and links the two windows. When Boomtect is already open, a link icon
+replaces the arrow. Boomtect makes sonic booms, blasts, thunder, and
 volcanic explosions.
 
 - **One scene** — The place, terrain, air, ground, microphones, and render
