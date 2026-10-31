@@ -37,6 +37,7 @@ active place and terrain travel with you when switching modes.
 - **View** — Drag empty space to turn, pinch or scroll to zoom, Shift-scroll,
   Shift-drag, or the right button to pan, double-click to reset. The mouse
   button in the view turns into a hand and lets two-finger scrolling pan.
+  Terrain draws coarser while the view moves.
 - **Randomise** — The dice on an emitter rolls its quick controls; heading,
   onset, crater height, and flight time stay locked until unlocked. The dice
   on Air and ground rolls the air and ground values within everyday weather
