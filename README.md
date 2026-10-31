@@ -37,6 +37,12 @@ active place and terrain travel with you when switching modes.
 - **View** — Drag empty space to turn, pinch or scroll to zoom, Shift-scroll,
   Shift-drag, or the right button to pan, double-click to reset. The mouse
   button in the view turns into a hand and lets two-finger scrolling pan.
+- **Randomise** — The dice on an emitter rolls its quick controls, all but
+  heading, onset, crater height, and flight time; the dice on Air and ground
+  rolls the air and ground values within everyday weather and keeps the
+  switches. The arrow beside it steps back through its rolls. The dice in the
+  bar rolls every enabled emitter and the air at once, sets how far a roll
+  moves from the present values, and shows locks that keep a control as it is.
 - **Selection** — Dashed lines lead from a selected microphone or emitter to its
   shadows on the floor and walls. A click on empty space clears it.
 - **Shadow boundary** — The line on the ground beyond which refraction lifts the

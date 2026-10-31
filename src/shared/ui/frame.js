@@ -25,6 +25,8 @@ import { composeListening, firstArrivalSeconds, LISTENING_LABELS, listeningKind 
 import { createOrientationBall } from './orientation-ball.js';
 import { createMobileLayout } from './mobile.js';
 import { createSettings } from './settings.js';
+import { createRandomiser, ENVIRONMENT } from './randomiser.js';
+import { ENVIRONMENT_CONTROLS } from '../domain/randomise.js';
 import { createPlayer, renderComposition } from './player.js';
 import { drawArrivals, drawWaveform, plotSeconds } from './plots.js';
 import { attachSplitters } from './splitters.js';
@@ -1163,6 +1165,14 @@ export function startFrame(tect) {
   const updateEmitter = (id, change) => commit(scene => change(scene.emitters.find(emitter => emitter.id === id)));
   const updateReceiver = (id, change) => commit(scene => change(scene.receivers.find(receiver => receiver.id === id)));
 
+  const quickControls = (emitter, scene) => kinds[emitter.kind].macros(emitter, { onset: scene.emitters.length > 1 || emitter.startSeconds > 0 });
+  const randomiser = createRandomiser({
+    state, commit, savePreferences, refreshPanel: () => refreshPanel(),
+    controlsOf: quickControls,
+    upperWind: scene => Boolean(MODE_SETTINGS[scene.mode].upperWind)
+  });
+  randomiser.menu($('randomise'));
+
   function preview(change) {
     change(state.scene);
     liveFields.warnings?.();
@@ -1233,6 +1243,7 @@ export function startFrame(tect) {
     const id = `macro-${emitter.id}-${macro.label}`;
     const label = element('label', '', macro.label);
     label.htmlFor = id;
+    const labelCell = randomiser.lockCell(label, emitter.kind, macro);
     const steps = macro.steps ?? VIEW.panels.macroSteps;
     const value = element(macro.entry ? 'button' : 'span', 'macro-value', macro.show(emitter));
     if (macro.entry) {
@@ -1289,7 +1300,7 @@ export function startFrame(tect) {
         input.addEventListener('dblclick', reset);
       }
       holder.append(lower, upper);
-      container.append(label, holder, value);
+      container.append(labelCell, holder, value);
       return;
     }
     const input = slider(macro.read(emitter));
@@ -1299,7 +1310,7 @@ export function startFrame(tect) {
     input.addEventListener('input', () => { holdViews(true); paintTrack(input, 0, Number(input.value) / steps); apply(() => [Number(input.value) / steps]); });
     input.addEventListener('change', () => { holdViews(false); commit(() => {}); });
     input.addEventListener('dblclick', reset);
-    container.append(label, input, value);
+    container.append(labelCell, input, value);
   }
 
   function cardNode(selected, { checked, title, onCheck, onToggle }, ...parts) {
@@ -1351,7 +1362,7 @@ export function startFrame(tect) {
         card.append(warnings);
       }
       const macros = element('div', 'macros');
-      kinds[emitter.kind].macros(emitter, { onset: scene.emitters.length > 1 || emitter.startSeconds > 0 }).forEach(macro => macroRow(macros, emitter, macro));
+      quickControls(emitter, scene).forEach(macro => macroRow(macros, emitter, macro));
       card.append(macros);
       const actions = element('div', 'card-actions');
       actions.append(button('Details…', () => openDetails(emitter.id)));
@@ -1364,6 +1375,7 @@ export function startFrame(tect) {
         source.enabled = false;
         return { ...structuredClone(source), id: uniqueId(source.kind, next.emitters), name: `${source.name} variant`.slice(0, 64), ...(seeded ? { seed: newSeed() } : {}), enabled: true };
       }), { disabled: scene.emitters.length >= RENDER.maximumEmitters, title: seeded ? 'Copy with a new seed; the original is switched off' : 'Copy to change; the original is switched off' }));
+      actions.append(randomiser.diceButtons(emitter.id));
       card.append(actions);
     }
     container.append(card);
@@ -1794,7 +1806,7 @@ export function startFrame(tect) {
     checkboxField(environment, { label: 'Ground reflection', value: scene.ground.enabled, reliability: 'B', onCommit: value => commit(next => { next.ground.enabled = value; }) });
     selectField(environment, {
       label: 'Ground', value: scene.ground.type, reliability: 'B',
-      options: GROUND_TYPES.map(type => [type, GROUND_LABELS[type]]),
+      key: 'groundType', options: GROUND_TYPES.map(type => [type, GROUND_LABELS[type]]),
       onCommit: value => commit(next => { next.ground.type = value; })
     });
     checkboxField(environment, { label: 'Forest', value: scene.ground.forest, reliability: 'B', onCommit: value => commit(next => { next.ground.forest = value; }) });
@@ -1803,6 +1815,11 @@ export function startFrame(tect) {
       numberField(environment, { key: 'forestDensity', value: scene.ground.forestDensity, onCommit: value => commit(next => { next.ground.forestDensity = value; }) });
     }
     checkboxField(environment, { label: 'Surroundings', value: scene.ground.surroundings, reliability: 'C', onCommit: value => commit(next => { next.ground.surroundings = value; }) });
+    for (const control of ENVIRONMENT_CONTROLS) {
+      const label = environment.querySelector(`[data-key="${control.key}"]`)?.labels?.[0];
+      if (label) randomiser.lockCell(label, ENVIRONMENT, control);
+    }
+    $('environment-tools').replaceChildren(randomiser.diceButtons(ENVIRONMENT));
 
     const terrainFields = $('terrain-fields');
     terrainFields.replaceChildren();

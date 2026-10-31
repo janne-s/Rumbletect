@@ -708,6 +708,78 @@ button.macro-value:hover {
 .card-actions button:hover:not(:disabled) {
   background: var(--faint);
 }
+.dice-buttons {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+}
+.card-actions .dice-button,
+.card-actions .dice-button:hover:not(:disabled) {
+  width: 28px;
+  height: auto;
+  margin: 0;
+  background: none;
+}
+.section-tools {
+  float: right;
+  margin: -3px -4px -3px 0;
+}
+.section-tools .dice-button {
+  width: 22px;
+  margin: 0;
+}
+.lockable {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
+}
+.lockable label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.lock-button {
+  flex: none;
+  width: 16px;
+  height: 16px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--faint);
+  font-size: 10px;
+}
+.lock-button[aria-pressed="true"] {
+  color: var(--accent);
+}
+.randomise-menu {
+  min-width: 220px;
+}
+.randomise-menu button {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.randomise-menu button i {
+  width: 1.2em;
+  color: var(--muted);
+  text-align: center;
+}
+.randomise-menu button[aria-pressed="true"] i {
+  color: var(--accent);
+}
+.randomise-amount {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) 40px;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 8px;
+  color: var(--muted);
+}
+.randomise-amount span {
+  color: var(--ink);
+  text-align: right;
+}
 .group {
   margin-top: 18px;
 }
@@ -1404,6 +1476,7 @@ details summary {
     height: 36px;
   }
   .bar #settings,
+  .bar #randomise,
   .bar .mobile-actions,
   .bar .github-link {
     flex: none;

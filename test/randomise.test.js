@@ -1,0 +1,25 @@
+import assert from 'node:assert/strict';
+import test from 'node:test';
+import { ADD_EMITTERS, KIND_PANELS } from '../src/ui/kinds.js';
+import { defaultScene, parseScene } from '../src/domain/scene.js';
+import { createRandom } from '../src/shared/domain/random.js';
+import { randomiseControls, randomiseEnvironment } from '../src/shared/domain/randomise.js';
+
+const PLACEMENT = ['headingDegrees', 'startSeconds', 'durationSeconds', 'autoDuration'];
+const ground = point => point && { x: point.x, y: point.y };
+
+test('a full roll of every kind\'s quick controls is a valid scene and leaves where on the ground and when it is', () => {
+  for (const [prefix, { create, mode }] of Object.entries(ADD_EMITTERS)) {
+    for (let seed = 1; seed <= 60; seed += 1) {
+      const scene = defaultScene(mode);
+      const emitter = create(`${prefix}-2`, 'Rolled', 1);
+      scene.emitters = [emitter];
+      const before = structuredClone(emitter);
+      randomiseControls(emitter, KIND_PANELS[emitter.kind].macros(emitter, { onset: true }), { random: createRandom(seed), amount: 1 });
+      randomiseEnvironment(scene, { random: createRandom(seed + 1000), amount: 1, upperWind: mode !== 'jet' });
+      assert.doesNotThrow(() => parseScene(scene), `${prefix} seed ${seed}`);
+      for (const key of PLACEMENT) if (key in before) assert.deepEqual(emitter[key], before[key], `${prefix} ${key}`);
+      assert.deepEqual(ground(emitter.startMetres ?? emitter.ventMetres), ground(before.startMetres ?? before.ventMetres), prefix);
+    }
+  }
+});

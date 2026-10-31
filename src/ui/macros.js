@@ -51,6 +51,7 @@ const flightHeight = {
 
 const flightHeading = {
   label: 'Heading',
+  randomised: false,
   read: item => item.headingDegrees / 360,
   write: (item, t) => { item.headingDegrees = Math.round(t * 360) % 360; },
   show: item => `${Math.round(item.headingDegrees)}°`,
@@ -106,6 +107,7 @@ const flightClimb = {
 
 const flightTime = {
   label: 'Flight time',
+  randomised: false,
   read: item => clamp01(logPosition(item.durationSeconds, range('flightSeconds'))),
   write: (item, t) => { item.durationSeconds = Math.round(logValue(t, range('flightSeconds'))); item.autoDuration = false; },
   show: item => (item.autoDuration ? 'Auto' : `${item.durationSeconds} s`),
@@ -114,6 +116,7 @@ const flightTime = {
 
 const onset = {
   label: 'Onset',
+  randomised: false,
   read: item => clamp01(Math.cbrt(item.startSeconds / range('startSeconds')[1])),
   write: (item, t) => { item.startSeconds = +(range('startSeconds')[1] * t ** 3).toFixed(2); },
   show: item => `${+item.startSeconds.toFixed(2)} s`,
@@ -319,6 +322,7 @@ const CRATER_HEIGHT_METRES = 6000;
 
 const craterHeight = {
   label: 'Crater height',
+  randomised: false,
   read: item => clamp01(Math.sqrt(item.ventMetres.z / CRATER_HEIGHT_METRES)),
   write: (item, t) => { item.ventMetres = { ...item.ventMetres, z: Math.round(t * t * CRATER_HEIGHT_METRES / 10) * 10 }; },
   show: item => metres(item.ventMetres.z),
