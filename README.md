@@ -257,7 +257,10 @@ active place and terrain travel with you when switching modes.
   sound under their canopy is muffled, and the forest answers every sound with
   a reverberant tail; a sparser forest does both less.
 - **Surroundings** — Over level ground, the long rumble the land around returns
-  of a loud sound. Over terrain with echoes, the echoes take its place.
+  of a loud sound, its colour set by where the microphone and the sources
+  stand. Over terrain with echoes, the echoes take its place.
+- **Surroundings tail** — How long the rumble lasts in its lowest bands:
+  about 2 s in a town, 7–20 s over an open range.
 - **Wind**, **Wind from**, and **Wind shear** — The wind at the ground, the
   compass direction it comes from, and how much it strengthens with height.
   Downwind, sound bends down and carries; upwind, the shadow comes closer.
@@ -430,7 +433,7 @@ B/C marks a part that combines the two.
 | Scintillation | fitted to recordings | C |
 | Forest, under the canopy | ISO 9613-2 foliage attenuation, up to 200 m | B |
 | Forest reverberation | seeded diffuse tail at the microphone with an early and a late slope per octave, fitted to eight measured forest responses (Koli, Finland), driven by each path's way under the canopy | B/C |
-| Surroundings | seeded diffuse tail at the microphone over level ground, fitted to recorded booms | C |
+| Surroundings | diffuse tail at the microphone over level ground, seeded by the positions, band shape fitted to recorded booms, length set (default 4 s) | C |
 | Distance loss below 100 % | creative easing of spreading | C |
 | Ambisonics | spherical harmonics, AmbiX | A |
 | Ear reflex | threshold, latency, low-frequency attenuation, adaptation | B/C |
@@ -487,6 +490,7 @@ What each change does to the sound:
 | `grass`, `soil`, `forestFloor`, `snow` | softer ground, the lows dip near it; `snow` the most muffled |
 | `ground.forest` | highs muffled on the way, a reverberant tail |
 | `ground.surroundings` | the long rumble the land around returns of a loud sound |
+| `ground.surroundingsSeconds` | a longer or shorter rumble |
 | Microphone `z` near the ground | a deeper ground dip |
 | Humid air | highs carry farther |
 | Wind toward the microphone | louder; against it, a shadow at a distance |
