@@ -1,8 +1,8 @@
 export * from '../shared/domain/constants.js';
 
-export const APP_VERSION = '0.1.2';
+export const APP_VERSION = '0.2.0';
 
-export const MODEL_VERSION = '0.2.0';
+export const MODEL_VERSION = '0.3.0';
 
 /** Marks on a drawn path: a tick where it reaches the speed of sound, rings where a rocket's turn starts and ends. */
 export const TRACK_MARKS = Object.freeze({ barrierPixels: 4, turnRadius: 3 });
