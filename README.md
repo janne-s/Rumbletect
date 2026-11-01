@@ -35,26 +35,19 @@ active place and terrain travel with you when switching modes.
   on the floor or a wall to move it in that plane. A flight's second point sets
   its heading.
 - **View** — Drag empty space to turn, pinch or scroll to zoom, Shift-scroll,
-  Shift-drag, or the right button to pan, double-click to reset. The mouse
-  button in the view turns into a hand and lets two-finger scrolling pan.
-  Terrain draws coarser while the view moves.
-- **Randomise** — The dice on an emitter rolls its quick controls; heading,
-  onset, crater height, and flight time stay locked until unlocked. The dice
-  on Air and ground rolls the air and ground values within everyday weather
-  and keeps the switches. The arrow beside it steps back through its rolls. The dice in the
-  bar rolls every enabled emitter and the air at once, sets how far a roll
-  moves from the present values, and shows locks that keep a control as it is.
-- **Mix** — The last section of an emitter's details sets it louder or
-  quieter in decibels against the others, after propagation, so that its
-  sound keeps its shape; the export's summary lists what was mixed.
-- **Presets** — The bookmark beside a dice opens one presets window, on its
-  Emitter or its Air and ground tab, that saves under a name and loads back
-  the emitter's device, its flight from where it starts, or both, or the air
-  and ground with their switches; other kinds' presets show dimmed. A device
-  leaves the emitter's flight and a flight its device; the name stays. A
-  jet's flight fits every kind of jet. A rocket's
-  device loads into a salvo and back. Presets stay in the browser through an
-  app reset, and Export library and Import library keep them in one file.
+  Shift-drag, or the right button to pan, double-click to reset. The hand
+  button lets two-finger scrolling pan.
+- **Randomise** — The dice on an emitter rolls its quick controls, with
+  heading, onset, flight time, and crater height locked until unlocked; on Air
+  and ground it rolls everyday weather. The arrow steps back through the rolls.
+  The dice in the bar rolls everything, sets how far a roll goes, and shows
+  the locks.
+- **Mix** — An emitter louder or quieter in decibels against the others,
+  after propagation, its sound's shape kept.
+- **Presets** — The bookmark beside a dice saves and loads an emitter's
+  device, its flight from where it starts, or both, and the air and ground. A
+  jet's flight fits every jet, and a rocket loads into a salvo. Presets survive
+  an app reset; Export library and Import library keep them in a file.
 - **Selection** — Dashed lines lead from a selected microphone or emitter to its
   shadows on the floor and walls. A click on empty space clears it.
 - **Shadow boundary** — The line on the ground beyond which refraction lifts the
@@ -238,8 +231,7 @@ active place and terrain travel with you when switching modes.
 - **Level** — Normalizes to the peak, or uses a fixed full scale in pascals.
   A fixed scale keeps sounds as loud as each other as they are outdoors.
 - **Low cut** — Cuts infrasound below 20 Hz (default) or 30 Hz, as a
-  recording chain does, so the audible sound is not set by an inaudible peak;
-  Off keeps the whole field.
+  recording chain does; Off keeps the whole field.
 - **Distance loss** — 100 % is physical; less eases how fast a source fades
   with distance beyond the microphone's nearest path, keeping air absorption,
   directivity, Doppler shift, and ground.
@@ -360,8 +352,8 @@ that moves.
 
 **Boomtect** in the bar opens [Boomtect](https://github.com/janne-s/Boomtect) in its own
 window and links the two windows. When Boomtect is already open, a link icon
-replaces the arrow. Boomtect makes sonic booms, blasts, thunder, and
-volcanic explosions.
+replaces the arrow. Boomtect makes sonic booms, blasts, thunder, volcanic
+and gas explosions, and bursting vessels.
 
 - **One scene** — The place, terrain, air, ground, microphones, and render
   settings are the same in both windows, and a change in either reaches the
@@ -408,6 +400,7 @@ B/C marks a part that combines the two.
 | Jet velocity | ideal nozzle | A |
 | Mixing noise spectra | Tam, Golebiowski & Seiner 1996 | B |
 | Mixing noise level with size | Khavaran & Bridges 2009, fitted | B/C |
+| Mixing noise in flight | the shear between exhaust and flight; a flight faster than its exhaust reverses it, shock cells as they are | C |
 | Peak frequencies | full-scale F-35AA and F-22A, Gee, Neilsen & Wall 2013, fitted | B/C |
 | Directivity | Tam 1996 figs. 6–7 | B |
 | Flight effects | Stone, Krejsa & Clark 2003, combined | B/C |
@@ -498,6 +491,7 @@ What each change does to the sound:
 | `ground.surroundings` | the long rumble the land around returns of a loud sound |
 | `ground.surroundingsSeconds` | a longer or shorter rumble |
 | `emitters[].mixDecibels` | the emitter louder or quieter, its sound's shape kept |
+| `render.lowCutHz` `0` | the infrasound kept; 20 (default) or 30 cuts it as a recording does |
 | Microphone `z` near the ground | a deeper ground dip |
 | Humid air | highs carry farther |
 | Wind toward the microphone | louder; against it, a shadow at a distance |
