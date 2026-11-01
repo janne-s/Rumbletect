@@ -45,7 +45,7 @@ test('the default rocket, Falcon 9\'s size, is about 135 dB at 1 km over grass, 
   rocket.ascent = { ...rocket.ascent, burnSeconds: 30, accelerationPercent: shortened, burnoutMetresPerSecond: burnoutMetresPerSecond * speedShare(accelerationPercent, share), bendDegrees: 0 };
   const scene = parseScene({
     ...base, air: { ...base.air, refraction: false }, ground: { ...base.ground, type: 'grass', forest: false, surroundings: false }, emitters: [rocket],
-    receivers: [{ ...base.receivers[0], type: 'omni', positionMetres: { x: 0, y: -1000, z: 1.7 } }], render: { ...base.render, ambisonicOrder: 0 }
+    receivers: [{ ...base.receivers[0], type: 'omni', positionMetres: { x: 0, y: -1000, z: 1.7 } }], render: { ...base.render, ambisonicOrder: 0, lowCutHz: 0 }
   });
   const { samples, sampleRate } = renderReceiver(prepareScene(scene), scene.receivers[0], scene);
   let loudest = 0;
