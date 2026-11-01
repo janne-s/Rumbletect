@@ -44,6 +44,9 @@ active place and terrain travel with you when switching modes.
   and keeps the switches. The arrow beside it steps back through its rolls. The dice in the
   bar rolls every enabled emitter and the air at once, sets how far a roll
   moves from the present values, and shows locks that keep a control as it is.
+- **Mix** — The last section of an emitter's details sets it louder or
+  quieter in decibels against the others, after propagation, so that its
+  sound keeps its shape; the export's summary lists what was mixed.
 - **Presets** — The bookmark beside a dice opens one presets window, on its
   Emitter or its Air and ground tab, that saves under a name and loads back
   the emitter's device, its flight from where it starts, or both, or the air
@@ -491,6 +494,7 @@ What each change does to the sound:
 | `ground.forest` | highs muffled on the way, a reverberant tail |
 | `ground.surroundings` | the long rumble the land around returns of a loud sound |
 | `ground.surroundingsSeconds` | a longer or shorter rumble |
+| `emitters[].mixDecibels` | the emitter louder or quieter, its sound's shape kept |
 | Microphone `z` near the ground | a deeper ground dip |
 | Humid air | highs carry farther |
 | Wind toward the microphone | louder; against it, a shadow at a distance |
