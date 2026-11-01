@@ -32,7 +32,6 @@ function tableDecibels(strouhal, degrees) {
   return row(r0) + (row(r1) - row(r0)) * rs;
 }
 
-/** Directivity index in dB toward `degrees` from the plume axis: SATURN's table (B), forward of its edge RSRM's fall (C). */
 export function directivityDecibels(strouhal, degrees) {
   if (degrees <= ROCKET.directivityEdgeDegrees) return tableDecibels(strouhal, degrees);
   const edge = tableDecibels(strouhal, ROCKET.directivityEdgeDegrees);
@@ -80,7 +79,6 @@ const GRID_FORWARD = Array.from({ length: 181 }, (_, degrees) => {
   return [at(FORWARD.low), at(FORWARD.high)];
 });
 
-/** `directivityDecibels` every degree from 0° to 180° as linear intensity ratios, written into `out` from `offset`. */
 export function directivityRow(strouhal, out, offset) {
   const [r0, r1, rs] = bracket(TABLE_LOG_STROUHAL, Math.log(strouhal));
   const [first, second] = [SATURN_DIRECTIVITY.decibels[r0], SATURN_DIRECTIVITY.decibels[r1]];
@@ -95,13 +93,11 @@ export function directivityRow(strouhal, out, offset) {
   }
 }
 
-/** A rocket's engine set to a category's: thrust, engines, propellant, nozzle, efficiency, length and the pad's water; its flight kept. */
 export function categoryEngine(item, category) {
   const sized = sizedRocket(category.newtons, category.engines, category.propellant);
   return { ...item, propellant: category.propellant, lengthMetres: category.lengthMetres, engine: { ...item.engine, ...sized.engine, efficiencyPercent: category.efficiencyPercent }, ascent: { ...item.ascent, water: sized.ascent.water } };
 }
 
-/** A rocket set to a category's thrust, engines, propellant, efficiency and ascent; the throttle schedule kept. */
 export function categoryRocket(item, category) {
   const sized = sizedRocket(category.newtons, category.engines, category.propellant);
   const { turnStartPercent, turnLengthPercent } = ROCKET.defaultAscent;
@@ -115,10 +111,6 @@ export function categoryRocket(item, category) {
   };
 }
 
-/**
- * The ascent and, after burnout, a solid rocket's unpowered flight against gravity and drag until it falls back to its
- * pad's height. Class B/C. A liquid launcher stages instead, so its path ends at burnout.
- */
 export function coastedPath(path, emitter, air, surface = FLAT_SURFACE) {
   if (emitter.propellant !== 'solid' || path.groundSeconds !== null || path.seconds.length < 2) return path;
   const { burntDensityKilogramsPerCubicMetre, dragCoefficient, seconds } = ROCKET.coast;
@@ -148,7 +140,6 @@ export function coastedPath(path, emitter, air, surface = FLAT_SURFACE) {
   return coasted;
 }
 
-/** A vehicle's length for a saved rocket's total thrust, between its categories' on log–log; none without an engine. Class C. */
 export function typicalLengthMetres(item) {
   const engine = item?.engine;
   const newtons = engine?.engines * engine?.thrustKilonewtons * 1000;
@@ -164,7 +155,6 @@ export function typicalLengthMetres(item) {
   return Math.exp(points.at(-1)[1]);
 }
 
-/** The category whose thrust is nearest, in octaves, to the rocket's. */
 export const nearestCategory = emitter => ROCKET.categories.reduce((best, category) => (Math.abs(Math.log(category.newtons / totalThrustNewtons(emitter))) < Math.abs(Math.log(best.newtons / totalThrustNewtons(emitter))) ? category : best));
 
 export const sourceLocationMetres = (strouhal, diameterMetres) => ROCKET.sourceLocation.coefficient * strouhal ** ROCKET.sourceLocation.exponent * diameterMetres;
@@ -186,14 +176,12 @@ export const soundPowerWatts = (vehicle, throttle = 1) => .5 * vehicle.efficienc
 
 export const ignitionSecondsOf = vehicle => ROCKET.shortestIgnitionSeconds + ROCKET.ignitionSecondsPerEngine * (vehicle.engines - 1);
 
-/** Decision 19: the first grain's power over the burn's, its excess shared among the engines; 1 when the burst is off. */
 export function ignitionBurstGain(emitter) {
   const { ignitionBurst: burst } = ROCKET;
   if (emitter.ignitionBurstDecibels <= burst.offDecibels) return 1;
   return 1 + (10 ** (burst.decibels / 10) - 1) * 10 ** (emitter.ignitionBurstDecibels / 10) / emitter.engine.engines;
 }
 
-/** Decision 19: the ignition pulse at the pad, or null when it is off. */
 export function ignitionPulse(emitter, scene) {
   const { ignitionPulse: pulse } = ROCKET;
   if (emitter.ignitionPulseDecibels <= pulse.offDecibels) return null;
@@ -228,12 +216,7 @@ export function speedShare(accelerationPercent, burnShare) {
   return fraction < 1e-9 ? burnShare : Math.log(1 - fraction * burnShare) / Math.log(1 - fraction);
 }
 
-/**
- * Class C, decision 9: the authored ascent in the vertical plane of the launch heading. Liquid engines are held on the pad
- * for `ROCKET.holdSeconds`; then the speed rises to the burnout speed as `speedShare`, and the flight-path angle turns from
- * the launch angle by `bendDegrees` between the turn's start and end, as shares of the distance flown. The path is sampled
- * like `flightPath` and ends at the burn's end or where it comes down to the ground of `surface`.
- */
+/** Class C, decision 9: the authored ascent. */
 export function ascentPath(emitter, surface = FLAT_SURFACE) {
   const { ascent } = emitter;
   const hold = emitter.propellant === 'solid' ? 0 : ROCKET.holdSeconds;
@@ -291,11 +274,6 @@ export function ascentPath(emitter, surface = FLAT_SURFACE) {
 
 const GRID_DEGREES = 181;
 
-/**
- * Per frequency, once per rocket: SATURN's power as a linear share per unit Sr, the source's distance behind the nozzle,
- * and its directivity every degree, read at the Strouhal number scaled by `stretch` so the spectrum peaks where the
- * vehicle's does; the power is scaled by it too, keeping the whole.
- */
 function spectralTable(frequencies, diameter, velocity, stretch) {
   const power = new Float64Array(frequencies.length);
   const location = new Float64Array(frequencies.length);
@@ -313,7 +291,6 @@ const SHARED_TABLES = 8;
 const sharedTables = [];
 const sameValues = (a, b) => a.length === b.length && a.every((value, index) => value === b[index]);
 
-/** One table for every round of a salvo that shares its nozzle and frequency grid. */
 function sharedSpectralTable(frequencies, diameter, velocity, stretch) {
   const found = sharedTables.find(entry => entry.diameter === diameter && entry.velocity === velocity && entry.stretch === stretch && sameValues(entry.frequencies, frequencies));
   if (found) return found.table;
@@ -323,10 +300,6 @@ function sharedSpectralTable(frequencies, diameter, velocity, stretch) {
   return table;
 }
 
-/**
- * The rocket's source along its ascent for `pathGrains`: power from thrust (B), SATURN's spectrum and directivity (B),
- * the ignition opening the spectrum upward (C), and frequencies still at the pad radiating without directivity (C).
- */
 export function rocketSource(emitter, scene, path) {
   const vehicle = vehicleOf(emitter);
   const { air } = scene;

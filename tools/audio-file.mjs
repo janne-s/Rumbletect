@@ -1,4 +1,3 @@
-// Reads a recording or render as mono: WAV directly, any other format through ffmpeg when it is installed.
 import { readFileSync } from 'node:fs';
 import { spawnSync } from 'node:child_process';
 

@@ -7,7 +7,6 @@ export const AIRLINER_CLASSES = Object.freeze(Object.keys(ENGINE.classes).filter
 
 const settingsOf = engineClass => (ENGINE.classes[engineClass] ?? ENGINE.classes.fighter).settings;
 
-/** The nozzle at a power from 0 (idle) to 1 (full power, the fighter's full afterburner) of an engine class, interpolated between its settings (class C). */
 export function engineAtPower(power, engineClass = 'fighter') {
   const settings = settingsOf(engineClass);
   const upper = Math.max(1, settings.findIndex(setting => setting.power >= power));
@@ -20,7 +19,6 @@ export function engineAtPower(power, engineClass = 'fighter') {
   };
 }
 
-/** The power whose total temperature this is, the inverse of `engineAtPower` along its temperature. */
 export function powerOfEngine({ totalTemperatureKelvin }, engineClass = 'fighter') {
   const settings = settingsOf(engineClass);
   const upper = Math.max(1, settings.findIndex(setting => setting.totalTemperatureKelvin >= totalTemperatureKelvin));
@@ -38,7 +36,6 @@ export function powerLabel(power, engineClass = 'fighter') {
   return power < military ? `${Math.round(power / military * 100)} %` : `AB ${Math.round((power - military) / (1 - military) * 100)} %`;
 }
 
-/** A class's separate fan stream at a power, or null. */
 function bypassAt(power, engineClass) {
   const bypass = ENGINE.classes[engineClass]?.bypass;
   if (!bypass) return null;
@@ -52,7 +49,6 @@ function bypassAt(power, engineClass) {
   };
 }
 
-/** Each stream's fully expanded jet: the engine's own, and for a class with a separate fan stream its bypass at the same power. */
 export function streamsOf(engine, engineClass, temperatureCelsius) {
   const fan = bypassAt(powerOfEngine(engine, engineClass), engineClass);
   const core = jetOfEngine(engine, temperatureCelsius);
@@ -74,7 +70,6 @@ export function thrustNewtons(power, engineClass) {
 /** Class C: the fan's speed as a share of its full speed, about the square root of the thrust share (fan pressure rise goes as speed squared). */
 export const fanSpeedShare = (power, engineClass) => Math.sqrt(Math.max(0, thrustNewtons(power, engineClass) / thrustNewtons(1, engineClass)));
 
-/** A jet of an engine class at its usual power, with the class's engine count. */
 export function engineOfClass(engineClass) {
   const type = ENGINE.classes[engineClass];
   return { ...engineAtPower(type.defaultPower, engineClass), engines: type.engines };

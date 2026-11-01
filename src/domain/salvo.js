@@ -4,10 +4,7 @@ import { createRandom, normalDeviate } from '../shared/domain/random.js';
 const LAUNCH_RANGE = Object.freeze([5, 90]);
 const LAYOUT_KEYS = Object.freeze(Object.keys(ROCKET.salvoLayout));
 
-/**
- * Class C: a salvo's rounds laid out as Boomtect's barrage, each round its rocket with its own seed, launch time,
- * place within the launcher radius, heading, launch angle and thrust. Any other rocket is its only round.
- */
+/** Class C: laid out as Boomtect's barrage. */
 export function salvoRounds(rocket) {
   if (rocket.kind !== 'salvo') return [rocket];
   const plain = Object.fromEntries(Object.entries(rocket).filter(([key]) => !LAYOUT_KEYS.includes(key)));

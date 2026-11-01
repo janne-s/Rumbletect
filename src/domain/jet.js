@@ -30,19 +30,11 @@ export function fineSimilarityDecibels(ratio) {
   return 9.9 + 14.91126 * l;
 }
 
-/**
- * Class B: Stone, Krejsa & Clark 2003, eq. 2a, the velocity split evenly between relative and absolute. Class C past
- * the jet's own speed, where the shear reverses: its size stands in, so an aircraft faster than its exhaust is not silent.
- */
+/** Class B: Stone, Krejsa & Clark 2003, eq. 2a; class C past the jet's data. */
 export const effectiveVelocity = (jetVelocity, flightVelocity) => jetVelocity * Math.sqrt(Math.abs(1 - flightVelocity / jetVelocity));
 
 const convection = (mach, cosine) => (1 + mach * cosine) ** 2 + JET_FLIGHT.convectionSpread * mach * mach;
 
-/**
- * The jet's two mixing-noise components in flight, as peak level and peak frequency, and its shock-cell noise when
- * `jet.machNumber` is above 1. `jet` holds the fully expanded diameter, velocity, and reservoir-to-ambient temperature
- * ratio; mixing-noise levels are dB per 1 Hz scaled to r = D_j.
- */
 export function jetComponents(jet, { temperatureCelsius, flightMetresPerSecond = 0 }) {
   const sound = speedOfSound(temperatureCelsius);
   const ratio = jet.temperatureRatio;
@@ -84,10 +76,6 @@ export function flightConvectionDecibels(components, inletDegrees) {
   return JET_FLIGHT.convectionDecibels * Math.log10(convection(components.staticConvection, cosine) / convection(components.flightConvection, cosine));
 }
 
-/**
- * Power spectral densities, Pa²/Hz at 1 m from the nozzle, of each component (mixing noise large and fine, shock-cell noise) toward `inletDegrees`
- * (0 ahead along the jet's inlet axis, 180 straight aft) at the given frequencies.
- */
 export function jetSpectra(components, inletDegrees, frequencies) {
   const scale = REFERENCE_SOUND_PRESSURE_PA ** 2 * components.diameterMetres ** 2;
   const flight = flightConvectionDecibels(components, inletDegrees);

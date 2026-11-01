@@ -1,8 +1,3 @@
-// Compares octave (or third-octave) shapes of recordings and renders over chosen time windows, as in Doc/reviews/2026-10-21-new-recordings.md.
-// node tools/octaves.mjs [--thirds] <file>[@start-end][=label] ...
-// Without a window the 2 s around the loudest second is used. Bands in dB re the window's loudest band; swing is the standard
-// deviation of 0.25 s levels in dB; slope skewness is the skewness of the sample-to-sample difference. Recordings in other
-// formats than WAV are decoded with ffmpeg.
 import { basename } from 'node:path';
 import { readAudio } from './audio-file.mjs';
 import { OCTAVES, THIRDS, averagedPower, bandPowers, decibels } from './bands.mjs';

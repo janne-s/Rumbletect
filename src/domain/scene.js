@@ -93,7 +93,6 @@ export function defaultJet(id = 'jet-1', name = 'Jet', seed = 20261015) {
 
 const DEFAULT_AIR_CELSIUS = 15;
 
-/** A narrowbody in level flight, crossing from as far before the origin as after it. */
 export function defaultAirliner(id = 'airliner-1', name = 'Airliner', seed = 20261021) {
   const { flight } = ENGINE.classes.narrowbody;
   const approachMetres = 2500;
@@ -102,7 +101,6 @@ export function defaultAirliner(id = 'airliner-1', name = 'Airliner', seed = 202
 
 export const defaultFormation = (id = 'formation-1', name = 'Formation', seed = 20261014) => ({ ...defaultJet(id, name, seed), kind: 'formation', ...FORMATION_LAYOUT });
 
-/** Falcon 9's size, propellant and ascent: the Medium launcher. */
 export function defaultRocket(id = 'rocket-1', name = 'Rocket', seed = 20261017) {
   const medium = ROCKET.categories.find(category => category.label === 'Medium launcher');
   return categoryRocket({

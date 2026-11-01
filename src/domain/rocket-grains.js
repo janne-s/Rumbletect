@@ -14,7 +14,6 @@ const arrivalAt = (path, scene, index) => {
   return Math.min(...scene.receivers.map(({ positionMetres: at }) => path.seconds[index] + Math.hypot(path.x[index] - at.x, path.y[index] - at.y, path.z[index] - at.z) / sound));
 };
 
-/** The index after which the ascent's direct sound reaches no microphone within the render's span from `firstArrival`, with a margin for echoes. */
 export function heardSteps(path, scene, firstArrival = arrivalAt(path, scene, 0)) {
   const latest = firstArrival + RENDER.maximumSeconds - ROCKET.renderMarginSeconds;
   let last = path.seconds.length - 1;
@@ -24,13 +23,11 @@ export function heardSteps(path, scene, firstArrival = arrivalAt(path, scene, 0)
 
 const kept = (path, count) => (count === path.seconds.length ? path : Object.fromEntries(Object.entries(path).map(([key, values]) => [key, Array.isArray(values) ? values.slice(0, count) : values])));
 
-/** Per round, the samples heard within the render's span from the salvo's first arrival. */
 export function heardCounts(paths, scene) {
   const first = Math.min(...paths.map(path => arrivalAt(path, scene, 0)));
   return paths.map(path => heardSteps(path, scene, first));
 }
 
-/** Each round's ascent, cut where its sound would arrive after the render's span; unheard rounds dropped. */
 export function heardAscents(emitter, scene) {
   const rounds = salvoRounds(emitter);
   const surface = terrainSurface(scene.terrain);
@@ -39,7 +36,6 @@ export function heardAscents(emitter, scene) {
   return rounds.flatMap((round, index) => (counts[index] > 1 ? [{ round, path: kept(paths[index], counts[index]) }] : []));
 }
 
-/** The salvo's rounds as one emitter, each with its ignition pulse above the low band. */
 export function rocketGrains(emitter, scene, band = 'full') {
   const ascents = heardAscents(emitter, scene);
   const grains = mergedGrains(ascents.map(({ round, path }) => pathGrains(round, scene, path, { ...rocketSource(round, scene, path), shape: ROCKET_SHAPE }, band)));

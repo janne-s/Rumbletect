@@ -1,10 +1,3 @@
-// Checks each airliner class against the ANP database's NPD rows, as in Doc/reviews/2026-10-21-airliner-reference.md.
-// node tools/check-anp.mjs <ANP folder> [class[=ANP aircraft] ...] [--spectra]
-// The ANP tables are downloaded from EASA (https://www.easa.europa.eu/en/downloads/138164/en) and stay out of the repository.
-// For each LAmax row of the class's aircraft: a level pass at Mach 0.24 (160 kt), 1 000 ft above an omni at 1.2 m over grass,
-// 25 °C and 70 %, at the power whose thrust per engine equals the row's, approach rows with gear and flaps out as ANP
-// measured them; LAmax is the largest 1 s A-weighted level.
-// --spectra also prints the third-octave spectrum of that second against the ANP spectral class, both re 70 dB at 1 kHz.
 import { readdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { ENGINE } from '../src/domain/constants.js';

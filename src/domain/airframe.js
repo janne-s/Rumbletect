@@ -28,7 +28,6 @@ const DIRECTIVITY = Object.freeze({
   flap: deflection => (theta, phi) => 3 * (Math.sin(deflection) * Math.cos(theta) + Math.cos(deflection) * Math.sin(theta) * Math.cos(phi)) ** 2
 });
 
-/** Fink's dimensionless turbulent boundary-layer thickness at the trailing edge of a surface, re its span (ANOPP eq. 5). */
 function boundaryLayer({ areaSquareMetres: area, spanMetres: span }, density, speed, viscosity) {
   return .37 * area / span ** 2 * (density * speed * area / (viscosity * span)) ** -.2;
 }
@@ -71,11 +70,7 @@ function gear({ count, wheels, tyreMetres, strutMetres }, mach, wingSpan) {
   ]).flat();
 }
 
-/**
- * Class B: Fink's airframe noise (FAA-RD-77-29, 1977) as ANOPP gives it (Zorumski 1982, NASA TM-83199 part 2, section 8.8):
- * the wing's and tails' trailing edges always, and with `deployed` the slats, the trailing-edge flaps at their landing
- * deflection and the landing gear. Null for an airframe of none.
- */
+/** Class B: Fink (FAA-RD-77-29) as ANOPP gives it (NASA TM-83199). */
 export function airframeAt(airframe, { speedMetresPerSecond: speed, temperatureCelsius, deployed }) {
   if (!airframe || !(speed > 0)) return null;
   const kelvin = temperatureCelsius + KELVIN_OFFSET;
@@ -88,11 +83,6 @@ export function airframeAt(airframe, { speedMetresPerSecond: speed, temperatureC
   return { mach, speed, scalePa2: (density * sound ** 2) ** 2 * airframe.wing.spanMetres ** 2 / (4 * Math.PI), parts };
 }
 
-/**
- * Adds the airframe toward `polarDegrees` from the flight direction and `azimuthDegrees` round it from straight below to
- * a PSD at 1 m on evenly spaced bins, in the source's frame: frequencies are emitted ones, and of Fink's convective
- * (1 − M cos θ)⁻⁴ the grain brings one power, so three are added here.
- */
 export function addAirframe(psd, frequencies, state, polarDegrees, azimuthDegrees = 0) {
   if (!state) return psd;
   const [theta, phi] = [radians(polarDegrees), radians(azimuthDegrees)];

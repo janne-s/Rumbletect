@@ -1,6 +1,3 @@
-// Renders a rocket to an omni microphone over flat grass and prints its levels.
-// node tools/render-rocket.mjs <folder> <total thrust MN> <engines> <solid|kerosene|methane|hydrogen> <distance metres> [seconds] [seed] [efficiency %]
-// writes rocket-<thrust>MN-<distance>m.wav. Falcon 9: 7.6 9 kerosene; Starship: 74.4 33 methane 0.4.
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { defaultRocket, defaultScene, parseScene } from '../src/domain/scene.js';

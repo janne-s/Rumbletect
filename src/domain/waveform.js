@@ -13,11 +13,6 @@ function solveShape(skewness) {
   return (low + high) / 2;
 }
 
-/**
- * The quadratic shape `a` and the lognormal modulation depth `sigma` that give a unit Gaussian these
- * moments: z = (x + a(x² − 1))/√(1 + 2a²) times e = exp(σu − σ²) with u a unit Gaussian independent of x.
- * Skewness is Sk(z)·e^(1.5σ²) and kurtosis K(z)·e^(4σ²).
- */
 export function waveformShape({ skewness, kurtosis }) {
   let a = 0;
   let sigma = 0;
@@ -28,7 +23,6 @@ export function waveformShape({ skewness, kurtosis }) {
   return { a, sigma };
 }
 
-/** `gaussian` of local RMS `rmsAt(sample)` turned skewed and intermittent by `envelope`, a unit Gaussian; power is kept. */
 export function shapeWaveform(gaussian, rmsAt, envelope, { a, sigma }) {
   const norm = 1 / Math.sqrt(1 + 2 * a * a);
   const output = new Float64Array(gaussian.length);

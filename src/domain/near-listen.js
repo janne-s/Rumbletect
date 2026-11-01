@@ -11,7 +11,6 @@ import { difference, dot, length } from './trajectory.js';
 
 const NEWTON_STEPS = 8;
 
-/** The emission time whose sound reaches `listener` at `listenerSeconds`, for a source slower than sound. */
 export function emissionSeconds(trajectory, listener, listenerSeconds, sound, guess = listenerSeconds) {
   let emission = guess;
   for (let step = 0; step < NEWTON_STEPS; step += 1) {
@@ -33,11 +32,6 @@ export function emissionGeometry(trajectory, listener, seconds, sound) {
   return { distance, inletDegrees: Math.acos(Math.max(-1, Math.min(1, cosine))) * 180 / Math.PI, cosine, mach: speed / sound };
 }
 
-/**
- * The path from the emission frame to the listener per bin, as `{ re, im }` at the received frequency: air
- * absorption, and with `ground` its reflection over the plane up = 0, 1 + (R₁/R₂)·γ·Q·e^(−iωΔ) with the
- * scattered share r²|Q|²(1 − γ²) added as power (class C), γ from roughness and turbulence.
- */
 function pathGains({ frequencies, doppler, limit, geometry, source, listener, air, sound, ground, scintillation }) {
   const re = new Float64Array(frequencies.length);
   const im = new Float64Array(frequencies.length);
@@ -81,11 +75,6 @@ const catmullRom = (samples, position) => {
   return b + .5 * t * (c - a + t * (2 * a - 5 * b + 4 * c - d + t * (3 * (b - c) + d - a)));
 };
 
-/**
- * Pressure in pascals from `startSeconds` of listener time. The moving source's Doppler shift and
- * −10 log(1 − M cos ψ) (Stone et al. 2003, eq. 2) and the path (`pathGains`) are applied here, not in the
- * source, so they count once.
- */
 export function nearListen({ trajectory, listener, jet, air, emissionSeconds: duration, sampleRate, seed, ground = null, scintillation = false, order = 0 }) {
   const sound = speedOfSound(air.temperatureCelsius);
   const startSeconds = length(difference(listener, trajectory.positionAt(0))) / sound;

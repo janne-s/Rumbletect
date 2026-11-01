@@ -1,5 +1,3 @@
-// Measures a flyover recording or render as in Doc/reviews/2026-10-15-jet-sound-diagnosis.md.
-// node tools/measure-sound.mjs <file.wav>... prints one JSON line per file.
 import { basename } from 'node:path';
 import { fft, nextPowerOfTwo } from '../src/shared/domain/fft.js';
 import { readAudio } from './audio-file.mjs';

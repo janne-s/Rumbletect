@@ -1,5 +1,3 @@
-// Renders a category's rocket or salvo (Artillery by default) to an omni microphone beside the launchers over flat grass and prints its levels.
-// node tools/render-salvo.mjs <folder> [distance metres] [rounds] [seed] [salvo seconds] [category] [degrees behind the side]
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { ROCKET } from '../src/domain/constants.js';

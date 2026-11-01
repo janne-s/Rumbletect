@@ -15,17 +15,12 @@ const GRAIN = PROPAGATION.grainSamples;
 const WINDOW = Float64Array.from({ length: GRAIN }, (_, index) => Math.sin(Math.PI * (index + .5) / GRAIN));
 const STREAMS = Object.freeze({ fine: 0, large: 0x9e3779b9, envelope: 0x85ebca6b, low: 0xc2b2ae35 });
 
-/** The flight's turn on its radius from its start, or none; it does not depend on how long the flight is. */
 const arcOf = emitter => (emitter.turnDegrees ? { degrees: emitter.turnDegrees, fromSeconds: emitter.turnStartSeconds, radiusMetres: emitter.turnRadiusMetres } : null);
 
 const withTurn = ({ arcSeconds, ...path }) => ({ ...path, turnSeconds: arcSeconds ? arcSeconds.filter(seconds => seconds !== null) : null });
 
 const cut = (path, kept) => Object.fromEntries(Object.entries(path).map(([key, values]) => [key, Array.isArray(values) && key !== 'arcSeconds' ? values.slice(0, kept) : values]));
 
-/**
- * The jet's flight, its Mach relative to the sound speed at its height as in Boomtect. With `autoDuration` it
- * flies on until every microphone is `JET_FLIGHT.hearingDecibels` below its closest approach by spreading.
- */
 export function jetPath(emitter, scene) {
   if (emitter.paths) return followedPath(emitter.paths[0]);
   const { air } = scene;
@@ -35,7 +30,6 @@ export function jetPath(emitter, scene) {
   return withTurn(cut(flightPath({ ...flight, durationSeconds: PARAMETERS.flightSeconds.maximum }, air), heard.seconds.length));
 }
 
-/** A straight flight cut where every microphone has fallen out of hearing after its closest pass. */
 function heardFlight(path, scene) {
   const ratio = 10 ** (JET_FLIGHT.hearingDecibels / 20);
   let end = 0;
@@ -57,11 +51,9 @@ export function sampled(path, seconds) {
   return { position: { x: at(path.x), y: at(path.y), z: at(path.z) }, velocity: { x: at(path.vx), y: at(path.vy), z: at(path.vz) } };
 }
 
-/** Synthesis levels of `render.quality.synthesis`: exact; fast, equal up to rounding; fastest, with other noise of the same statistics. */
 const FAST = 1;
 const FASTEST = 2;
 
-/** The normal deviates of a frame of `size`, two per bin between DC and Nyquist. */
 function frameDeviates(seed, size = GRAIN, synthesis = 0) {
   const random = createRandom(seed);
   return synthesis >= FASTEST ? normalDeviates(random, size - 2) : Float64Array.from({ length: size - 2 }, () => normalDeviate(random));
@@ -81,7 +73,6 @@ function gaussianFrame(deviates, psd, sampleRate, size = GRAIN) {
   return real;
 }
 
-/** Two Gaussian frames from one inverse FFT, the second carried in the imaginary part. */
 function gaussianPair(first, firstPsd, second, secondPsd, sampleRate, size = GRAIN) {
   const real = new Float64Array(size);
   const imaginary = new Float64Array(size);
@@ -103,7 +94,6 @@ function gaussianPair(first, firstPsd, second, secondPsd, sampleRate, size = GRA
 
 const lowShare = frequency => 1 / (1 + (frequency / LOW_BAND.crossoverHz) ** 4);
 
-/** A source's spectra restricted to one band: 'low', 'high', or 'full' (unsplit). */
 function banded(source, band) {
   if (band === 'full') return source;
   const share = band === 'low' ? lowShare : frequency => 1 - lowShare(frequency);
@@ -127,12 +117,7 @@ const catmullRom = (samples, position) => {
   return b + .5 * t * (c - a + t * (2 * a - 5 * b + 4 * c - d + t * (3 * (b - c) + d - a)));
 };
 
-/**
- * Class C: crackle as simple-wave steepening (Earnshaw): each sample moves earlier by k p, so compressions run ahead
- * and their fronts close into shocks, rises sharp and falls slow. `index` is the share of the shock-formation distance
- * a sine at `hz` with the frame's rms has travelled: at 1 its steepest point just becomes a shock. Where fronts would
- * fold over they become a jump. The rms is kept.
- */
+/** Class C: crackle as simple-wave steepening (Earnshaw). */
 export function steepen(samples, index, hz, sampleRate) {
   if (!(index > 0) || !(hz > 0)) return samples;
   const count = samples.length;
@@ -157,7 +142,6 @@ export function steepen(samples, index, hz, sampleRate) {
   return out;
 }
 
-/** The renderer drops each frame's DC, so a grain carrying a mean would step at frame edges; a sine taper removes it. */
 function removeMean(samples, first, last, sum) {
   const span = last - first + 2;
   let weights = 0;
@@ -165,7 +149,6 @@ function removeMean(samples, first, last, sum) {
   for (let sample = first; sample <= last; sample += 1) samples[sample] -= sum * Math.sin(Math.PI * (sample - first + 1) / span) / weights;
 }
 
-/** Degrees round the flight direction from straight below to `departure`, for a body flying without roll. */
 function azimuthDegrees(velocity, speed, departure) {
   if (!(speed > 0)) return 0;
   const along = (velocity.x * departure.x + velocity.y * departure.y + velocity.z * departure.z) / speed;
@@ -178,16 +161,6 @@ function azimuthDegrees(velocity, speed, departure) {
   return Math.acos(Math.max(-1, Math.min(1, cosine))) * 180 / Math.PI;
 }
 
-/**
- * Grains along a path (`tect-shared-interfaces.md`, grains): sine-windowed frames at half overlap, each heard toward
- * a path's departure. `source.components(state)` gives a grain's source state or null when it is silent;
- * `source.spectra(components, inletDegrees, frequencies, azimuthDegrees)` its shaped and plain PSDs at 1 m, inlet 0
- * ahead along its axis, azimuth round its flight from straight below; `source.packetHz(components)` the corner of its intermittency; `source.axis` and `source.place` optionally
- * its axis and emission point when they differ from its flight; with `source.ignites` the first grain is heard from the
- * path's start on, so the sound starts at once. Its Doppler shift and −10 log|1 − M cos ψ|
- * (Stone et al. 2003, eq. 2) come with the grain, so they count once. Ahead of a supersonic grain's Mach cone the
- * factor is negative and the grain arrives reversed.
- */
 export function pathGrains(emitter, scene, path, unbanded, band = 'full') {
   if (band === 'low') return lowBandGrains(emitter, scene, path, banded(unbanded, 'low'));
   const source = banded(unbanded, band);
@@ -225,7 +198,6 @@ export function pathGrains(emitter, scene, path, unbanded, band = 'full') {
   const { synthesis } = scene.render.quality;
   let noise = { index: -1 };
 
-  /** A grain's paths follow one another in the render, so its deviates and its envelope, the same toward every departure, are kept for the next. */
   function noiseOf(index) {
     if (noise.index === index) return noise;
     const seed = salt => (emitter.seed ^ Math.imul(index + 1, 0x27d4eb2d) ^ salt) >>> 0;
@@ -293,16 +265,10 @@ export function pathGrains(emitter, scene, path, unbanded, band = 'full') {
 
 const shockOf = crackle => ({ shockShare: crackle?.share ?? 0, shockHz: crackle ? SHOCK_FORMATION.frequencyRatio * crackle.hz : 0 });
 
-/** Samples from a grain's start in its frame to its centre: room for half of it stretched by 1 + M as it recedes. */
 const leadSamples = (grainSamples, mach) => Math.max(grainSamples, Math.ceil(grainSamples * (1 + mach) / 2) + 2);
 
 const LOW_WINDOW = Float64Array.from({ length: LOW_BAND.internalSamples }, (_, index) => Math.sin(Math.PI * (index + .5) / LOW_BAND.internalSamples));
 
-/**
- * The low band's grains along a path: each a Gaussian frame of `LOW_BAND.internalSamples` at a low rate, sine-windowed,
- * and its spectrum evaluated directly on the render frame's bins up to `LOW_BAND.highestFrequencyHz`. Time is scaled by
- * the grain's Doppler compression as in the short grains, and reversed ahead of a supersonic grain's Mach cone.
- */
 function lowBandGrains(emitter, scene, path, source) {
   const sampleRate = scene.render.sampleRate;
   const size = LOW_BAND.internalSamples;
@@ -370,7 +336,6 @@ function lowBandGrains(emitter, scene, path, source) {
   return { sources: sourceTable(rows), rows, emission };
 }
 
-/** Several emitters' grains as one: noise seeds offset per member so that `emission` finds the member's own. */
 export function mergedGrains(members) {
   if (members.length === 1) return members[0];
   const offsets = [];
@@ -386,10 +351,7 @@ export function mergedGrains(members) {
   return { sources: sourceTable(rows), rows, emission };
 }
 
-/**
- * Class C: a formation's jets, the shared V with each rank `verticalSpacingMetres` higher (lower when negative), a seed
- * for each aircraft, the leader's its own; any other jet is its only member.
- */
+/** Class C. */
 export function formationJets(emitter) {
   if (emitter.paths) return emitter.paths.map((saved, index) => ({ ...emitter, kind: 'jet', seed: index ? (emitter.seed + Math.imul(index, 0x9e3779b9)) >>> 0 : emitter.seed, paths: [saved] }));
   if (emitter.kind !== 'formation') return [emitter];
@@ -405,7 +367,6 @@ export function formationJets(emitter) {
 
 const JET_SHAPE = waveformShape({ skewness: JET.largeScaleSkewness, kurtosis: JET.largeScaleKurtosis });
 
-/** The sound of a jet's engines and airframe at a moment of its flight, as grains and the emitter's levels see it. */
 export function jetSource(emitter, scene) {
   const { air } = scene;
   const streams = streamsOf(emitter.engine, emitter.engineClass, air.temperatureCelsius);

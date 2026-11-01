@@ -26,7 +26,6 @@ export const cachedTracks = (emitter, scene) => (emitter.kind === 'volcano'
 
 const coastedTracks = new Map();
 
-/** A rocket's rounds with their unpowered flight after burnout, as another tect follows them. */
 export const cachedCoastedTracks = (emitter, scene) => cached(coastedTracks, emitter, [scene.air, surfaceId(currentSurface())], () => cachedTracks(emitter, scene).map(path => coastedPath(path, emitter, scene.air, currentSurface())));
 
 export function cachedSoundTracks(emitter, scene) {
@@ -52,7 +51,6 @@ const sourceOf = (emitter, scene, path) => (emitter.kind === 'volcano'
   ? rocketSource(salvoRounds(emitter)[0], scene, path)
   : jetSource(emitter, scene));
 
-/** The loudest moment of one aircraft, rocket round or vent; a formation's aircraft add up. */
 export function cachedLevels(emitter, scene) {
   const [path] = cachedTracks(emitter, scene);
   return cached(levels, emitter, [scene.air, scene.render.sampleRate, path.seconds.length, path.step], () => {

@@ -7,7 +7,6 @@ const VOLCANO_VIEW = Object.freeze({ topWidthShare: 2, fillAlpha: .18, sourceRad
 
 const pointOf = (path, index) => ({ x: path.x[index], y: path.y[index], z: path.z[index] });
 
-/** A short tick across the drawn path at the sample where it reaches the speed of sound. */
 function drawSoundBarrier(context, path, frame, air) {
   const index = supersonicIndex(path, air);
   if (index <= 0) return;
@@ -21,7 +20,6 @@ function drawSoundBarrier(context, path, frame, air) {
   context.beginPath(); context.moveTo(p.x - nx, p.y - ny); context.lineTo(p.x + nx, p.y + ny); context.stroke();
 }
 
-/** Small rings where a turn starts and ends: a rocket's along the distance flown, a jet's along its flight time. */
 function drawTurn(context, path, frame) {
   const indices = path.turnMetres ? path.turnMetres.map(metres => path.flownMetres.findIndex(flown => flown >= metres))
     : (path.turnSeconds ?? []).map(seconds => Math.round(seconds / path.step));

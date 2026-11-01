@@ -1,4 +1,3 @@
-// Spectra, octave and third-octave band levels, and A-weighting shared by the comparison tools.
 import { fft } from '../src/shared/domain/fft.js';
 
 export const OCTAVES = [31.5, 63, 125, 250, 500, 1000, 2000, 4000, 8000, 16000];
@@ -14,7 +13,6 @@ export function aWeightDecibels(frequency) {
 
 export const decibels = value => 10 * Math.log10(Math.max(value, 1e-30));
 
-/** Mean-square power per bin of one rectangular window, zero-padded to a power of two: summing the bins gives the window's mean square. */
 export function windowPower(samples, start, length, size) {
   const real = new Float64Array(size);
   const imaginary = new Float64Array(size);
@@ -25,7 +23,6 @@ export function windowPower(samples, start, length, size) {
   return power;
 }
 
-/** Power per bin averaged over Hann windows with half overlap, in arbitrary units for relative band levels. */
 export function averagedPower(samples, size = 8192) {
   const power = new Float64Array(size / 2);
   const hann = Float64Array.from({ length: size }, (_, index) => .5 - .5 * Math.cos(2 * Math.PI * index / size));
@@ -38,7 +35,6 @@ export function averagedPower(samples, size = 8192) {
   return power;
 }
 
-/** Band powers at nominal centres, one band per octave or per third (`perOctave` 1 or 3). */
 export function bandPowers(power, sampleRate, centres, perOctave) {
   const size = power.length * 2;
   return centres.map(nominal => {

@@ -17,11 +17,7 @@ export const volcanoSourcePosition = (volcano, position) => ({ x: position.x, y:
 
 const smoothStep = value => { const t = Math.min(1, Math.max(0, value)); return t * t * (3 - 2 * t); };
 
-/**
- * Class C: the share of the exit velocity at `seconds` after the start: a smooth onset, the pulsing, and a fade to the end
- * of the eruption. The pulsing lowers the velocity by up to its depth, between a sine whose phase wanders by a seeded
- * random walk and, as the bursts' share grows, a background broken by Strombolian bursts.
- */
+/** Class C. */
 export function eruptionShare(volcano, seconds) {
   const { eruptionSeconds, riseSeconds, fadeSeconds, pulsePeriodSeconds, pulseDepthPercent, burstsPercent } = volcano.eruption;
   if (seconds < 0 || seconds > eruptionSeconds) return 0;
@@ -52,7 +48,6 @@ export function burstSchedule(volcano) {
   return bursts;
 }
 
-/** How far the bursts at `seconds` lift the eruption, from 0 between bursts to 1 at a burst's height. */
 export function burstLevel(volcano, seconds) {
   const { riseSeconds } = VOLCANO.bursts;
   let level = 0;
@@ -74,7 +69,6 @@ function wander(seed, cycles) {
   return phase + (next - phase) * (cycles - whole);
 }
 
-/** The crater held still for the eruption, its height above the ground of `surface`, sampled like `flightPath`. */
 export function ventPath(volcano, surface = FLAT_SURFACE) {
   const total = volcano.eruption.eruptionSeconds;
   const steps = Math.min(TRAJECTORY.maximumSteps, Math.max(2, Math.ceil(total / TRAJECTORY.stepSeconds)));
@@ -89,7 +83,6 @@ export function ventPath(volcano, surface = FLAT_SURFACE) {
   return path;
 }
 
-/** The eruption jet as Tam's two components (B structure, C values), the jet upward from the vent, its exit velocity following the eruption. */
 export function volcanoSource(volcano, scene) {
   const { air } = scene;
   const temperatureRatio = volcano.jet.gasTemperatureKelvin / (air.temperatureCelsius + KELVIN_OFFSET);

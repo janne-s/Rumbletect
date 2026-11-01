@@ -4,7 +4,6 @@ import { jetComponents, jetSpectra } from './jet.js';
 
 const between = (pair, share) => pair[0] + (pair[1] - pair[0]) * share;
 
-/** The static full-power mixing noise of a class at 90°, Pa² at 1 m, that turbomachinery levels refer to. */
 export function referencePower(engineClass, temperatureCelsius) {
   const frequencies = [];
   for (let x = Math.log(1); x < Math.log(30000); x += .02) frequencies.push(Math.exp(x));
@@ -16,14 +15,12 @@ export function referencePower(engineClass, temperatureCelsius) {
 
 const SLOWEST_FAN = .01;
 
-/** A civil fan's level re full speed: its speed to `speedExponent`, and with a knee a steep rise once the tips turn supersonic. */
 function speedLawDecibels({ speedExponent, knee }, speed) {
   if (!knee) return 10 * speedExponent * Math.log10(speed);
   const rise = 10 ** (knee.decibels / 10);
   return 10 * Math.log10((speed ** speedExponent + rise * smoothStep((speed - knee.fromSpeed) / (1 - knee.fromSpeed))) / (1 + rise));
 }
 
-/** Class C: the blade-passing frequency and the tones' and hump's powers at a power share, or null for a class without turbomachinery; a civil fan's levels go as its speed to `speedExponent`, the others' run between idle and full by power. */
 export function turbomachineryAt(engineClass, power, referencePa2) {
   const turbo = ENGINE.classes[engineClass]?.turbomachinery;
   if (!turbo) return null;
@@ -60,7 +57,6 @@ function buzzSawTones(turbo, bladeHz, speed, referencePa2) {
 
 const aftGain = inletDegrees => 10 ** (-JET.turbomachineryAftDecibels * Math.max(0, inletDegrees - 90) / 90 / 10);
 
-/** Adds the turbomachinery toward `inletDegrees` to a PSD on evenly spaced bins: each tone split between its two nearest bins, the hump log-normal about `humpCentre` times the blade-passing frequency. */
 export function addTurbomachinery(psd, frequencies, state, inletDegrees) {
   if (!state) return psd;
   const binHz = frequencies[1] - frequencies[0];

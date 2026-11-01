@@ -1,6 +1,3 @@
-// Renders a jet category's flyover straight over an omni microphone on flat grass and prints its maximum levels.
-// node tools/render-jet.mjs <folder> [category] [height metres] [mach] [seed] [power 0–1, else the category's own] [gear]
-// `gear` puts an airliner's gear and flaps out.
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { ENGINE } from '../src/domain/constants.js';

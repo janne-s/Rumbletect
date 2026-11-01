@@ -16,7 +16,6 @@ import { followerPlacement, followerSeed } from '../shared/domain/follower.js';
 import { engineAtPower, engineOfClass } from '../domain/engine.js';
 import { frontProfile } from '../shared/domain/refraction.js';
 
-/** The first sample at or above the speed of sound of the air at its height, or −1. */
 export const supersonicIndex = (path, air) => path.speed.findIndex((speed, index) => speed >= soundSpeedAt(air, path.z[index]));
 
 function levelInfo(emitter, scene) {
@@ -219,7 +218,6 @@ export const isSupersonic = (emitter, scene) => supersonicIndex(cachedTracks(emi
 
 const isRecord = value => value !== null && typeof value === 'object' && !Array.isArray(value);
 
-/** Copies the keys a preset has; a group is merged, so a preset short of a field leaves the emitter's own. */
 function given(item, values, keys) {
   for (const key of keys) {
     if (!(key in values)) continue;
@@ -229,12 +227,10 @@ function given(item, values, keys) {
 
 const pick = (emitter, keys) => Object.fromEntries(keys.filter(key => key in emitter).map(key => [key, emitter[key]]));
 
-/** A flight is where, when, and how the emitter flies, its place included, so a pass is the same past the microphones. */
 const JET_FLIGHT = Object.freeze(['startMetres', 'startSeconds', 'headingDegrees', 'climbDegrees', 'mach', 'accelerationMetresPerSecondSquared', 'turnDegrees', 'turnStartSeconds', 'turnRadiusMetres', 'durationSeconds', 'autoDuration']);
 const KIND_FLIGHT = Object.freeze({ airliner: ['gearAndFlaps'], formation: ['memberCount', 'lateralSpacingMetres', 'trailSpacingMetres', 'verticalSpacingMetres'] });
 const jetFlightKeys = emitter => [...JET_FLIGHT, ...(KIND_FLIGHT[emitter.kind] ?? [])];
 
-/** A device preset is what flies (decision 18); a flight preset is its path, and a jet's path fits every kind of jet. */
 const jetPreset = section => Object.freeze({
   section,
   take: emitter => ({ engineClass: emitter.engineClass, engine: emitter.engine }),
@@ -247,7 +243,6 @@ const jetPreset = section => Object.freeze({
 const ROCKET_DEVICE = Object.freeze(['propellant', 'engine', 'lengthMetres', 'ignitionPulseDecibels', 'ignitionBurstDecibels']);
 const SALVO_LAYOUT_KEYS = Object.freeze(Object.keys(ROCKET.salvoLayout));
 
-/** A rocket's device goes between a rocket and a salvo; a launcher's layout only from salvo to salvo. */
 const rocketPreset = Object.freeze({
   section: 'rocket',
   take: emitter => ({
@@ -373,7 +368,6 @@ export const ADD_EMITTERS = Object.freeze({
 
 const within = (key, value) => Math.min(PARAMETERS[key].maximum, Math.max(PARAMETERS[key].minimum, value));
 
-/** A jet on a linked tect's flight, so that its engines come from Rumbletect: a fighter in full afterburner when the flight is supersonic; the category and power are kept once chosen. */
 const CATEGORY_OF_ERUPTION = Object.freeze({ strombolian: 'strombolian', vulcanian: 'subplinian', strongVulcanian: 'plinian' });
 
 function withCategory(volcano, key) {

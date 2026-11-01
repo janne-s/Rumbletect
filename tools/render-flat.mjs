@@ -1,5 +1,3 @@
-// Renders the default jet over flat grass, through the shared propagation and through the near listen, for comparison.
-// node tools/render-flat.mjs <folder> [seeds...] writes grains-<seed>.wav and near-<seed>.wav there.
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { defaultScene, parseScene } from '../src/domain/scene.js';

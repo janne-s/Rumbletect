@@ -14,7 +14,6 @@ const power = {
   show: item => powerLabel(powerOfEngine(item.engine, item.engineClass), item.engineClass)
 };
 
-/** A class changes the engine only, at the same power; where and how the aircraft flies stays. */
 const categoryOf = classes => ({
   label: 'Category',
   read: item => classes.indexOf(item.engineClass) / (classes.length - 1),
@@ -60,7 +59,6 @@ const flightHeading = {
 
 const MOST_TURN = range('turnDegrees')[1];
 
-/** Squared from the middle, so that the first half turn is fine and five full circles are still in reach. */
 const jetTurn = {
   label: 'Turn',
   read: item => (1 + Math.sign(item.turnDegrees) * Math.sqrt(Math.abs(item.turnDegrees) / MOST_TURN)) / 2,
@@ -134,7 +132,6 @@ const formationCount = {
 const SPACING_SPAN = Object.freeze([5, 2000]);
 const TRAIL_RATIO = 1.5;
 
-/** The formation's lateral spacing; the trail spacing keeps its ratio to it. */
 const formationSpacing = {
   label: 'Spacing',
   read: item => clamp01(logPosition(Math.max(SPACING_SPAN[0], item.lateralSpacingMetres), SPACING_SPAN)),
@@ -171,7 +168,6 @@ const rocketCategory = {
 const SIZE_SPAN = ROCKET.sizing.totalNewtons;
 const totalOf = item => item.engine.engines * item.engine.thrustKilonewtons * 1000;
 
-/** A new size changes the engine, the length and the pad's water, not the flight; Category sets a typical burn and flight. */
 const resize = (item, newtons) => {
   const sized = sizedRocket(newtons, item.engine.engines, item.propellant);
   item.engine = { ...item.engine, ...sized.engine };
@@ -187,7 +183,6 @@ const rocketSize = {
   entry: { unit: 'kN', get: item => totalOf(item) / 1000, set: (item, value) => resize(item, value * 1000) }
 };
 
-/** A propellant changes the nozzle at the same total thrust, as in the details. */
 const rocketPropellant = {
   label: 'Propellant',
   steps: PROPELLANTS.length - 1,
@@ -205,7 +200,6 @@ export const thrustLabel = newtons => (newtons >= 1e6 ? `${+(newtons / 1e6).toPr
 
 const setAscent = (item, key, value) => { item.ascent = { ...item.ascent, [key]: value }; };
 
-/** Positive bends the path down toward level flight, negative lofts it up after launch. */
 const ROCKET_BEND_SPAN = Object.freeze([-90, 180]);
 
 const rocketTurn = {

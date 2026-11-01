@@ -17,11 +17,6 @@ function grid(sampleRate) {
   return weightsFor.get(sampleRate);
 }
 
-/**
- * The loudest moment of a source along its path, from the spectra its grains use (PSDs at 1 m, before Doppler and
- * propagation): its sound power level LW re 1 pW over the sphere, and its A-weighted level 1 km away by spreading
- * alone toward its loudest direction.
- */
 export function sourceLevels(source, path, scene) {
   const { binHz, frequencies, aWeights } = grid(scene.render.sampleRate);
   const { air } = scene;

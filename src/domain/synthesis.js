@@ -2,7 +2,6 @@ import { fft } from '../shared/domain/fft.js';
 import { createRandom, normalDeviate } from '../shared/domain/random.js';
 import { SYNTHESIS } from './constants.js';
 
-/** `spectrumAt(centreSample, binHz)` gives each bin's one-sided PSD in Pa²/Hz; sine windows at half overlap keep the variance. */
 export function synthesizeNoise({ length, sampleRate, seed, spectrumAt, frameSamples = SYNTHESIS.frameSamples }) {
   const hop = frameSamples / 2;
   const binHz = sampleRate / frameSamples;
@@ -32,7 +31,6 @@ export function synthesizeNoise({ length, sampleRate, seed, spectrumAt, frameSam
   return output;
 }
 
-/** Each frame's spectrum times `gainAt(centreSample, binHz)`, real per bin or `{ re, im }`; sine windows in and out, so a gain of 1 returns the signal. */
 export function filterFrames(signal, sampleRate, gainAt, frameSamples = SYNTHESIS.frameSamples) {
   const hop = frameSamples / 2;
   const binHz = sampleRate / frameSamples;
